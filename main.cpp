@@ -12,6 +12,7 @@ int main(int argc, char *argv[]) {
         return -1; // Exit if connection fails
     }
 
+
     MainWindow w;
     w.show();
     return a.exec(); // Keep the Qt event loop running

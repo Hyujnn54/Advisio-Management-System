@@ -103,7 +103,6 @@ public:
     QGridLayout *gridLayout;
     QPushButton *refreshStatsButton;
     QTextEdit *statsDisplay;
-    QSpacerItem *verticalSpacer;
     QStatusBar *statusBar;
 
     void setupUi(QMainWindow *MainWindow)
@@ -111,6 +110,12 @@ public:
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName("MainWindow");
         MainWindow->resize(1387, 758);
+        QSizePolicy sizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(MainWindow->sizePolicy().hasHeightForWidth());
+        MainWindow->setSizePolicy(sizePolicy);
+        MainWindow->setMinimumSize(QSize(0, 600));
         MainWindow->setStyleSheet(QString::fromUtf8(""));
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
@@ -118,9 +123,6 @@ public:
         verticalLayout->setObjectName("verticalLayout");
         header = new QFrame(centralwidget);
         header->setObjectName("header");
-        QSizePolicy sizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
-        sizePolicy.setHorizontalStretch(0);
-        sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(header->sizePolicy().hasHeightForWidth());
         header->setSizePolicy(sizePolicy);
         header->setMinimumSize(QSize(0, 75));
@@ -143,6 +145,11 @@ public:
         horizontalLayout_3->setContentsMargins(0, 0, 0, 0);
         menuButton = new QPushButton(frame_3);
         menuButton->setObjectName("menuButton");
+        QSizePolicy sizePolicy1(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Fixed);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(menuButton->sizePolicy().hasHeightForWidth());
+        menuButton->setSizePolicy(sizePolicy1);
         menuButton->setMinimumSize(QSize(0, 30));
         menuButton->setMaximumSize(QSize(16777215, 30));
         menuButton->setIconSize(QSize(24, 24));
@@ -194,7 +201,7 @@ public:
         verticalLayout_2->setContentsMargins(0, 0, 0, 0);
         frame_6 = new QFrame(sideMenu);
         frame_6->setObjectName("frame_6");
-        frame_6->setMinimumSize(QSize(150, 575));
+        frame_6->setMinimumSize(QSize(125, 600));
         frame_6->setMaximumSize(QSize(150, 16777215));
         frame_6->setFrameShape(QFrame::Shape::StyledPanel);
         frame_6->setFrameShadow(QFrame::Shadow::Raised);
@@ -247,11 +254,11 @@ public:
 
         frame_4 = new QFrame(frame_2);
         frame_4->setObjectName("frame_4");
-        QSizePolicy sizePolicy1(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
-        sizePolicy1.setHorizontalStretch(0);
-        sizePolicy1.setVerticalStretch(0);
-        sizePolicy1.setHeightForWidth(frame_4->sizePolicy().hasHeightForWidth());
-        frame_4->setSizePolicy(sizePolicy1);
+        QSizePolicy sizePolicy2(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
+        sizePolicy2.setHorizontalStretch(0);
+        sizePolicy2.setVerticalStretch(0);
+        sizePolicy2.setHeightForWidth(frame_4->sizePolicy().hasHeightForWidth());
+        frame_4->setSizePolicy(sizePolicy2);
         frame_4->setFrameShape(QFrame::Shape::StyledPanel);
         frame_4->setFrameShadow(QFrame::Shadow::Raised);
         verticalLayout_5 = new QVBoxLayout(frame_4);
@@ -270,6 +277,7 @@ public:
 
         searchDateButton_2 = new QDateTimeEdit(ClientForm);
         searchDateButton_2->setObjectName("searchDateButton_2");
+        searchDateButton_2->setMinimumSize(QSize(125, 0));
 
         gridLayout_2->addWidget(searchDateButton_2, 4, 1, 1, 1);
 
@@ -455,10 +463,6 @@ public:
 
         gridLayout_3->addLayout(gridLayout, 0, 0, 1, 1);
 
-        verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
-
-        gridLayout_3->addItem(verticalSpacer, 1, 0, 1, 1);
-
         tabWidget->addTab(tab, QString());
 
         verticalLayout_5->addWidget(tabWidget);
@@ -476,7 +480,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        tabWidget->setCurrentIndex(3);
+        tabWidget->setCurrentIndex(0);
 
 
         QMetaObject::connectSlotsByName(MainWindow);

@@ -32,13 +32,13 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , isDarkTheme(true)
+    , isDarkTheme(false)
     , emailSender(new EmailSender(this))
     , emailAttempts(0)
     , emailSuccesses(0)
 {
     ui->setupUi(this);
-
+    applyLightTheme();
     // Set up the datetime edit widget for consultations
     QDateTimeEdit *dateTimeEdit = new QDateTimeEdit(this);
     dateTimeEdit->setObjectName("consultation_datetime");
@@ -229,7 +229,6 @@ void MainWindow::on_updateButtonClicked() {
 
 void MainWindow::toggleTheme() {
     isDarkTheme = !isDarkTheme;
-
     if (isDarkTheme) {
         applyDarkTheme();
     } else {
@@ -237,29 +236,262 @@ void MainWindow::toggleTheme() {
     }
 }
 
-void MainWindow::applyDarkTheme() {
-    QPalette darkPalette;
-    darkPalette.setColor(QPalette::Window, QColor(53, 53, 53));
-    darkPalette.setColor(QPalette::WindowText, Qt::white);
-    darkPalette.setColor(QPalette::Base, QColor(25, 25, 25));
-    darkPalette.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
-    darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
-    darkPalette.setColor(QPalette::ToolTipText, Qt::white);
-    darkPalette.setColor(QPalette::Text, Qt::white);
-    darkPalette.setColor(QPalette::Button, QColor(53, 53, 53));
-    darkPalette.setColor(QPalette::ButtonText, Qt::white);
-    darkPalette.setColor(QPalette::BrightText, Qt::red);
-    darkPalette.setColor(QPalette::Link, QColor(42, 130, 218));
-    darkPalette.setColor(QPalette::Highlight, QColor(42, 130, 218));
-    darkPalette.setColor(QPalette::HighlightedText, Qt::black);
-
-    qApp->setPalette(darkPalette);
-    qApp->setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }");
+void MainWindow::applyLightTheme() {
+    // Blueish white gradient (unchanged)
+    QString styleSheet = R"(
+        QWidget {
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                        stop:0 #FFFFFF, stop:1 #A1B8E6);
+            color: #333333;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        /* Buttons with rounded corners and subtle shadow */
+        QPushButton {
+            background-color: #3A5DAE;
+            color: white;
+            border: 1px solid #2A4682;
+            border-radius: 5px;
+            padding: 6px;
+            font-weight: bold;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        QPushButton:hover {
+            background-color: #4A70C2;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        QPushButton:pressed {
+            background-color: #2A4682;
+        }
+        /* Input fields with smooth borders */
+        QLineEdit, QComboBox, QDateTimeEdit {
+            background-color: #F5F7FA;
+            border: 1px solid #3A5DAE;
+            border-radius: 4px;
+            padding: 4px;
+            color: #333333;
+        }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus {
+            border: 2px solid #3A5DAE;
+        }
+        /* Table view styling */
+        QTableView {
+            background-color: #FFFFFF;
+            border: 1px solid #D3DCE6;
+            border-radius: 4px;
+            selection-background-color: #A1B8E6;
+            selection-color: #333333;
+        }
+        QHeaderView::section {
+            background-color: #3A5DAE;
+            color: white;
+            padding: 5px;
+            border: none;
+            border-radius: 2px;
+        }
+        /* Calendar styling */
+        QCalendarWidget {
+            background-color: #F5F7FA;
+            border: 1px solid #3A5DAE;
+            border-radius: 4px;
+        }
+        QCalendarWidget QToolButton {
+            background-color: #3A5DAE;
+            color: white;
+            border-radius: 3px;
+        }
+        /* Tooltip */
+        QToolTip {
+            color: #333333;
+            background-color: #E6ECF5;
+            border: 1px solid #3A5DAE;
+            border-radius: 3px;
+        }
+        /* Tab widget */
+        QTabWidget::pane {
+            border: 1px solid #3A5DAE;
+            border-radius: 4px;
+        }
+        QTabBar::tab {
+            background-color: #D3DCE6;
+            color: #333333;
+            padding: 6px;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+        QTabBar::tab:selected {
+            background-color: #3A5DAE;
+            color: white;
+        }
+        /* General Label Styling (all labels) */
+        QLabel {
+            font-size: 10pt;
+            padding: 2px;
+        }
+        /* Form Labels (e.g., Name:, Sector:) - Using custom property or specific names */
+        QLabel[formLabel="true"], #label_name, #label_sector, #label_contact, #label_email, #label_date, #label_consultant {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #3A5DAE;
+            text-decoration: underline;
+            padding: 2px;
+            qproperty-alignment: AlignRight;
+        }
+        /* Main Title ("Client Management System") */
+        #label { /* Specific to ui->label in frame_5 */
+            font-size: 18pt;
+            font-weight: bold;
+            color: #3A5DAE;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            qproperty-alignment: AlignCenter;
+        }
+        /* Frames for distinguishing areas */
+        QFrame#header {
+            border: 2px solid #3A5DAE;
+            border-radius: 5px;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+        }
+        QFrame#sideMenu {
+            border: 2px solid #3A5DAE;
+            border-radius: 5px;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+            background-color: #E6ECF5; /* Slightly darker blueish background for contrast */
+        }
+        QFrame#frame_2, QFrame#frame_4 {
+            border: 1px solid #D3DCE6;
+            border-radius: 5px;
+            box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.1);
+        }
+    )";
+    qApp->setStyleSheet(styleSheet);
 }
 
-void MainWindow::applyLightTheme() {
-    qApp->setPalette(QApplication::style()->standardPalette());
-    qApp->setStyleSheet("");
+void MainWindow::applyDarkTheme() {
+    // Lighter orange to soft dark gray gradient
+    QString styleSheet = R"(
+        QWidget {
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                        stop:0 #F28C6F, stop:1 #5C5C5C);
+            color: #F0F0F0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        /* Buttons with rounded corners and subtle shadow */
+        QPushButton {
+            background-color: #F28C6F;
+            color: white;
+            border: 1px solid #D96C53;
+            border-radius: 5px;
+            padding: 6px;
+            font-weight: bold;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        QPushButton:hover {
+            background-color: #F5A38A;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+        }
+        QPushButton:pressed {
+            background-color: #D96C53;
+        }
+        /* Input fields with smooth borders */
+        QLineEdit, QComboBox, QDateTimeEdit {
+            background-color: #6A6A6A;
+            border: 1px solid #F28C6F;
+            border-radius: 4px;
+            padding: 4px;
+            color: #F0F0F0;
+        }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus {
+            border: 2px solid #F28C6F;
+        }
+        /* Table view styling */
+        QTableView {
+            background-color: #6A6A6A;
+            border: 1px solid #4A4A4A;
+            border-radius: 4px;
+            selection-background-color: #F28C6F;
+            selection-color: #F0F0F0;
+        }
+        QHeaderView::section {
+            background-color: #F28C6F;
+            color: white;
+            padding: 5px;
+            border: none;
+            border-radius: 2px;
+        }
+        /* Calendar styling */
+        QCalendarWidget {
+            background-color: #6A6A6A;
+            border: 1px solid #F28C6F;
+            border-radius: 4px;
+        }
+        QCalendarWidget QToolButton {
+            background-color: #F28C6F;
+            color: white;
+            border-radius: 3px;
+        }
+        /* Tooltip */
+        QToolTip {
+            color: #F0F0F0;
+            background-color: #F28C6F;
+            border: 1px solid #D96C53;
+            border-radius: 3px;
+        }
+        /* Tab widget */
+        QTabWidget::pane {
+            border: 1px solid #F28C6F;
+            border-radius: 4px;
+        }
+        QTabBar::tab {
+            background-color: #7A7A7A;
+            color: #F0F0F0;
+            padding: 6px;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+        QTabBar::tab:selected {
+            background-color: #F28C6F;
+            color: white;
+        }
+        /* General Label Styling (all labels) */
+        QLabel {
+            font-size: 10pt;
+            padding: 2px;
+        }
+        /* Form Labels (e.g., Name:, Sector:) - Using custom property or specific names */
+        QLabel[formLabel="true"], #label_name, #label_sector, #label_contact, #label_email, #label_date, #label_consultant {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #F28C6F;
+            text-decoration: underline;
+            padding: 2px;
+            qproperty-alignment: AlignRight;
+        }
+        /* Main Title ("Client Management System") */
+        #label { /* Specific to ui->label in frame_5 */
+            font-size: 18pt;
+            font-weight: bold;
+            color: #F28C6F;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            qproperty-alignment: AlignCenter;
+        }
+        /* Frames for distinguishing areas */
+        QFrame#header {
+            border: 2px solid #F28C6F;
+            border-radius: 5px;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        QFrame#sideMenu {
+            border: 2px solid #F28C6F;
+            border-radius: 5px;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+            background-color: #7A7A7A; /* Slightly lighter gray for contrast */
+        }
+        QFrame#frame_2, QFrame#frame_4 {
+            border: 1px solid #4A4A4A;
+            border-radius: 5px;
+            box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
+        }
+    )";
+    qApp->setStyleSheet(styleSheet);
 }
 
 void MainWindow::on_resetSearchButton_clicked()
