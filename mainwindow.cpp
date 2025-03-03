@@ -24,11 +24,15 @@
 #include <QTextCharFormat>
 #include <QHoverEvent>
 #include <QToolTip>
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include "emailsender.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , isDarkTheme(true)
+    , emailSender(new EmailSender(this))
 {
     ui->setupUi(this);
 
@@ -77,6 +81,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->resetSearchButton, &QPushButton::clicked, this, &MainWindow::on_resetSearchButton_clicked);
     connect(ui->tableView->horizontalHeader(), &QHeaderView::sectionClicked, this, &MainWindow::tableViewHeaderClicked);
 
+    connect(ui->pushButton_5, &QPushButton::clicked, this, &MainWindow::sendConsultationReminders);
+
     // Connect dynamic search signals
     connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_searchInput_textChanged);
     connect(ui->searchCriteriaComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -91,6 +97,8 @@ MainWindow::MainWindow(QWidget *parent)
     for (int i = 0; i < model->columnCount(); ++i) {
         ui->tableView->showColumn(i);
     }
+
+    checkAndSendReminders();
 }
 
 MainWindow::~MainWindow()
@@ -688,4 +696,44 @@ void MainWindow::performSearch()
         ui->tableView->showColumn(i);
     }
     ui->statusBar->showMessage(QString("Found %1 client(s)").arg(model->rowCount()));
+}
+
+void MainWindow::sendConsultationReminders()
+{
+    checkAndSendReminders();
+}
+
+void MainWindow::checkAndSendReminders()
+{
+    // Define the reminder window (e.g., next 24 hours)
+    QDateTime now = QDateTime::currentDateTime();
+    QDateTime reminderEnd = now.addSecs(24 * 60 * 60); // 24 hours from now
+
+    QSqlQueryModel *model = Etmp.getUpcomingConsultations(now, reminderEnd);
+    int rowCount = model->rowCount();
+
+    for (int row = 0; row < rowCount; ++row) {
+        QString name = model->data(model->index(row, 0)).toString();
+        QString email = model->data(model->index(row, 3)).toString();
+        QDateTime consultationDate = model->data(model->index(row, 4)).toDateTime();
+
+        if (!email.isEmpty()) {
+            QString subject = "Consultation Reminder";
+            QString body = QString("Dear %1,\n\nThis is a reminder for your consultation scheduled on %2.\n\nBest regards,\nClient Management System")
+                               .arg(name)
+                               .arg(consultationDate.toString("yyyy-MM-dd HH:mm"));
+
+            if (emailSender->sendEmail(email, subject, body)) {
+                qDebug() << "Reminder sent to:" << email;
+                ui->statusBar->showMessage("Reminder sent to " + email);
+            } else {
+                qDebug() << "Failed to send reminder to:" << email;
+                ui->statusBar->showMessage("Failed to send reminder to " + email);
+            }
+        }
+    }
+
+    if (rowCount == 0) {
+        ui->statusBar->showMessage("No upcoming consultations found.");
+    }
 }

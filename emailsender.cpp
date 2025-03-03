@@ -10,7 +10,9 @@ EmailSender::EmailSender(QObject *parent) : QObject(parent)
 bool EmailSender::sendEmail(const QString &to, const QString &subject, const QString &body)
 {
     QSslSocket socket;
-    socket.setProtocol(QSsl::SslV3); // Use SSL for Gmail
+    // Remove setProtocol or use a modern TLS version
+    // socket.setProtocol(QSsl::TlsV1_2); // Optional: Explicitly use TLS 1.2
+    // By default, QSslSocket will negotiate the best available protocol (TLS)
 
     // Connect to SMTP server
     if (!connectToServer(socket)) {

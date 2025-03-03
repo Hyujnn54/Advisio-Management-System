@@ -77,8 +77,7 @@ void Client::setConsultant(int consultant) {
 bool Client::ajouter() {
     QSqlQuery query;
     query.prepare("INSERT INTO Clients (CLIENT_ID, NAME, SECTOR, CONTACT_INFO, EMAIL, CONSULTATION_DATE, CONSULTANT) "
-                  "VALUES (:clientId, :name, :sector, :contactInfo, :email, TO_DATE(:consultationDateTime, 'YYYY-MM-DD HH24:MI:SS'), :consultant)");
-    query.bindValue(":clientId", clientId);
+                  "VALUES (clients_seq.NEXTVAL, :name, :sector, :contactInfo, :email, TO_DATE(:consultationDateTime, 'YYYY-MM-DD HH24:MI:SS'), :consultant)");
     query.bindValue(":name", name);
     query.bindValue(":sector", sector);
     query.bindValue(":contactInfo", contactInfo);

@@ -4,6 +4,7 @@
 #include "qcalendarwidget.h"
 #include "qdatetimeedit.h"
 #include "updateclientdialog.h"
+#include "emailsender.h"
 #include <QPrinter>
 #include <QPdfWriter>
 #include <QPainter>
@@ -38,6 +39,7 @@ private slots:
     void updateCalendarConsultations();
     bool isValidDateTime(const QDateTime &dateTime);
     void on_exportPdfButton_clicked();
+    void sendConsultationReminders();
 
 private:
     Ui::MainWindow *ui;
@@ -58,6 +60,8 @@ private:
     void highlightDatesWithConsultations();
     void updateSelectedDateInfo(const QDate &date);
     void performSearch(); // New helper method for dynamic search
+    EmailSender *emailSender; // New member
+    void checkAndSendReminders();
 };
 
 class CalendarHoverItem : public QObject
