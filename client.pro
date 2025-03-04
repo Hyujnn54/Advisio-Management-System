@@ -9,7 +9,6 @@ CONFIG += c++17
 message("C++ flags: $$QMAKE_CXXFLAGS")
 
 SOURCES += \
-    calendarhoveritem.cpp \
     client.cpp \
     connection.cpp \
     emailsender.cpp \
@@ -18,7 +17,6 @@ SOURCES += \
     updateclientdialog.cpp
 
 HEADERS += \
-    calendarhoveritem.h \
     client.h \
     connection.h \
     emailsender.h \
