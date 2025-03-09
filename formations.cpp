@@ -6,27 +6,23 @@
 #include <QSqlError>
 #include <QDebug>
 #include <QVariant>
+
 // Default constructor
 formations::formations()
-    : formation(""),           // Empty string for formation
-    description(""),          // Empty string for description
-    trainer(""),              // Empty string for trainer
-    datef(QDate::currentDate()), // Current date as default
-    time(0),                 // Empty string for time
-    prix(0)                  // Empty string for price
+    : idfor(0),
+    formation(""),
+    description(""),
+    trainer(""),
+    datef(QDate::currentDate()),
+    time(0),
+    prix(0.0) // Initialize as double
 {
 }
 
 // Parameterized constructor
-formations::formations(
-    // Added id parameter
-     QString& formation,
-     QString& description,
-     QString& trainer,
-     QDate& datef,
-     int& time,
-     int& prix)
-    : formation(formation),                  // Initialize id with provided value
+formations::formations(int idfor, QString& formation, QString& description, QString& trainer, QDate& datef, int& time, double& prix)
+    : idfor(idfor),
+    formation(formation),
     description(description),
     trainer(trainer),
     datef(datef),
@@ -60,11 +56,40 @@ int formations::getTime() const {
     return time;
 }
 
-int formations::getPrix() const {
+double formations::getPrix() const { // Change return type to double
     return prix;
 }
-bool formations::ajoutforma(){
 
+// Setters
+void formations::setIdfor(int idfor) {
+    this->idfor = idfor;
+}
+
+void formations::setFormation(const QString& formation) {
+    this->formation = formation;
+}
+
+void formations::setDescription(const QString& description) {
+    this->description = description;
+}
+
+void formations::setTrainer(const QString& trainer) {
+    this->trainer = trainer;
+}
+
+void formations::setDatef(const QDate& datef) {
+    this->datef = datef;
+}
+
+void formations::setTime(int time) {
+    this->time = time;
+}
+
+void formations::setPrix(double prix) { // Change parameter type to double
+    this->prix = prix;
+}
+
+bool formations::ajoutforma() {
     QSqlQuery query;
     query.prepare("INSERT INTO formations (formation, description, trainer, datef, time, prix) "
                   "VALUES (:formation, :description, :trainer, :datef, :time, :prix)");
@@ -74,29 +99,35 @@ bool formations::ajoutforma(){
     query.bindValue(":trainer", trainer);
     query.bindValue(":datef", datef);
     query.bindValue(":time", time);
-    query.bindValue(":prix", prix);
+    query.bindValue(":prix", prix); // Bind as double
 
-
-    return query.exec();
+    if (!query.exec()) {
+        qDebug() << "SQL Error:" << query.lastError().text();
+        return false;
+    }
+    return true;
 }
+
 QSqlQueryModel* formations::afficher() {
     QSqlQueryModel* model = new QSqlQueryModel();
 
-    // Make sure database is open
-    if (!QSqlDatabase::database().isOpen()) {
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) {
         qDebug() << "Database connection is not open when trying to display formations!";
-        model->setQuery(QString()); // Empty query
+        model->setQuery(QString());
         return model;
     }
 
-    model->setQuery("SELECT * FROM formations");
+    model->setQuery("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM formations");
 
     if (model->lastError().isValid()) {
         qDebug() << "SQL Error when displaying formations:" << model->lastError().text();
+        model->setQuery(QString());
     }
 
     return model;
 }
+
 bool formations::deleteFormation(int idfor) {
     QSqlQuery query;
     query.prepare("DELETE FROM FORMATIONS WHERE IDFORM = :id");
@@ -116,7 +147,7 @@ bool formations::deleteFormation(int idfor) {
 }
 
 bool formations::updateFormation(int idfor, const QString& newFormation, const QString& newDescription,
-                                 const QString& newTrainer, const QDate& newDatef, int newTime, int newPrix) {
+                                 const QString& newTrainer, const QDate& newDatef, int newTime, double newPrix) {
     QSqlQuery query;
     query.prepare("UPDATE formations SET formation = :formation, description = :description, "
                   "trainer = :trainer, datef = :datef, time = :time, prix = :prix "
@@ -127,7 +158,7 @@ bool formations::updateFormation(int idfor, const QString& newFormation, const Q
     query.bindValue(":trainer", newTrainer);
     query.bindValue(":datef", newDatef);
     query.bindValue(":time", newTime);
-    query.bindValue(":prix", newPrix);
+    query.bindValue(":prix", newPrix); // Bind as double
     query.bindValue(":id", idfor);
 
     if (!query.exec()) {
@@ -142,20 +173,20 @@ bool formations::updateFormation(int idfor, const QString& newFormation, const Q
 
     return true;
 }
+
 bool formations::exists(int idfor) {
     QSqlQuery query;
-    query.prepare("SELECT COUNT(*) FROM formations WHERE idform = :idform");  // Use 'idform'
+    query.prepare("SELECT COUNT(*) FROM formations WHERE idform = :idform");
     query.bindValue(":idform", idfor);
 
     if (query.exec()) {
         if (query.next()) {
             int count = query.value(0).toInt();
-            qDebug() << "ID check for" << idfor << ": count =" << count; // Debug info
-            return count > 0;  // Return true if ID exists
+            qDebug() << "ID check for" << idfor << ": count =" << count;
+            return count > 0;
         }
     } else {
-        qDebug() << "Query execution failed:" << query.lastError().text(); // Debug error
+        qDebug() << "Query execution failed:" << query.lastError().text();
     }
     return false;
 }
-

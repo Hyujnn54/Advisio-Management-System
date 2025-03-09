@@ -30,12 +30,14 @@ SOURCES += \
         connection.cpp \
         formations.cpp \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+        updatetrainingdialog.cpp
 
 HEADERS += \
         connection.h \
         formations.h \
-        mainwindow.h
+        mainwindow.h \
+        updatetrainingdialog.h
 
 FORMS += \
         mainwindow.ui

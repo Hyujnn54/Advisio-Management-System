@@ -9,23 +9,27 @@
 #ifndef UI_MAINWINDOW_H
 #define UI_MAINWINDOW_H
 
-#include <QtCore/QLocale>
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDateEdit>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QFrame>
+#include <QtWidgets/QGridLayout>
+#include <QtWidgets/QGroupBox>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
-#include <QtWidgets/QListWidget>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStatusBar>
-#include <QtWidgets/QTableWidget>
-#include <QtWidgets/QTextEdit>
+#include <QtWidgets/QTabWidget>
+#include <QtWidgets/QTableView>
+#include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -34,48 +38,57 @@ class Ui_MainWindow
 {
 public:
     QWidget *centralwidget;
-    QLineEdit *txtTitle;
-    QPushButton *btnAdd;
-    QLabel *label_2;
-    QLineEdit *txtTrainer;
-    QLabel *label_5;
-    QLineEdit *lineEdit;
-    QFrame *frame;
-    QPushButton *sidebarButton;
-    QPushButton *sidebarButton_2;
-    QPushButton *sidebarButton_3;
-    QPushButton *sidebarButton_4;
-    QPushButton *sidebarButton_5;
+    QFrame *header;
+    QHBoxLayout *horizontalLayout_2;
     QFrame *frame_3;
-    QLabel *label_11;
-    QLabel *label_12;
-    QPushButton *updateButton;
+    QHBoxLayout *horizontalLayout_3;
+    QPushButton *menuButton;
+    QFrame *frame_5;
+    QVBoxLayout *verticalLayout_4;
     QLabel *label;
-    QLabel *label_8;
-    QDoubleSpinBox *spinCost;
-    QPushButton *exportPdfButton;
-    QLabel *label_9;
-    QTextEdit *txtDescription;
-    QLabel *label_4;
-    QSpinBox *spinDuration;
-    QLabel *label_7;
-    QLabel *label_6;
-    QPushButton *deletef;
-    QListWidget *listWidget;
-    QTableWidget *tabtr;
-    QLineEdit *format;
-    QPushButton *add;
-    QLabel *label_3;
-    QLineEdit *tr;
-    QLabel *label_10;
-    QDoubleSpinBox *prixb;
-    QTextEdit *des;
-    QLabel *label_13;
-    QSpinBox *timeb;
-    QLabel *label_14;
-    QLabel *label_15;
-    QLabel *label_16;
+    QFrame *frame_2;
+    QHBoxLayout *horizontalLayout;
+    QFrame *sideMenu;
+    QVBoxLayout *verticalLayout_2;
+    QFrame *frame_6;
+    QVBoxLayout *verticalLayout_3;
+    QPushButton *pushButton;
+    QPushButton *pushButton_2;
+    QPushButton *pushButton_3;
+    QPushButton *pushButton_4;
+    QPushButton *pushButton_5;
+    QPushButton *themeButton;
+    QFrame *frame_4;
+    QVBoxLayout *verticalLayout_5;
+    QTabWidget *tabWidget;
+    QWidget *ClientForm;
+    QGridLayout *gridLayout_2;
+    QSpacerItem *horizontalSpacer;
+    QLabel *label_email;
+    QLabel *label_contact;
+    QLabel *label_date;
+    QLabel *label_name;
+    QLabel *label_sector;
+    QLabel *label_consultant;
     QDateEdit *date;
+    QSpinBox *timeb;
+    QLineEdit *tr;
+    QLineEdit *des;
+    QLineEdit *format;
+    QDoubleSpinBox *prixb;
+    QPushButton *add;
+    QWidget *listClient;
+    QVBoxLayout *verticalLayout_6;
+    QGroupBox *searchGroupBox;
+    QHBoxLayout *searchLayout;
+    QComboBox *searchCriteriaComboBox;
+    QLineEdit *searchInput;
+    QPushButton *resetSearchButton;
+    QTableView *tabtr;
+    QHBoxLayout *horizontalLayout_4;
+    QPushButton *deletef;
+    QPushButton *updateButton;
+    QPushButton *exportPdfButton;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -83,439 +96,311 @@ public:
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName("MainWindow");
-        MainWindow->resize(1200, 798);
-        MainWindow->setStyleSheet(QString::fromUtf8("QWidget {\n"
-"    background: qlineargradient(\n"
-"        spread: pad,\n"
-"        x1: 0, y1: 0,\n"
-"        x2: 0, y2: 1,\n"
-"        stop: 0 #87CEEB, /* Sky Blue */\n"
-"        stop: 1 #FFFFFF  /* White */\n"
-"    );\n"
-"}\n"
-""));
+        MainWindow->resize(1100, 705);
+        MainWindow->setStyleSheet(QString::fromUtf8(""));
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
-        txtTitle = new QLineEdit(centralwidget);
-        txtTitle->setObjectName("txtTitle");
-        txtTitle->setGeometry(QRect(220, 150, 121, 41));
-        txtTitle->setStyleSheet(QString::fromUtf8("width: 100%;\n"
-"color: rgb(0, 0, 0);\n"
-"    padding: 10px;\n"
-"    margin: 8px 0;\n"
-"    border: 1px solid #ddd;\n"
-"    border-radius: 5px;\n"
-"    font-size: 16px;\n"
-"    background: #f9f9f9;"));
-        btnAdd = new QPushButton(centralwidget);
-        btnAdd->setObjectName("btnAdd");
-        btnAdd->setGeometry(QRect(450, 510, 111, 31));
-        btnAdd->setStyleSheet(QString::fromUtf8("background-color: #007bff;\n"
-"    color: #ffffff;\n"
-"    border: none;\n"
-"    border-radius: 4px;\n"
-"    padding: 8px 16px;\n"
-"    font-weight: bold;"));
-        label_2 = new QLabel(centralwidget);
-        label_2->setObjectName("label_2");
-        label_2->setGeometry(QRect(220, 140, 71, 16));
-        QFont font;
-        font.setFamilies({QString::fromUtf8("Open Sans")});
-        font.setBold(true);
-        label_2->setFont(font);
-        label_2->setStyleSheet(QString::fromUtf8("font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;\n"
-"background-color: transparent;"));
-        txtTrainer = new QLineEdit(centralwidget);
-        txtTrainer->setObjectName("txtTrainer");
-        txtTrainer->setGeometry(QRect(220, 380, 191, 51));
-        txtTrainer->setStyleSheet(QString::fromUtf8("width: 100%;\n"
-"color: rgb(0, 0, 0);\n"
-"    padding: 10px;\n"
-"    margin: 8px 0;\n"
-"    border: 1px solid #ddd;\n"
-"    border-radius: 5px;\n"
-"    font-size: 16px;\n"
-"    background: #f9f9f9;"));
-        label_5 = new QLabel(centralwidget);
-        label_5->setObjectName("label_5");
-        label_5->setGeometry(QRect(410, 280, 49, 16));
-        label_5->setFont(font);
-        label_5->setStyleSheet(QString::fromUtf8("background-color: transparent;font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;"));
-        lineEdit = new QLineEdit(centralwidget);
-        lineEdit->setObjectName("lineEdit");
-        lineEdit->setGeometry(QRect(910, 210, 181, 21));
-        lineEdit->setStyleSheet(QString::fromUtf8("border: 1px solid #cccccc;\n"
-"    border-radius: 6px;\n"
-"    padding: 8px;\n"
-"    font-size: 14px;\n"
-"    background-color: #ffffff;\n"
-"    transition: border-color 0.3s ease, background-color 0.3s ease;\n"
-""));
-        frame = new QFrame(centralwidget);
-        frame->setObjectName("frame");
-        frame->setGeometry(QRect(10, 90, 191, 541));
-        frame->setToolTipDuration(1);
-        frame->setStyleSheet(QString::fromUtf8("QWidget {\n"
-"    background-color: white; /* White background */\n"
-"}"));
-        frame->setLocale(QLocale(QLocale::English, QLocale::World));
-        frame->setFrameShape(QFrame::Shape::StyledPanel);
-        frame->setFrameShadow(QFrame::Shadow::Raised);
-        sidebarButton = new QPushButton(frame);
-        sidebarButton->setObjectName("sidebarButton");
-        sidebarButton->setGeometry(QRect(20, 90, 151, 61));
-        sidebarButton->setStyleSheet(QString::fromUtf8("QPushButton#sidebarButton {\n"
-"    background-color: #0078D7; /* Windows blue */\n"
-"    color: white;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px;\n"
-"    font-weight: bold;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"QPushButton#sidebarButton:hover {\n"
-"    background-color: #0056A3;\n"
-"}"));
-        sidebarButton_2 = new QPushButton(frame);
-        sidebarButton_2->setObjectName("sidebarButton_2");
-        sidebarButton_2->setGeometry(QRect(20, 180, 151, 61));
-        sidebarButton_2->setStyleSheet(QString::fromUtf8("QPushButton#sidebarButton_2 {\n"
-"    background-color: #0078D7; /* Windows blue */\n"
-"    color: white;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px;\n"
-"    font-weight: bold;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"QPushButton#sidebarButton_2:hover {\n"
-"    background-color: #0056A3;\n"
-"}"));
-        sidebarButton_3 = new QPushButton(frame);
-        sidebarButton_3->setObjectName("sidebarButton_3");
-        sidebarButton_3->setGeometry(QRect(20, 270, 151, 61));
-        sidebarButton_3->setStyleSheet(QString::fromUtf8("QPushButton#sidebarButton_3 {\n"
-"    background-color: #0078D7; /* Windows blue */\n"
-"    color: white;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px;\n"
-"    font-weight: bold;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"QPushButton#sidebarButton_3:hover {\n"
-"   background-color: #0056A3;\n"
-"}"));
-        sidebarButton_4 = new QPushButton(frame);
-        sidebarButton_4->setObjectName("sidebarButton_4");
-        sidebarButton_4->setGeometry(QRect(20, 360, 151, 61));
-        sidebarButton_4->setStyleSheet(QString::fromUtf8("QPushButton#sidebarButton_4 {\n"
-"    background-color: #0078D7; /* Windows blue */\n"
-"    color: white;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px;\n"
-"    font-weight: bold;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"QPushButton#sidebarButton_4:hover {\n"
-"    background-color: #0056A3;\n"
-"}"));
-        sidebarButton_5 = new QPushButton(frame);
-        sidebarButton_5->setObjectName("sidebarButton_5");
-        sidebarButton_5->setGeometry(QRect(20, 450, 151, 61));
-        sidebarButton_5->setStyleSheet(QString::fromUtf8("QPushButton#sidebarButton_5 {\n"
-"   background-color: #0078D7; /* Windows blue */\n"
-"    color: white;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px;\n"
-"    font-weight: bold;\n"
-"    border: none;\n"
-"}\n"
-"\n"
-"QPushButton#sidebarButton_5:hover {\n"
-"    background-color: #0056A3;\n"
-"}"));
-        frame_3 = new QFrame(centralwidget);
+        header = new QFrame(centralwidget);
+        header->setObjectName("header");
+        header->setGeometry(QRect(0, 0, 1071, 75));
+        QSizePolicy sizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(header->sizePolicy().hasHeightForWidth());
+        header->setSizePolicy(sizePolicy);
+        header->setMinimumSize(QSize(0, 75));
+        header->setMaximumSize(QSize(16777215, 75));
+        header->setFrameShape(QFrame::Shape::StyledPanel);
+        header->setFrameShadow(QFrame::Shadow::Raised);
+        horizontalLayout_2 = new QHBoxLayout(header);
+        horizontalLayout_2->setSpacing(0);
+        horizontalLayout_2->setObjectName("horizontalLayout_2");
+        horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
+        frame_3 = new QFrame(header);
         frame_3->setObjectName("frame_3");
-        frame_3->setGeometry(QRect(10, 10, 191, 161));
-        frame_3->setStyleSheet(QString::fromUtf8("QWidgett {\n"
-"    background-color: #0078D7; /* Solid Blue */\n"
-"    border-bottom: 2px solid white; /* White separator */\n"
-"}"));
+        frame_3->setMinimumSize(QSize(50, 0));
+        frame_3->setMaximumSize(QSize(151, 16777215));
+        frame_3->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);"));
         frame_3->setFrameShape(QFrame::Shape::StyledPanel);
         frame_3->setFrameShadow(QFrame::Shadow::Raised);
-        label_11 = new QLabel(frame_3);
-        label_11->setObjectName("label_11");
-        label_11->setGeometry(QRect(30, 0, 161, 171));
-        label_11->setStyleSheet(QString::fromUtf8("background-color: transparent\n"
-";"));
-        label_11->setPixmap(QPixmap(QString::fromUtf8("C:/Users/Desktop/LLLLL.png")));
-        label_11->setScaledContents(true);
-        label_12 = new QLabel(frame_3);
-        label_12->setObjectName("label_12");
-        label_12->setGeometry(QRect(10, 10, 161, 151));
-        label_12->setStyleSheet(QString::fromUtf8("background-color: transparent;"));
-        label_12->setPixmap(QPixmap(QString::fromUtf8("LLLLL.png")));
-        label_12->setScaledContents(true);
-        updateButton = new QPushButton(centralwidget);
-        updateButton->setObjectName("updateButton");
-        updateButton->setGeometry(QRect(1040, 440, 71, 31));
-        updateButton->setStyleSheet(QString::fromUtf8("background-color: #007bff;\n"
-"    color: #ffffff;\n"
-"    border: none;\n"
-"    border-radius: 4px;\n"
-"    padding: 8px 16px;\n"
-"    font-weight: bold;"));
-        label = new QLabel(centralwidget);
+        horizontalLayout_3 = new QHBoxLayout(frame_3);
+        horizontalLayout_3->setSpacing(0);
+        horizontalLayout_3->setObjectName("horizontalLayout_3");
+        horizontalLayout_3->setContentsMargins(0, 0, 0, 0);
+        menuButton = new QPushButton(frame_3);
+        menuButton->setObjectName("menuButton");
+        QSizePolicy sizePolicy1(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Fixed);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(menuButton->sizePolicy().hasHeightForWidth());
+        menuButton->setSizePolicy(sizePolicy1);
+        menuButton->setMinimumSize(QSize(0, 30));
+        menuButton->setMaximumSize(QSize(16777215, 30));
+        menuButton->setIconSize(QSize(24, 24));
+
+        horizontalLayout_3->addWidget(menuButton);
+
+
+        horizontalLayout_2->addWidget(frame_3);
+
+        frame_5 = new QFrame(header);
+        frame_5->setObjectName("frame_5");
+        frame_5->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);"));
+        frame_5->setFrameShape(QFrame::Shape::StyledPanel);
+        frame_5->setFrameShadow(QFrame::Shadow::Raised);
+        verticalLayout_4 = new QVBoxLayout(frame_5);
+        verticalLayout_4->setObjectName("verticalLayout_4");
+        label = new QLabel(frame_5);
         label->setObjectName("label");
-        label->setGeometry(QRect(400, 10, 411, 51));
-        label->setStyleSheet(QString::fromUtf8("background-color: transparent;font-size: 22px;\n"
+        QFont font;
+        font.setPointSize(15);
+        font.setBold(true);
+        label->setFont(font);
+        label->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        verticalLayout_4->addWidget(label);
+
+
+        horizontalLayout_2->addWidget(frame_5);
+
+        frame_2 = new QFrame(centralwidget);
+        frame_2->setObjectName("frame_2");
+        frame_2->setGeometry(QRect(0, 80, 1071, 551));
+        frame_2->setFrameShape(QFrame::Shape::StyledPanel);
+        frame_2->setFrameShadow(QFrame::Shadow::Raised);
+        horizontalLayout = new QHBoxLayout(frame_2);
+        horizontalLayout->setSpacing(0);
+        horizontalLayout->setObjectName("horizontalLayout");
+        horizontalLayout->setContentsMargins(0, 0, 0, 0);
+        sideMenu = new QFrame(frame_2);
+        sideMenu->setObjectName("sideMenu");
+        sideMenu->setMinimumSize(QSize(150, 0));
+        sideMenu->setMaximumSize(QSize(150, 16777215));
+        sideMenu->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
+"border-color: rgb(0, 0, 0);"));
+        sideMenu->setFrameShape(QFrame::Shape::StyledPanel);
+        sideMenu->setFrameShadow(QFrame::Shadow::Raised);
+        verticalLayout_2 = new QVBoxLayout(sideMenu);
+        verticalLayout_2->setSpacing(0);
+        verticalLayout_2->setObjectName("verticalLayout_2");
+        verticalLayout_2->setContentsMargins(0, 0, 0, 0);
+        frame_6 = new QFrame(sideMenu);
+        frame_6->setObjectName("frame_6");
+        frame_6->setMinimumSize(QSize(125, 600));
+        frame_6->setMaximumSize(QSize(150, 16777215));
+        frame_6->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
+"border-color: rgb(0, 0, 0);"));
+        frame_6->setFrameShape(QFrame::Shape::StyledPanel);
+        frame_6->setFrameShadow(QFrame::Shadow::Raised);
+        verticalLayout_3 = new QVBoxLayout(frame_6);
+        verticalLayout_3->setSpacing(0);
+        verticalLayout_3->setObjectName("verticalLayout_3");
+        verticalLayout_3->setContentsMargins(0, 0, 0, 0);
+        pushButton = new QPushButton(frame_6);
+        pushButton->setObjectName("pushButton");
+        pushButton->setStyleSheet(QString::fromUtf8("#label {\n"
+"    color: white;\n"
+"    padding: 5px;\n"
+"    font-size: 15pt;\n"
 "    font-weight: bold;\n"
-"    color: #003f7f; /* Navy blue */\n"
-"    margin-bottom: 15px;"));
-        label_8 = new QLabel(centralwidget);
-        label_8->setObjectName("label_8");
-        label_8->setGeometry(QRect(230, 90, 171, 21));
-        QFont font1;
-        font1.setFamilies({QString::fromUtf8("Open Sans")});
-        font1.setPointSize(13);
-        font1.setWeight(QFont::Black);
-        label_8->setFont(font1);
-        label_8->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
-"background-color: transparent;"));
-        spinCost = new QDoubleSpinBox(centralwidget);
-        spinCost->setObjectName("spinCost");
-        spinCost->setGeometry(QRect(420, 390, 61, 31));
-        spinCost->setStyleSheet(QString::fromUtf8("display: flex;\n"
-"color: rgb(0, 0, 0);\n"
-"    gap: 10px;\n"
-"background-color: transparent;"));
-        exportPdfButton = new QPushButton(centralwidget);
-        exportPdfButton->setObjectName("exportPdfButton");
-        exportPdfButton->setGeometry(QRect(830, 440, 111, 31));
-        exportPdfButton->setStyleSheet(QString::fromUtf8("background-color: #007bff;\n"
-"    color: #ffffff;\n"
-"    border: none;\n"
-"    border-radius: 4px;\n"
-"    padding: 8px 16px;\n"
-"    font-weight: bold;"));
-        label_9 = new QLabel(centralwidget);
-        label_9->setObjectName("label_9");
-        label_9->setGeometry(QRect(870, 210, 41, 21));
-        label_9->setStyleSheet(QString::fromUtf8("    background-color: transparent;\n"
-"    border: 1px solid #aaaaaa;\n"
-"    border-radius: 5px;\n"
-"    padding: 6px 12px;\n"
-"    font-size: 14px;"));
-        label_9->setPixmap(QPixmap(QString::fromUtf8("search.png")));
-        label_9->setScaledContents(true);
-        txtDescription = new QTextEdit(centralwidget);
-        txtDescription->setObjectName("txtDescription");
-        txtDescription->setGeometry(QRect(220, 250, 191, 81));
-        txtDescription->setStyleSheet(QString::fromUtf8("width: 100%;\n"
-"color: rgb(0, 0, 0);\n"
-"    padding: 10px;\n"
-"    margin: 8px 0;\n"
-"    border: 1px solid #ddd;\n"
-"    border-radius: 5px;\n"
-"    font-size: 16px;\n"
-"    background: #f9f9f9;"));
-        label_4 = new QLabel(centralwidget);
-        label_4->setObjectName("label_4");
-        label_4->setGeometry(QRect(220, 370, 61, 16));
-        label_4->setFont(font);
-        label_4->setStyleSheet(QString::fromUtf8("background-color: transparent;font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;"));
-        spinDuration = new QSpinBox(centralwidget);
-        spinDuration->setObjectName("spinDuration");
-        spinDuration->setGeometry(QRect(420, 300, 41, 25));
-        spinDuration->setStyleSheet(QString::fromUtf8("display: flex;\n"
-"color: rgb(0, 0, 0);\n"
-"    gap: 10px;\n"
-"background-color: transparent;"));
-        label_7 = new QLabel(centralwidget);
-        label_7->setObjectName("label_7");
-        label_7->setGeometry(QRect(610, 210, 121, 21));
-        label_7->setFont(font);
-        label_7->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
-"background-color: transparent;"));
-        label_6 = new QLabel(centralwidget);
-        label_6->setObjectName("label_6");
-        label_6->setGeometry(QRect(410, 370, 49, 16));
-        label_6->setFont(font);
-        label_6->setStyleSheet(QString::fromUtf8("background-color: transparent;font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;"));
-        deletef = new QPushButton(centralwidget);
-        deletef->setObjectName("deletef");
-        deletef->setGeometry(QRect(950, 440, 71, 31));
-        deletef->setStyleSheet(QString::fromUtf8("background-color: #007bff;\n"
-"    color: #ffffff;\n"
-"    border: none;\n"
-"    border-radius: 4px;\n"
-"    padding: 8px 16px;\n"
-"    font-weight: bold;"));
-        listWidget = new QListWidget(centralwidget);
-        listWidget->setObjectName("listWidget");
-        listWidget->setGeometry(QRect(210, 120, 371, 451));
-        listWidget->setStyleSheet(QString::fromUtf8("background-color: #fefefe;\n"
-"    border: 1px solid #e0e0e0;\n"
-"    border-radius: 12px;\n"
-"    padding: 20px;\n"
-"    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);"));
-        tabtr = new QTableWidget(centralwidget);
-        if (tabtr->columnCount() < 6)
-            tabtr->setColumnCount(6);
-        QTableWidgetItem *__qtablewidgetitem = new QTableWidgetItem();
-        tabtr->setHorizontalHeaderItem(0, __qtablewidgetitem);
-        QTableWidgetItem *__qtablewidgetitem1 = new QTableWidgetItem();
-        tabtr->setHorizontalHeaderItem(1, __qtablewidgetitem1);
-        QTableWidgetItem *__qtablewidgetitem2 = new QTableWidgetItem();
-        tabtr->setHorizontalHeaderItem(2, __qtablewidgetitem2);
-        QTableWidgetItem *__qtablewidgetitem3 = new QTableWidgetItem();
-        tabtr->setHorizontalHeaderItem(3, __qtablewidgetitem3);
-        QTableWidgetItem *__qtablewidgetitem4 = new QTableWidgetItem();
-        tabtr->setHorizontalHeaderItem(4, __qtablewidgetitem4);
-        QTableWidgetItem *__qtablewidgetitem5 = new QTableWidgetItem();
-        tabtr->setHorizontalHeaderItem(5, __qtablewidgetitem5);
-        tabtr->setObjectName("tabtr");
-        tabtr->setGeometry(QRect(600, 240, 511, 191));
-        QFont font2;
-        font2.setFamilies({QString::fromUtf8("Open Sans")});
-        font2.setBold(true);
-        font2.setItalic(false);
-        tabtr->setFont(font2);
-        tabtr->setStyleSheet(QString::fromUtf8("background-color: #ffffff;\n"
-"color: rgb(0, 0, 0);\n"
-"color: rgb(0, 0, 0);\n"
-"    border: 1px solid #dee2e6;\n"
-"    border-radius: 4px;\n"
-"    gridline-color: #dee2e6;"));
-        format = new QLineEdit(centralwidget);
-        format->setObjectName("format");
-        format->setGeometry(QRect(220, 150, 141, 61));
-        format->setStyleSheet(QString::fromUtf8("width: 100%;\n"
-"color: rgb(0, 0, 0);\n"
-"    padding: 10px;\n"
-"    margin: 8px 0;\n"
-"    border: 1px solid #ddd;\n"
-"    border-radius: 5px;\n"
-"    font-size: 16px;\n"
-"    background: #f9f9f9;"));
-        add = new QPushButton(centralwidget);
-        add->setObjectName("add");
-        add->setGeometry(QRect(450, 530, 111, 31));
-        add->setStyleSheet(QString::fromUtf8("background-color: #007bff;\n"
-"    color: #ffffff;\n"
-"    border: none;\n"
-"    border-radius: 4px;\n"
-"    padding: 8px 16px;\n"
-"    font-weight: bold;"));
-        label_3 = new QLabel(centralwidget);
-        label_3->setObjectName("label_3");
-        label_3->setGeometry(QRect(220, 140, 71, 16));
-        label_3->setFont(font);
-        label_3->setStyleSheet(QString::fromUtf8("font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;\n"
-"background-color: transparent;"));
-        tr = new QLineEdit(centralwidget);
-        tr->setObjectName("tr");
-        tr->setGeometry(QRect(220, 380, 211, 61));
-        tr->setStyleSheet(QString::fromUtf8("width: 100%;\n"
-"color: rgb(0, 0, 0);\n"
-"    padding: 10px;\n"
-"    margin: 8px 0;\n"
-"    border: 1px solid #ddd;\n"
-"    border-radius: 5px;\n"
-"    font-size: 16px;\n"
-"    background: #f9f9f9;"));
-        label_10 = new QLabel(centralwidget);
-        label_10->setObjectName("label_10");
-        label_10->setGeometry(QRect(440, 300, 49, 16));
-        label_10->setFont(font);
-        label_10->setStyleSheet(QString::fromUtf8("background-color: transparent;font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;"));
-        prixb = new QDoubleSpinBox(centralwidget);
-        prixb->setObjectName("prixb");
-        prixb->setGeometry(QRect(440, 390, 61, 31));
-        prixb->setStyleSheet(QString::fromUtf8("display: flex;\n"
-"color: rgb(0, 0, 0);\n"
-"    gap: 10px;\n"
-"background-color: transparent;"));
-        des = new QTextEdit(centralwidget);
-        des->setObjectName("des");
-        des->setGeometry(QRect(220, 250, 221, 111));
-        des->setStyleSheet(QString::fromUtf8("width: 100%;\n"
-"color: rgb(0, 0, 0);\n"
-"    padding: 10px;\n"
-"    margin: 8px 0;\n"
-"    border: 1px solid #ddd;\n"
-"    border-radius: 5px;\n"
-"    font-size: 16px;\n"
-"    background: #f9f9f9;"));
-        label_13 = new QLabel(centralwidget);
-        label_13->setObjectName("label_13");
-        label_13->setGeometry(QRect(220, 370, 61, 16));
-        label_13->setFont(font);
-        label_13->setStyleSheet(QString::fromUtf8("background-color: transparent;font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;"));
-        timeb = new QSpinBox(centralwidget);
-        timeb->setObjectName("timeb");
-        timeb->setGeometry(QRect(450, 320, 41, 25));
-        timeb->setStyleSheet(QString::fromUtf8("display: flex;\n"
-"color: rgb(0, 0, 0);\n"
-"color: rgb(0, 0, 0);\n"
-"    gap: 10px;\n"
-"background-color: transparent;"));
-        label_14 = new QLabel(centralwidget);
-        label_14->setObjectName("label_14");
-        label_14->setGeometry(QRect(440, 370, 49, 16));
-        label_14->setFont(font);
-        label_14->setStyleSheet(QString::fromUtf8("background-color: transparent;font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;"));
-        label_15 = new QLabel(centralwidget);
-        label_15->setObjectName("label_15");
-        label_15->setGeometry(QRect(220, 230, 101, 21));
-        label_15->setFont(font);
-        label_15->setStyleSheet(QString::fromUtf8("font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;background-color: transparent;"));
-        label_16 = new QLabel(centralwidget);
-        label_16->setObjectName("label_16");
-        label_16->setGeometry(QRect(220, 460, 61, 16));
-        label_16->setFont(font);
-        label_16->setStyleSheet(QString::fromUtf8("background-color: transparent;font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    color: #555555;\n"
-"    padding-bottom: 5px;"));
-        date = new QDateEdit(centralwidget);
+"    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);\n"
+"}"));
+
+        verticalLayout_3->addWidget(pushButton);
+
+        pushButton_2 = new QPushButton(frame_6);
+        pushButton_2->setObjectName("pushButton_2");
+
+        verticalLayout_3->addWidget(pushButton_2);
+
+        pushButton_3 = new QPushButton(frame_6);
+        pushButton_3->setObjectName("pushButton_3");
+
+        verticalLayout_3->addWidget(pushButton_3);
+
+        pushButton_4 = new QPushButton(frame_6);
+        pushButton_4->setObjectName("pushButton_4");
+
+        verticalLayout_3->addWidget(pushButton_4);
+
+        pushButton_5 = new QPushButton(frame_6);
+        pushButton_5->setObjectName("pushButton_5");
+
+        verticalLayout_3->addWidget(pushButton_5);
+
+        themeButton = new QPushButton(frame_6);
+        themeButton->setObjectName("themeButton");
+
+        verticalLayout_3->addWidget(themeButton);
+
+
+        verticalLayout_2->addWidget(frame_6, 0, Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter);
+
+
+        horizontalLayout->addWidget(sideMenu);
+
+        frame_4 = new QFrame(frame_2);
+        frame_4->setObjectName("frame_4");
+        QSizePolicy sizePolicy2(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
+        sizePolicy2.setHorizontalStretch(0);
+        sizePolicy2.setVerticalStretch(0);
+        sizePolicy2.setHeightForWidth(frame_4->sizePolicy().hasHeightForWidth());
+        frame_4->setSizePolicy(sizePolicy2);
+        frame_4->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
+"border-color: rgb(0, 0, 0);\n"
+""));
+        frame_4->setFrameShape(QFrame::Shape::StyledPanel);
+        frame_4->setFrameShadow(QFrame::Shadow::Raised);
+        verticalLayout_5 = new QVBoxLayout(frame_4);
+        verticalLayout_5->setObjectName("verticalLayout_5");
+        tabWidget = new QTabWidget(frame_4);
+        tabWidget->setObjectName("tabWidget");
+        tabWidget->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
+"border-color: rgb(0, 0, 0);"));
+        ClientForm = new QWidget();
+        ClientForm->setObjectName("ClientForm");
+        ClientForm->setContextMenuPolicy(Qt::ContextMenuPolicy::PreventContextMenu);
+        gridLayout_2 = new QGridLayout(ClientForm);
+        gridLayout_2->setObjectName("gridLayout_2");
+        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        gridLayout_2->addItem(horizontalSpacer, 0, 4, 7, 1);
+
+        label_email = new QLabel(ClientForm);
+        label_email->setObjectName("label_email");
+
+        gridLayout_2->addWidget(label_email, 3, 0, 1, 1);
+
+        label_contact = new QLabel(ClientForm);
+        label_contact->setObjectName("label_contact");
+
+        gridLayout_2->addWidget(label_contact, 2, 0, 1, 1);
+
+        label_date = new QLabel(ClientForm);
+        label_date->setObjectName("label_date");
+
+        gridLayout_2->addWidget(label_date, 4, 0, 1, 1);
+
+        label_name = new QLabel(ClientForm);
+        label_name->setObjectName("label_name");
+
+        gridLayout_2->addWidget(label_name, 0, 0, 1, 1);
+
+        label_sector = new QLabel(ClientForm);
+        label_sector->setObjectName("label_sector");
+
+        gridLayout_2->addWidget(label_sector, 1, 0, 1, 1);
+
+        label_consultant = new QLabel(ClientForm);
+        label_consultant->setObjectName("label_consultant");
+
+        gridLayout_2->addWidget(label_consultant, 5, 0, 1, 1);
+
+        date = new QDateEdit(ClientForm);
         date->setObjectName("date");
-        date->setGeometry(QRect(220, 480, 131, 25));
-        date->setStyleSheet(QString::fromUtf8("background-color: rgb(255, 255, 255);\n"
-"color: rgb(0, 0, 0);"));
+
+        gridLayout_2->addWidget(date, 4, 1, 1, 1);
+
+        timeb = new QSpinBox(ClientForm);
+        timeb->setObjectName("timeb");
+
+        gridLayout_2->addWidget(timeb, 3, 1, 1, 1);
+
+        tr = new QLineEdit(ClientForm);
+        tr->setObjectName("tr");
+
+        gridLayout_2->addWidget(tr, 2, 1, 1, 1);
+
+        des = new QLineEdit(ClientForm);
+        des->setObjectName("des");
+
+        gridLayout_2->addWidget(des, 1, 1, 1, 1);
+
+        format = new QLineEdit(ClientForm);
+        format->setObjectName("format");
+
+        gridLayout_2->addWidget(format, 0, 1, 1, 1);
+
+        prixb = new QDoubleSpinBox(ClientForm);
+        prixb->setObjectName("prixb");
+
+        gridLayout_2->addWidget(prixb, 5, 1, 1, 1);
+
+        add = new QPushButton(ClientForm);
+        add->setObjectName("add");
+
+        gridLayout_2->addWidget(add, 6, 2, 1, 1);
+
+        tabWidget->addTab(ClientForm, QString());
+        listClient = new QWidget();
+        listClient->setObjectName("listClient");
+        verticalLayout_6 = new QVBoxLayout(listClient);
+        verticalLayout_6->setObjectName("verticalLayout_6");
+        searchGroupBox = new QGroupBox(listClient);
+        searchGroupBox->setObjectName("searchGroupBox");
+        searchLayout = new QHBoxLayout(searchGroupBox);
+        searchLayout->setObjectName("searchLayout");
+        searchCriteriaComboBox = new QComboBox(searchGroupBox);
+        searchCriteriaComboBox->addItem(QString());
+        searchCriteriaComboBox->addItem(QString());
+        searchCriteriaComboBox->addItem(QString());
+        searchCriteriaComboBox->addItem(QString());
+        searchCriteriaComboBox->addItem(QString());
+        searchCriteriaComboBox->setObjectName("searchCriteriaComboBox");
+
+        searchLayout->addWidget(searchCriteriaComboBox);
+
+        searchInput = new QLineEdit(searchGroupBox);
+        searchInput->setObjectName("searchInput");
+
+        searchLayout->addWidget(searchInput);
+
+        resetSearchButton = new QPushButton(searchGroupBox);
+        resetSearchButton->setObjectName("resetSearchButton");
+
+        searchLayout->addWidget(resetSearchButton);
+
+
+        verticalLayout_6->addWidget(searchGroupBox);
+
+        tabtr = new QTableView(listClient);
+        tabtr->setObjectName("tabtr");
+        tabtr->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+        tabtr->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
+
+        verticalLayout_6->addWidget(tabtr);
+
+        horizontalLayout_4 = new QHBoxLayout();
+        horizontalLayout_4->setObjectName("horizontalLayout_4");
+        deletef = new QPushButton(listClient);
+        deletef->setObjectName("deletef");
+
+        horizontalLayout_4->addWidget(deletef);
+
+        updateButton = new QPushButton(listClient);
+        updateButton->setObjectName("updateButton");
+
+        horizontalLayout_4->addWidget(updateButton);
+
+        exportPdfButton = new QPushButton(listClient);
+        exportPdfButton->setObjectName("exportPdfButton");
+
+        horizontalLayout_4->addWidget(exportPdfButton);
+
+
+        verticalLayout_6->addLayout(horizontalLayout_4);
+
+        tabWidget->addTab(listClient, QString());
+
+        verticalLayout_5->addWidget(tabWidget);
+
+
+        horizontalLayout->addWidget(frame_4);
+
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1200, 21));
+        menubar->setGeometry(QRect(0, 0, 1100, 21));
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName("statusbar");
@@ -523,70 +408,44 @@ public:
 
         retranslateUi(MainWindow);
 
+        tabWidget->setCurrentIndex(0);
+
+
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
 
     void retranslateUi(QMainWindow *MainWindow)
     {
         MainWindow->setWindowTitle(QCoreApplication::translate("MainWindow", "MainWindow", nullptr));
-        txtTitle->setText(QString());
-        btnAdd->setText(QCoreApplication::translate("MainWindow", "Add Training", nullptr));
-        label_2->setText(QCoreApplication::translate("MainWindow", "formation", nullptr));
-        txtTrainer->setText(QString());
-        label_5->setText(QCoreApplication::translate("MainWindow", "time", nullptr));
-        sidebarButton->setText(QCoreApplication::translate("MainWindow", "Employee", nullptr));
-        sidebarButton_2->setText(QCoreApplication::translate("MainWindow", "Client", nullptr));
-        sidebarButton_3->setText(QCoreApplication::translate("MainWindow", "Resource", nullptr));
-        sidebarButton_4->setText(QCoreApplication::translate("MainWindow", "Meeting", nullptr));
-        sidebarButton_5->setText(QCoreApplication::translate("MainWindow", "Training", nullptr));
-        label_11->setText(QString());
-        label_12->setText(QString());
-        updateButton->setText(QCoreApplication::translate("MainWindow", "Modify", nullptr));
-        label->setText(QCoreApplication::translate("MainWindow", "<html><head/><body><p><span style=\" font-size:20pt;\">Training Management System</span></p></body></html>", nullptr));
-        label_8->setText(QCoreApplication::translate("MainWindow", "<html><head/><body><p>Ajouter Formation</p></body></html>", nullptr));
-        exportPdfButton->setText(QCoreApplication::translate("MainWindow", "download PDF", nullptr));
-        label_9->setText(QString());
-        txtDescription->setHtml(QCoreApplication::translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Segoe UI'; font-size:16px; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt;\"><br /></p></body></html>", nullptr));
-        label_4->setText(QCoreApplication::translate("MainWindow", "Trainer", nullptr));
-        label_7->setText(QCoreApplication::translate("MainWindow", "<html><head/><body><p><span style=\" font-size:12pt;\">tableTrainings</span></p></body></html>", nullptr));
-        label_6->setText(QCoreApplication::translate("MainWindow", "Price", nullptr));
+        menuButton->setText(QCoreApplication::translate("MainWindow", "Menu", nullptr));
+        label->setText(QCoreApplication::translate("MainWindow", "TrainingManagement System", nullptr));
+        pushButton->setText(QCoreApplication::translate("MainWindow", "Dashboard", nullptr));
+        pushButton_2->setText(QCoreApplication::translate("MainWindow", "Clients", nullptr));
+        pushButton_3->setText(QCoreApplication::translate("MainWindow", "Reports", nullptr));
+        pushButton_4->setText(QCoreApplication::translate("MainWindow", "Settings", nullptr));
+        pushButton_5->setText(QCoreApplication::translate("MainWindow", "Calendar", nullptr));
+        themeButton->setText(QCoreApplication::translate("MainWindow", "Toggle Theme", nullptr));
+        label_email->setText(QCoreApplication::translate("MainWindow", "time", nullptr));
+        label_contact->setText(QCoreApplication::translate("MainWindow", "trainer", nullptr));
+        label_date->setText(QCoreApplication::translate("MainWindow", " Date:", nullptr));
+        label_name->setText(QCoreApplication::translate("MainWindow", "Training", nullptr));
+        label_sector->setText(QCoreApplication::translate("MainWindow", "description", nullptr));
+        label_consultant->setText(QCoreApplication::translate("MainWindow", "prix", nullptr));
+        add->setText(QCoreApplication::translate("MainWindow", "Add formation", nullptr));
+        tabWidget->setTabText(tabWidget->indexOf(ClientForm), QCoreApplication::translate("MainWindow", "Add Training", nullptr));
+        searchGroupBox->setTitle(QCoreApplication::translate("MainWindow", "Search", nullptr));
+        searchCriteriaComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "formation", nullptr));
+        searchCriteriaComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "trainer", nullptr));
+        searchCriteriaComboBox->setItemText(2, QCoreApplication::translate("MainWindow", "prix", nullptr));
+        searchCriteriaComboBox->setItemText(3, QCoreApplication::translate("MainWindow", "date", nullptr));
+        searchCriteriaComboBox->setItemText(4, QString());
+
+        searchInput->setPlaceholderText(QCoreApplication::translate("MainWindow", "Type to search...", nullptr));
+        resetSearchButton->setText(QCoreApplication::translate("MainWindow", "Reset Search", nullptr));
         deletef->setText(QCoreApplication::translate("MainWindow", "Delete", nullptr));
-        QTableWidgetItem *___qtablewidgetitem = tabtr->horizontalHeaderItem(0);
-        ___qtablewidgetitem->setText(QCoreApplication::translate("MainWindow", "description", nullptr));
-        QTableWidgetItem *___qtablewidgetitem1 = tabtr->horizontalHeaderItem(1);
-        ___qtablewidgetitem1->setText(QCoreApplication::translate("MainWindow", "formation", nullptr));
-        QTableWidgetItem *___qtablewidgetitem2 = tabtr->horizontalHeaderItem(2);
-        ___qtablewidgetitem2->setText(QCoreApplication::translate("MainWindow", "date", nullptr));
-        QTableWidgetItem *___qtablewidgetitem3 = tabtr->horizontalHeaderItem(3);
-        ___qtablewidgetitem3->setText(QCoreApplication::translate("MainWindow", "duration", nullptr));
-        QTableWidgetItem *___qtablewidgetitem4 = tabtr->horizontalHeaderItem(4);
-        ___qtablewidgetitem4->setText(QCoreApplication::translate("MainWindow", "cost", nullptr));
-        QTableWidgetItem *___qtablewidgetitem5 = tabtr->horizontalHeaderItem(5);
-        ___qtablewidgetitem5->setText(QCoreApplication::translate("MainWindow", "trainer", nullptr));
-        format->setText(QString());
-        add->setText(QCoreApplication::translate("MainWindow", "Add Training", nullptr));
-        label_3->setText(QCoreApplication::translate("MainWindow", "formation", nullptr));
-        tr->setText(QString());
-        label_10->setText(QCoreApplication::translate("MainWindow", "time", nullptr));
-        des->setHtml(QCoreApplication::translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Segoe UI'; font-size:16px; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt;\"><br /></p></body></html>", nullptr));
-        label_13->setText(QCoreApplication::translate("MainWindow", "Trainer", nullptr));
-        label_14->setText(QCoreApplication::translate("MainWindow", "Price", nullptr));
-        label_15->setText(QCoreApplication::translate("MainWindow", "description", nullptr));
-        label_16->setText(QCoreApplication::translate("MainWindow", "Date", nullptr));
+        updateButton->setText(QCoreApplication::translate("MainWindow", "Update", nullptr));
+        exportPdfButton->setText(QCoreApplication::translate("MainWindow", "PDF", nullptr));
+        tabWidget->setTabText(tabWidget->indexOf(listClient), QCoreApplication::translate("MainWindow", "Manage Training", nullptr));
     } // retranslateUi
 
 };
