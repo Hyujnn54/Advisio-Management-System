@@ -31,7 +31,7 @@ public:
     QDate getPurchaseDate() const;
     QByteArray getImage()const;
 
-    //void setResourceId(int id);
+    void setResourceId(int id);
     void setName(const QString& name);
     void setType(const QString& type);
     void setBrand(const QString& brand);
@@ -42,6 +42,8 @@ public:
     bool addResource();
     //QSqlQueryModel* loadResource();
     QSqlQueryModel* afficher();
+    bool delet(int resource_id);
+    bool updateResource();
 
 };
 
