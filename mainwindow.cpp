@@ -11,17 +11,13 @@
 #include <QPdfWriter>
 #include <QPainter>
 #include <QFileDialog>
-#include <QStandardItemModel>  // For setting the model
+#include <QStandardItemModel> // For setting the model
 #include <QTableView>
 #include "updatetrainingdialog.h"
 #include <QRegularExpression>
 #include <QDateTime>
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-    , isDarkTheme(false)
-    , tableModel(nullptr)
-    , proxyModel(new QSortFilterProxyModel(this))
+    : QMainWindow(parent), ui(new Ui::MainWindow), isDarkTheme(false), tableModel(nullptr), proxyModel(new QSortFilterProxyModel(this))
 {
     ui->setupUi(this);
     applyLightTheme();
@@ -36,15 +32,15 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->exportButton, &QPushButton::clicked, this, &MainWindow::exportToPdf);
 
     QRegularExpression formationRegex("^[A-Za-z]+$");
-    QRegularExpressionValidator* formationValidator = new QRegularExpressionValidator(formationRegex, this);
+    QRegularExpressionValidator *formationValidator = new QRegularExpressionValidator(formationRegex, this);
     ui->format->setValidator(formationValidator);
 
     QRegularExpression descriptionRegex("^[A-Za-z]+$");
-    QRegularExpressionValidator* descriptionValidator = new QRegularExpressionValidator(descriptionRegex, this);
+    QRegularExpressionValidator *descriptionValidator = new QRegularExpressionValidator(descriptionRegex, this);
     ui->des->setValidator(descriptionValidator);
 
     QRegularExpression trainerRegex("^[A-Za-z]+$");
-    QRegularExpressionValidator* trainerValidator = new QRegularExpressionValidator(trainerRegex, this);
+    QRegularExpressionValidator *trainerValidator = new QRegularExpressionValidator(trainerRegex, this);
     ui->tr->setValidator(trainerValidator);
 
     ui->timeb->setRange(1, 30);
@@ -64,18 +60,21 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::exportToPdf() {
+void MainWindow::exportToPdf()
+{
     refreshTableView();
 
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss");
     QString defaultFileName = QString("Formations_%1.pdf").arg(timestamp);
 
     QString filePath = QFileDialog::getSaveFileName(this, tr("Save PDF"), defaultFileName, tr("PDF Files (*.pdf)"));
-    if (filePath.isEmpty()) {
+    if (filePath.isEmpty())
+    {
         return;
     }
 
-    if (!filePath.endsWith(".pdf", Qt::CaseInsensitive)) {
+    if (!filePath.endsWith(".pdf", Qt::CaseInsensitive))
+    {
         filePath += ".pdf";
     }
 
@@ -98,7 +97,8 @@ void MainWindow::exportToPdf() {
     // Column widths in points, adjusted to fit within pageWidth - 2*margin (595 - 80 = 515)
     QVector<int> columnWidths = {50, 100, 150, 80, 80, 50, 60}; // ID, Formation, Description, Trainer, Date, Time, Price
     int totalWidth = 0;
-    for (int w : columnWidths) totalWidth += w;
+    for (int w : columnWidths)
+        totalWidth += w;
     qDebug() << "Total table width:" << totalWidth << "Available width:" << (pageWidth - 2 * margin);
 
     // Title
@@ -109,7 +109,8 @@ void MainWindow::exportToPdf() {
 
     qDebug() << "Export - Row count:" << (tableModel ? tableModel->rowCount() : 0) << "Columns:" << (tableModel ? tableModel->columnCount() : 0);
 
-    if (!tableModel || tableModel->rowCount() == 0 || tableModel->columnCount() < 7) {
+    if (!tableModel || tableModel->rowCount() == 0 || tableModel->columnCount() < 7)
+    {
         painter.setFont(QFont("Arial", 10));
         painter.drawText(margin, yPos, "No data available or incomplete data to export.");
         painter.end();
@@ -122,7 +123,8 @@ void MainWindow::exportToPdf() {
     QStringList headers = {"ID", "Formation", "Description", "Trainer", "Date", "Time", "Price"};
     int xPos = margin;
     int headerYPos = yPos;
-    for (int i = 0; i < headers.size(); ++i) {
+    for (int i = 0; i < headers.size(); ++i)
+    {
         painter.drawText(xPos, yPos, headers[i]);
         xPos += columnWidths[i];
     }
@@ -135,10 +137,12 @@ void MainWindow::exportToPdf() {
 
     // Draw table data with grid lines
     painter.setFont(QFont("Arial", 10));
-    for (int row = 0; row < tableModel->rowCount(); ++row) {
+    for (int row = 0; row < tableModel->rowCount(); ++row)
+    {
         xPos = margin;
         int rowYPos = yPos;
-        for (int col = 0; col < 7; ++col) {
+        for (int col = 0; col < 7; ++col)
+        {
             QString data = tableModel->index(row, col).data().toString();
             painter.drawText(xPos, yPos, data);
             qDebug() << "Row" << row << "Col" << col << ":" << data;
@@ -151,19 +155,23 @@ void MainWindow::exportToPdf() {
 
         // Draw vertical lines for columns
         xPos = margin;
-        for (int i = 0; i <= 7; ++i) {
+        for (int i = 0; i <= 7; ++i)
+        {
             painter.drawLine(xPos, rowYPos, xPos, yPos);
-            if (i < 7) xPos += columnWidths[i];
+            if (i < 7)
+                xPos += columnWidths[i];
         }
 
         // Check for new page
-        if (yPos > (pageHeight - margin)) {
+        if (yPos > (pageHeight - margin))
+        {
             pdfWriter.newPage();
             yPos = margin;
             painter.setFont(QFont("Arial", 10, QFont::Bold));
             xPos = margin;
             headerYPos = yPos;
-            for (int i = 0; i < headers.size(); ++i) {
+            for (int i = 0; i < headers.size(); ++i)
+            {
                 painter.drawText(xPos, yPos, headers[i]);
                 xPos += columnWidths[i];
             }
@@ -177,7 +185,8 @@ void MainWindow::exportToPdf() {
     painter.end();
     QMessageBox::information(this, "Export", "Formations data exported to PDF successfully at: " + filePath);
 }
-void MainWindow::on_addButtonclicked() {
+void MainWindow::on_addButtonclicked()
+{
     // Get input values
     QString formation = ui->format->text().trimmed();
     QString description = ui->des->text().trimmed();
@@ -186,38 +195,44 @@ void MainWindow::on_addButtonclicked() {
     int time = ui->timeb->value();
     double prix = ui->prixb->value();
 
-
-
     // Check each field one by one
-    if (formation.isEmpty()) {
+    if (formation.isEmpty())
+    {
         QMessageBox::warning(this, "Missing Data", "Please enter a Formation.");
         return;
     }
-    if (formation.length() < 4) {
+    if (formation.length() < 4)
+    {
         QMessageBox::warning(this, "Invalid Data", "Formation must be at least 4 letters long.");
         return;
     }
-    if (description.isEmpty()) {
+    if (description.isEmpty())
+    {
         QMessageBox::warning(this, "Missing Data", "Please enter a Description.");
         return;
     }
-    if (trainer.isEmpty()) {
+    if (trainer.isEmpty())
+    {
         QMessageBox::warning(this, "Missing Data", "Please enter a Trainer.");
         return;
     }
-    if (trainer.length() < 4) {
+    if (trainer.length() < 4)
+    {
         QMessageBox::warning(this, "Invalid Data", "Trainer must be at least 4 letters long.");
         return;
     }
-    if (!datef.isValid()) {
+    if (!datef.isValid())
+    {
         QMessageBox::warning(this, "Missing Data", "Please select a valid Date.");
         return;
     }
-    if (time == 0) {
+    if (time == 0)
+    {
         QMessageBox::warning(this, "Missing Data", "Please enter a valid Time (greater than 0).");
         return;
     }
-    if (prix == 0.0) {
+    if (prix == 0.0)
+    {
         QMessageBox::warning(this, "Missing Data", "Please enter a valid Price (greater than 0).");
         return;
     }
@@ -225,17 +240,22 @@ void MainWindow::on_addButtonclicked() {
     // If all fields are filled and valid, proceed with adding the formation
     formations f(0, formation, description, trainer, datef, time, prix);
 
-    if (f.ajoutforma()) {
+    if (f.ajoutforma())
+    {
         QMessageBox::information(this, "Success", "Formation added successfully!");
         refreshTableView();
-    } else {
+    }
+    else
+    {
         QMessageBox::critical(this, "Error", "Failed to add formation.");
     }
 }
 
-void MainWindow::refreshTableView() {
+void MainWindow::refreshTableView()
+{
     formations f;
-    if (tableModel) {
+    if (tableModel)
+    {
         delete tableModel;
     }
     tableModel = f.afficher();
@@ -246,9 +266,11 @@ void MainWindow::refreshTableView() {
 }
 #include <QInputDialog>
 
-void MainWindow::on_deleteButtonClicked() {
+void MainWindow::on_deleteButtonClicked()
+{
     QItemSelectionModel *selectionModel = ui->tabtr->selectionModel();
-    if (!selectionModel->hasSelection()) {
+    if (!selectionModel->hasSelection())
+    {
         QMessageBox::warning(this, "Erreur", "Veuillez sélectionner une formation à supprimer !");
         return;
     }
@@ -258,15 +280,19 @@ void MainWindow::on_deleteButtonClicked() {
     int idfor = ui->tabtr->model()->index(row, 0).data().toInt();
 
     formations f;
-    if (!f.exists(idfor)) {
+    if (!f.exists(idfor))
+    {
         QMessageBox::warning(this, "Erreur", "Cette formation n'existe pas !");
         return;
     }
 
-    if (formations::deleteFormation(idfor)) {
+    if (formations::deleteFormation(idfor))
+    {
         QMessageBox::information(this, "Succès", "Formation supprimée avec succès !");
         refreshTableView();
-    } else {
+    }
+    else
+    {
         QMessageBox::critical(this, "Erreur", "Échec de la suppression de la formation.");
     }
 }
@@ -274,7 +300,8 @@ void MainWindow::on_deleteButtonClicked() {
 void MainWindow::on_updateButtonClicked()
 {
     QItemSelectionModel *selectionModel = ui->tabtr->selectionModel();
-    if (!selectionModel->hasSelection()) {
+    if (!selectionModel->hasSelection())
+    {
         QMessageBox::warning(this, "Erreur", "Veuillez sélectionner une formation à modifier !");
         return;
     }
@@ -284,7 +311,8 @@ void MainWindow::on_updateButtonClicked()
     int idfor = ui->tabtr->model()->index(row, 0).data().toInt();
 
     formations f;
-    if (!f.exists(idfor)) {
+    if (!f.exists(idfor))
+    {
         QMessageBox::warning(this, "Erreur", "Cette formation n'existe pas !");
         return;
     }
@@ -300,7 +328,8 @@ void MainWindow::on_updateButtonClicked()
                            currentDate, currentTime, currentPrix);
 
     UpdateTrainingDialog dialog(idfor, currentData, this);
-    if (dialog.exec() == QDialog::Accepted) {
+    if (dialog.exec() == QDialog::Accepted)
+    {
         QString newFormation = dialog.getFormation();
         QString newDescription = dialog.getDescription();
         QString newTrainer = dialog.getTrainer();
@@ -308,34 +337,49 @@ void MainWindow::on_updateButtonClicked()
         int newTime = dialog.getTime();
         double newPrix = dialog.getPrix(); // Already a double
 
-        if (f.updateFormation(idfor, newFormation, newDescription, newTrainer, newDate, newTime, newPrix)) {
+        if (f.updateFormation(idfor, newFormation, newDescription, newTrainer, newDate, newTime, newPrix))
+        {
             QMessageBox::information(this, "Succès", "Formation mise à jour avec succès !");
             refreshTableView();
-        } else {
+        }
+        else
+        {
             QMessageBox::critical(this, "Erreur", "Échec de la mise à jour de la formation.");
         }
     }
 }
-{'"omarrrrrrrrrrrrrrrrrrr"'}
-
+{
+    '"omarrrrrrrrrrrrrrrrrrr"'
+}
 
 void MainWindow::on_searchInput_textChanged(const QString &text)
 {
-    if (!tableModel || !proxyModel) return;
+    if (!tableModel || !proxyModel)
+        return;
 
     QString column = ui->searchCriteriaComboBox->currentText();
-    if (column.isEmpty()) return;
+    if (column.isEmpty())
+        return;
 
     int columnIndex = -1;
-    if (column == "formation") {
+    if (column == "formation")
+    {
         columnIndex = 1;
-    } else if (column == "trainer") {
+    }
+    else if (column == "trainer")
+    {
         columnIndex = 3;
-    } else if (column == "prix") {
+    }
+    else if (column == "prix")
+    {
         columnIndex = 6;
-    } else if (column == "date") {
+    }
+    else if (column == "date")
+    {
         columnIndex = 4;
-    } else {
+    }
+    else
+    {
         qDebug() << "Invalid column selected for search:" << column;
         return;
     }
@@ -354,17 +398,22 @@ void MainWindow::on_resetSearchButton_clicked()
     proxyModel->setFilterRegularExpression("");
     ui->tabtr->resizeColumnsToContents();
 }
-void MainWindow::toggleTheme() {
+void MainWindow::toggleTheme()
+{
     isDarkTheme = !isDarkTheme;
-    if (isDarkTheme) {
+    if (isDarkTheme)
+    {
         applyDarkTheme();
-    } else {
+    }
+    else
+    {
         applyLightTheme();
     }
 }
 #include <QSqlError>
 
-void MainWindow::applyLightTheme() {
+void MainWindow::applyLightTheme()
+{
     // Blueish white gradient (unchanged)
     QString styleSheet = R"(
         QWidget {
@@ -493,7 +542,8 @@ void MainWindow::applyLightTheme() {
     qApp->setStyleSheet(styleSheet);
 }
 
-void MainWindow::applyDarkTheme() {
+void MainWindow::applyDarkTheme()
+{
     // Lighter orange to soft dark gray gradient
     QString styleSheet = R"(
         QWidget {
@@ -621,13 +671,11 @@ void MainWindow::applyDarkTheme() {
     )";
     qApp->setStyleSheet(styleSheet);
 }
-void MainWindow::toggleSidebar() {
+void MainWindow::toggleSidebar()
+{
     // Check if the sidebar is currently visible
     bool isVisible = ui->sideMenu->isVisible();
 
     // Toggle visibility
     ui->sideMenu->setVisible(!isVisible);
 }
-
-
-

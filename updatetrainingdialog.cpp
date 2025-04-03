@@ -7,9 +7,8 @@
 #include <QDialogButtonBox>
 #include <QPushButton>
 
-UpdateTrainingDialog::UpdateTrainingDialog(int idfor, const formations& currentData, QWidget *parent)
-    : QDialog(parent)
-    , trainingId(idfor)
+UpdateTrainingDialog::UpdateTrainingDialog(int idfor, const formations &currentData, QWidget *parent)
+    : QDialog(parent), trainingId(idfor)
 {
     setWindowTitle("Update Training");
 
@@ -53,7 +52,8 @@ UpdateTrainingDialog::~UpdateTrainingDialog()
 void UpdateTrainingDialog::onConfirmClicked()
 {
     // Basic validation could be added here
-    if (formationEdit->text().isEmpty() || descriptionEdit->text().isEmpty() || trainerEdit->text().isEmpty()) {
+    if (formationEdit->text().isEmpty() || descriptionEdit->text().isEmpty() || trainerEdit->text().isEmpty())
+    {
         return; // Don't accept if fields are empty
     }
     accept();

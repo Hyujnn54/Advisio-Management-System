@@ -6,8 +6,9 @@
 #include <QSortFilterProxyModel>
 
 QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
+namespace Ui
+{
+    class MainWindow;
 }
 QT_END_NAMESPACE
 
@@ -28,6 +29,7 @@ private slots:
     void on_searchInput_textChanged(const QString &text);
     void on_resetSearchButton_clicked();
     void exportToPdf();
+
 private:
     Ui::MainWindow *ui;
     formations formation;
@@ -38,9 +40,6 @@ private:
     void applyLightTheme();
     QWidget *sidebarWidget;
     void refreshTableView();
-
-
-
 };
 
 #endif // MAINWINDOW_H

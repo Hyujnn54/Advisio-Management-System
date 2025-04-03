@@ -15,7 +15,7 @@ class UpdateTrainingDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit UpdateTrainingDialog(int idfor, const formations& currentData, QWidget *parent = nullptr);
+    explicit UpdateTrainingDialog(int idfor, const formations &currentData, QWidget *parent = nullptr);
     ~UpdateTrainingDialog();
 
     // Getters for the updated values
