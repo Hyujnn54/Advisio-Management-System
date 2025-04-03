@@ -110,24 +110,29 @@ bool formations::ajoutforma() {
 
 QSqlQueryModel* formations::afficher() {
     QSqlQueryModel* model = new QSqlQueryModel();
-
     QSqlDatabase db = QSqlDatabase::database();
     if (!db.isOpen()) {
-        qDebug() << "Database connection is not open when trying to display formations!";
+        qDebug() << "Database not open!";
         model->setQuery(QString());
         return model;
     }
-
     model->setQuery("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM formations");
-
     if (model->lastError().isValid()) {
-        qDebug() << "SQL Error when displaying formations:" << model->lastError().text();
-        model->setQuery(QString());
+        qDebug() << "SQL Error:" << model->lastError().text();
     }
-
+    qDebug() << "Rows fetched:" << model->rowCount() << "Columns:" << model->columnCount();
+    for (int row = 0; row < model->rowCount(); ++row) {
+        qDebug() << "Row" << row << ":"
+                 << model->index(row, 0).data().toString() << ","
+                 << model->index(row, 1).data().toString() << ","
+                 << model->index(row, 2).data().toString() << ","
+                 << model->index(row, 3).data().toString() << ","
+                 << model->index(row, 4).data().toString() << ","
+                 << model->index(row, 5).data().toString() << ","
+                 << model->index(row, 6).data().toString();
+    }
     return model;
 }
-
 bool formations::deleteFormation(int idfor) {
     QSqlQuery query;
     query.prepare("DELETE FROM FORMATIONS WHERE IDFORM = :id");

@@ -27,7 +27,7 @@ private slots:
     void on_updateButtonClicked();
     void on_searchInput_textChanged(const QString &text);
     void on_resetSearchButton_clicked();
-
+    void exportToPdf();
 private:
     Ui::MainWindow *ui;
     formations formation;
@@ -38,6 +38,9 @@ private:
     void applyLightTheme();
     QWidget *sidebarWidget;
     void refreshTableView();
+
+
+
 };
 
 #endif // MAINWINDOW_H

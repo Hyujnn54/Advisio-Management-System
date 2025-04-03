@@ -377,6 +377,40 @@ border-color: rgb(0, 0, 0);</string>
             <string>Add Training</string>
            </attribute>
            <layout class="QGridLayout" name="gridLayout_2">
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_consultant">
+              <property name="text">
+               <string>prix</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="tr"/>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_date">
+              <property name="text">
+               <string> Date:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="des"/>
+            </item>
+            <item row="6" column="3">
+             <widget class="QPushButton" name="add">
+              <property name="text">
+               <string>Add formation</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_sector">
+              <property name="text">
+               <string>description</string>
+              </property>
+             </widget>
+            </item>
             <item row="0" column="4" rowspan="7">
              <spacer name="horizontalSpacer">
               <property name="orientation">
@@ -390,6 +424,9 @@ border-color: rgb(0, 0, 0);</string>
               </property>
              </spacer>
             </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="format"/>
+            </item>
             <item row="3" column="0">
              <widget class="QLabel" name="label_email">
               <property name="text">
@@ -397,17 +434,16 @@ border-color: rgb(0, 0, 0);</string>
               </property>
              </widget>
             </item>
+            <item row="3" column="1">
+             <widget class="QSpinBox" name="timeb"/>
+            </item>
+            <item row="5" column="1">
+             <widget class="QDoubleSpinBox" name="prixb"/>
+            </item>
             <item row="2" column="0">
              <widget class="QLabel" name="label_contact">
               <property name="text">
                <string>trainer</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_date">
-              <property name="text">
-               <string> Date:</string>
               </property>
              </widget>
             </item>
@@ -418,44 +454,8 @@ border-color: rgb(0, 0, 0);</string>
               </property>
              </widget>
             </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_sector">
-              <property name="text">
-               <string>description</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_consultant">
-              <property name="text">
-               <string>prix</string>
-              </property>
-             </widget>
-            </item>
             <item row="4" column="1">
              <widget class="QDateEdit" name="date"/>
-            </item>
-            <item row="3" column="1">
-             <widget class="QSpinBox" name="timeb"/>
-            </item>
-            <item row="2" column="1">
-             <widget class="QLineEdit" name="tr"/>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="des"/>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="format"/>
-            </item>
-            <item row="5" column="1">
-             <widget class="QDoubleSpinBox" name="prixb"/>
-            </item>
-            <item row="6" column="2">
-             <widget class="QPushButton" name="add">
-              <property name="text">
-               <string>Add formation</string>
-              </property>
-             </widget>
             </item>
            </layout>
           </widget>
@@ -543,7 +543,7 @@ border-color: rgb(0, 0, 0);</string>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="exportPdfButton">
+               <widget class="QPushButton" name="exportButton">
                 <property name="text">
                  <string>PDF</string>
                 </property>

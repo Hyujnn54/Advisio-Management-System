@@ -15,6 +15,7 @@
 #include <QTableView>
 #include "updatetrainingdialog.h"
 #include <QRegularExpression>
+#include <QDateTime>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -27,14 +28,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->date->setDate(QDate::currentDate());
 
-    // Connections
     QObject::connect(ui->add, SIGNAL(clicked()), this, SLOT(on_addButtonclicked()));
     QObject::connect(ui->deletef, SIGNAL(clicked()), this, SLOT(on_deleteButtonClicked()));
     QObject::connect(ui->updateButton, SIGNAL(clicked()), this, SLOT(on_updateButtonClicked()));
     connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
     connect(ui->menuButton, &QPushButton::clicked, this, &MainWindow::toggleSidebar);
+    connect(ui->exportButton, &QPushButton::clicked, this, &MainWindow::exportToPdf);
 
-    // Validators
     QRegularExpression formationRegex("^[A-Za-z]+$");
     QRegularExpressionValidator* formationValidator = new QRegularExpressionValidator(formationRegex, this);
     ui->format->setValidator(formationValidator);
@@ -50,14 +50,11 @@ MainWindow::MainWindow(QWidget *parent)
     ui->timeb->setRange(1, 30);
     ui->prixb->setRange(1, 1000);
 
-    // Enable sorting on the TableView
     ui->tabtr->setSortingEnabled(true);
 
-    // Connect search and reset slots
     connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_searchInput_textChanged);
     connect(ui->resetSearchButton, &QPushButton::clicked, this, &MainWindow::on_resetSearchButton_clicked);
 
-    // Show existing data on launch
     refreshTableView();
 }
 
@@ -67,21 +64,172 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::on_addButtonclicked() {
-    QString formation = ui->format->text();
-    QString description = ui->des->text();
-    QString trainer = ui->tr->text();
-    QDate datef = ui->date->date();
-    int time = ui->timeb->value(); // Use value() for QSpinBox
-    double prix = ui->prixb->value(); // Use value() for QDoubleSpinBox
+void MainWindow::exportToPdf() {
+    refreshTableView();
 
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss");
+    QString defaultFileName = QString("Formations_%1.pdf").arg(timestamp);
+
+    QString filePath = QFileDialog::getSaveFileName(this, tr("Save PDF"), defaultFileName, tr("PDF Files (*.pdf)"));
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    if (!filePath.endsWith(".pdf", Qt::CaseInsensitive)) {
+        filePath += ".pdf";
+    }
+
+    QPdfWriter pdfWriter(filePath);
+    pdfWriter.setPageSize(QPageSize(QPageSize::A4));
+    pdfWriter.setResolution(300); // High resolution for clarity
+
+    QPainter painter(&pdfWriter);
+    painter.setFont(QFont("Arial", 10));
+
+    // Scale factor for 300 DPI (default is 72 DPI)
+    const qreal scaleFactor = 300.0 / 72.0;
+    painter.scale(scaleFactor, scaleFactor);
+
+    // A4 dimensions in points at 72 DPI (595 x 842)
+    int pageWidth = 595;  // Width in points
+    int pageHeight = 842; // Height in points
+    int margin = 40;      // Margin in points
+    int lineHeight = 15;  // Row height in points
+    // Column widths in points, adjusted to fit within pageWidth - 2*margin (595 - 80 = 515)
+    QVector<int> columnWidths = {50, 100, 150, 80, 80, 50, 60}; // ID, Formation, Description, Trainer, Date, Time, Price
+    int totalWidth = 0;
+    for (int w : columnWidths) totalWidth += w;
+    qDebug() << "Total table width:" << totalWidth << "Available width:" << (pageWidth - 2 * margin);
+
+    // Title
+    painter.setFont(QFont("Arial", 12, QFont::Bold));
+    int yPos = margin;
+    painter.drawText(margin, yPos, "Formations List - Exported on " + QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
+    yPos += lineHeight * 2;
+
+    qDebug() << "Export - Row count:" << (tableModel ? tableModel->rowCount() : 0) << "Columns:" << (tableModel ? tableModel->columnCount() : 0);
+
+    if (!tableModel || tableModel->rowCount() == 0 || tableModel->columnCount() < 7) {
+        painter.setFont(QFont("Arial", 10));
+        painter.drawText(margin, yPos, "No data available or incomplete data to export.");
+        painter.end();
+        QMessageBox::information(this, "Export", "PDF exported with no/incomplete data at: " + filePath);
+        return;
+    }
+
+    // Draw table headers
+    painter.setFont(QFont("Arial", 10, QFont::Bold));
+    QStringList headers = {"ID", "Formation", "Description", "Trainer", "Date", "Time", "Price"};
+    int xPos = margin;
+    int headerYPos = yPos;
+    for (int i = 0; i < headers.size(); ++i) {
+        painter.drawText(xPos, yPos, headers[i]);
+        xPos += columnWidths[i];
+    }
+    yPos += lineHeight;
+
+    // Draw header underline
+    painter.setPen(QPen(Qt::black, 1));
+    painter.drawLine(margin, yPos, margin + totalWidth, yPos);
+    yPos += 2;
+
+    // Draw table data with grid lines
+    painter.setFont(QFont("Arial", 10));
+    for (int row = 0; row < tableModel->rowCount(); ++row) {
+        xPos = margin;
+        int rowYPos = yPos;
+        for (int col = 0; col < 7; ++col) {
+            QString data = tableModel->index(row, col).data().toString();
+            painter.drawText(xPos, yPos, data);
+            qDebug() << "Row" << row << "Col" << col << ":" << data;
+            xPos += columnWidths[col];
+        }
+        yPos += lineHeight;
+
+        // Draw horizontal line for each row
+        painter.drawLine(margin, yPos, margin + totalWidth, yPos);
+
+        // Draw vertical lines for columns
+        xPos = margin;
+        for (int i = 0; i <= 7; ++i) {
+            painter.drawLine(xPos, rowYPos, xPos, yPos);
+            if (i < 7) xPos += columnWidths[i];
+        }
+
+        // Check for new page
+        if (yPos > (pageHeight - margin)) {
+            pdfWriter.newPage();
+            yPos = margin;
+            painter.setFont(QFont("Arial", 10, QFont::Bold));
+            xPos = margin;
+            headerYPos = yPos;
+            for (int i = 0; i < headers.size(); ++i) {
+                painter.drawText(xPos, yPos, headers[i]);
+                xPos += columnWidths[i];
+            }
+            yPos += lineHeight;
+            painter.drawLine(margin, yPos, margin + totalWidth, yPos);
+            yPos += 2;
+            painter.setFont(QFont("Arial", 10));
+        }
+    }
+
+    painter.end();
+    QMessageBox::information(this, "Export", "Formations data exported to PDF successfully at: " + filePath);
+}
+void MainWindow::on_addButtonclicked() {
+    // Get input values
+    QString formation = ui->format->text().trimmed();
+    QString description = ui->des->text().trimmed();
+    QString trainer = ui->tr->text().trimmed();
+    QDate datef = ui->date->date();
+    int time = ui->timeb->value();
+    double prix = ui->prixb->value();
+
+
+
+    // Check each field one by one
+    if (formation.isEmpty()) {
+        QMessageBox::warning(this, "Missing Data", "Please enter a Formation.");
+        return;
+    }
+    if (formation.length() < 4) {
+        QMessageBox::warning(this, "Invalid Data", "Formation must be at least 4 letters long.");
+        return;
+    }
+    if (description.isEmpty()) {
+        QMessageBox::warning(this, "Missing Data", "Please enter a Description.");
+        return;
+    }
+    if (trainer.isEmpty()) {
+        QMessageBox::warning(this, "Missing Data", "Please enter a Trainer.");
+        return;
+    }
+    if (trainer.length() < 4) {
+        QMessageBox::warning(this, "Invalid Data", "Trainer must be at least 4 letters long.");
+        return;
+    }
+    if (!datef.isValid()) {
+        QMessageBox::warning(this, "Missing Data", "Please select a valid Date.");
+        return;
+    }
+    if (time == 0) {
+        QMessageBox::warning(this, "Missing Data", "Please enter a valid Time (greater than 0).");
+        return;
+    }
+    if (prix == 0.0) {
+        QMessageBox::warning(this, "Missing Data", "Please enter a valid Price (greater than 0).");
+        return;
+    }
+
+    // If all fields are filled and valid, proceed with adding the formation
     formations f(0, formation, description, trainer, datef, time, prix);
 
     if (f.ajoutforma()) {
-        QMessageBox::information(this, "Succès", "Formation ajoutée avec succès !");
+        QMessageBox::information(this, "Success", "Formation added successfully!");
         refreshTableView();
     } else {
-        QMessageBox::critical(this, "Erreur", "Échec de l'ajout de formation.");
+        QMessageBox::critical(this, "Error", "Failed to add formation.");
     }
 }
 
@@ -91,6 +239,7 @@ void MainWindow::refreshTableView() {
         delete tableModel;
     }
     tableModel = f.afficher();
+    qDebug() << "RefreshTableView - Row count:" << (tableModel ? tableModel->rowCount() : 0);
     proxyModel->setSourceModel(tableModel);
     ui->tabtr->setModel(proxyModel);
     ui->tabtr->resizeColumnsToContents();
@@ -167,6 +316,8 @@ void MainWindow::on_updateButtonClicked()
         }
     }
 }
+{'"omarrrrrrrrrrrrrrrrrrr"'}
+
 
 void MainWindow::on_searchInput_textChanged(const QString &text)
 {
@@ -211,6 +362,7 @@ void MainWindow::toggleTheme() {
         applyLightTheme();
     }
 }
+#include <QSqlError>
 
 void MainWindow::applyLightTheme() {
     // Blueish white gradient (unchanged)
@@ -476,3 +628,6 @@ void MainWindow::toggleSidebar() {
     // Toggle visibility
     ui->sideMenu->setVisible(!isVisible);
 }
+
+
+
