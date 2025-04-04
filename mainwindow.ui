@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1100</width>
-    <height>705</height>
+    <width>1298</width>
+    <height>704</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -384,33 +384,6 @@ border-color: rgb(0, 0, 0);</string>
               </property>
              </widget>
             </item>
-            <item row="2" column="1">
-             <widget class="QLineEdit" name="tr"/>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_date">
-              <property name="text">
-               <string> Date:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="des"/>
-            </item>
-            <item row="6" column="3">
-             <widget class="QPushButton" name="add">
-              <property name="text">
-               <string>Add formation</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_sector">
-              <property name="text">
-               <string>description</string>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="4" rowspan="7">
              <spacer name="horizontalSpacer">
               <property name="orientation">
@@ -424,26 +397,10 @@ border-color: rgb(0, 0, 0);</string>
               </property>
              </spacer>
             </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="format"/>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_email">
+            <item row="6" column="3">
+             <widget class="QPushButton" name="add">
               <property name="text">
-               <string>time</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QSpinBox" name="timeb"/>
-            </item>
-            <item row="5" column="1">
-             <widget class="QDoubleSpinBox" name="prixb"/>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_contact">
-              <property name="text">
-               <string>trainer</string>
+               <string>Add formation</string>
               </property>
              </widget>
             </item>
@@ -454,8 +411,61 @@ border-color: rgb(0, 0, 0);</string>
               </property>
              </widget>
             </item>
+            <item row="3" column="1">
+             <widget class="QSpinBox" name="timeb"/>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="format"/>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="tr"/>
+            </item>
+            <item row="5" column="1">
+             <widget class="QDoubleSpinBox" name="prixb"/>
+            </item>
             <item row="4" column="1">
              <widget class="QDateEdit" name="date"/>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_contact">
+              <property name="text">
+               <string>trainer</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_date">
+              <property name="text">
+               <string> Date:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_email">
+              <property name="text">
+               <string>time</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="des"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_sector">
+              <property name="text">
+               <string>description</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="5">
+             <widget class="QLabel" name="notificationLabel">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="pixmap">
+               <pixmap>C:/Users/Mega Pc/Downloads/R.ico</pixmap>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>
@@ -566,7 +576,7 @@ border-color: rgb(0, 0, 0);</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1100</width>
+     <width>1298</width>
      <height>21</height>
     </rect>
    </property>

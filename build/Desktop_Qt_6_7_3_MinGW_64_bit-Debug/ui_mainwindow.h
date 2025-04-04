@@ -64,19 +64,20 @@ public:
     QWidget *ClientForm;
     QGridLayout *gridLayout_2;
     QLabel *label_consultant;
-    QLineEdit *tr;
-    QLabel *label_date;
-    QLineEdit *des;
-    QPushButton *add;
-    QLabel *label_sector;
     QSpacerItem *horizontalSpacer;
-    QLineEdit *format;
-    QLabel *label_email;
-    QSpinBox *timeb;
-    QDoubleSpinBox *prixb;
-    QLabel *label_contact;
+    QPushButton *add;
     QLabel *label_name;
+    QSpinBox *timeb;
+    QLineEdit *format;
+    QLineEdit *tr;
+    QDoubleSpinBox *prixb;
     QDateEdit *date;
+    QLabel *label_contact;
+    QLabel *label_date;
+    QLabel *label_email;
+    QLineEdit *des;
+    QLabel *label_sector;
+    QLabel *notificationLabel;
     QWidget *listClient;
     QVBoxLayout *verticalLayout_6;
     QGroupBox *searchGroupBox;
@@ -96,7 +97,7 @@ public:
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName("MainWindow");
-        MainWindow->resize(1100, 705);
+        MainWindow->resize(1298, 704);
         MainWindow->setStyleSheet(QString::fromUtf8(""));
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
@@ -267,69 +268,75 @@ public:
 
         gridLayout_2->addWidget(label_consultant, 5, 0, 1, 1);
 
-        tr = new QLineEdit(ClientForm);
-        tr->setObjectName("tr");
+        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
-        gridLayout_2->addWidget(tr, 2, 1, 1, 1);
-
-        label_date = new QLabel(ClientForm);
-        label_date->setObjectName("label_date");
-
-        gridLayout_2->addWidget(label_date, 4, 0, 1, 1);
-
-        des = new QLineEdit(ClientForm);
-        des->setObjectName("des");
-
-        gridLayout_2->addWidget(des, 1, 1, 1, 1);
+        gridLayout_2->addItem(horizontalSpacer, 0, 4, 7, 1);
 
         add = new QPushButton(ClientForm);
         add->setObjectName("add");
 
         gridLayout_2->addWidget(add, 6, 3, 1, 1);
 
-        label_sector = new QLabel(ClientForm);
-        label_sector->setObjectName("label_sector");
+        label_name = new QLabel(ClientForm);
+        label_name->setObjectName("label_name");
 
-        gridLayout_2->addWidget(label_sector, 1, 0, 1, 1);
-
-        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        gridLayout_2->addItem(horizontalSpacer, 0, 4, 7, 1);
-
-        format = new QLineEdit(ClientForm);
-        format->setObjectName("format");
-
-        gridLayout_2->addWidget(format, 0, 1, 1, 1);
-
-        label_email = new QLabel(ClientForm);
-        label_email->setObjectName("label_email");
-
-        gridLayout_2->addWidget(label_email, 3, 0, 1, 1);
+        gridLayout_2->addWidget(label_name, 0, 0, 1, 1);
 
         timeb = new QSpinBox(ClientForm);
         timeb->setObjectName("timeb");
 
         gridLayout_2->addWidget(timeb, 3, 1, 1, 1);
 
+        format = new QLineEdit(ClientForm);
+        format->setObjectName("format");
+
+        gridLayout_2->addWidget(format, 0, 1, 1, 1);
+
+        tr = new QLineEdit(ClientForm);
+        tr->setObjectName("tr");
+
+        gridLayout_2->addWidget(tr, 2, 1, 1, 1);
+
         prixb = new QDoubleSpinBox(ClientForm);
         prixb->setObjectName("prixb");
 
         gridLayout_2->addWidget(prixb, 5, 1, 1, 1);
+
+        date = new QDateEdit(ClientForm);
+        date->setObjectName("date");
+
+        gridLayout_2->addWidget(date, 4, 1, 1, 1);
 
         label_contact = new QLabel(ClientForm);
         label_contact->setObjectName("label_contact");
 
         gridLayout_2->addWidget(label_contact, 2, 0, 1, 1);
 
-        label_name = new QLabel(ClientForm);
-        label_name->setObjectName("label_name");
+        label_date = new QLabel(ClientForm);
+        label_date->setObjectName("label_date");
 
-        gridLayout_2->addWidget(label_name, 0, 0, 1, 1);
+        gridLayout_2->addWidget(label_date, 4, 0, 1, 1);
 
-        date = new QDateEdit(ClientForm);
-        date->setObjectName("date");
+        label_email = new QLabel(ClientForm);
+        label_email->setObjectName("label_email");
 
-        gridLayout_2->addWidget(date, 4, 1, 1, 1);
+        gridLayout_2->addWidget(label_email, 3, 0, 1, 1);
+
+        des = new QLineEdit(ClientForm);
+        des->setObjectName("des");
+
+        gridLayout_2->addWidget(des, 1, 1, 1, 1);
+
+        label_sector = new QLabel(ClientForm);
+        label_sector->setObjectName("label_sector");
+
+        gridLayout_2->addWidget(label_sector, 1, 0, 1, 1);
+
+        notificationLabel = new QLabel(ClientForm);
+        notificationLabel->setObjectName("notificationLabel");
+        notificationLabel->setPixmap(QPixmap(QString::fromUtf8("C:/Users/Mega Pc/Downloads/R.ico")));
+
+        gridLayout_2->addWidget(notificationLabel, 1, 5, 1, 1);
 
         tabWidget->addTab(ClientForm, QString());
         listClient = new QWidget();
@@ -400,7 +407,7 @@ public:
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1100, 21));
+        menubar->setGeometry(QRect(0, 0, 1298, 21));
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName("statusbar");
@@ -426,12 +433,13 @@ public:
         pushButton_5->setText(QCoreApplication::translate("MainWindow", "Calendar", nullptr));
         themeButton->setText(QCoreApplication::translate("MainWindow", "Toggle Theme", nullptr));
         label_consultant->setText(QCoreApplication::translate("MainWindow", "prix", nullptr));
-        label_date->setText(QCoreApplication::translate("MainWindow", " Date:", nullptr));
         add->setText(QCoreApplication::translate("MainWindow", "Add formation", nullptr));
-        label_sector->setText(QCoreApplication::translate("MainWindow", "description", nullptr));
-        label_email->setText(QCoreApplication::translate("MainWindow", "time", nullptr));
-        label_contact->setText(QCoreApplication::translate("MainWindow", "trainer", nullptr));
         label_name->setText(QCoreApplication::translate("MainWindow", "Training", nullptr));
+        label_contact->setText(QCoreApplication::translate("MainWindow", "trainer", nullptr));
+        label_date->setText(QCoreApplication::translate("MainWindow", " Date:", nullptr));
+        label_email->setText(QCoreApplication::translate("MainWindow", "time", nullptr));
+        label_sector->setText(QCoreApplication::translate("MainWindow", "description", nullptr));
+        notificationLabel->setText(QString());
         tabWidget->setTabText(tabWidget->indexOf(ClientForm), QCoreApplication::translate("MainWindow", "Add Training", nullptr));
         searchGroupBox->setTitle(QCoreApplication::translate("MainWindow", "Search", nullptr));
         searchCriteriaComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "formation", nullptr));

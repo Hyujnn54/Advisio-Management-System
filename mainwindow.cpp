@@ -17,13 +17,20 @@
 #include <QRegularExpression>
 #include <QDateTime>
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), isDarkTheme(false), tableModel(nullptr), proxyModel(new QSortFilterProxyModel(this))
+    : QMainWindow(parent), ui(new Ui::MainWindow), isDarkTheme(false),
+    tableModel(nullptr), proxyModel(new QSortFilterProxyModel(this)),
+    notificationCount(0)
 {
     ui->setupUi(this);
     applyLightTheme();
 
     ui->date->setDate(QDate::currentDate());
 
+    // Initialize notification label (assuming you add it to UI in Qt Designer)
+    ui->notificationLabel->setText("Notifications: 0");
+    ui->notificationLabel->setStyleSheet("font-weight: bold; color: #3A5DAE;"); // Add to status bar
+
+    // Existing connections...
     QObject::connect(ui->add, SIGNAL(clicked()), this, SLOT(on_addButtonclicked()));
     QObject::connect(ui->deletef, SIGNAL(clicked()), this, SLOT(on_deleteButtonClicked()));
     QObject::connect(ui->updateButton, SIGNAL(clicked()), this, SLOT(on_updateButtonClicked()));
@@ -48,6 +55,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->tabtr->setSortingEnabled(true);
 
+
+    ui->notificationLabel->setText("Notifications: 0");
+    ui->notificationLabel->setStyleSheet("font-weight: bold; color: #3A5DAE;");
+    ui->notificationLabel->setTextInteractionFlags(Qt::TextBrowserInteraction); // Enable clicking
+    ui->notificationLabel->setCursor(Qt::PointingHandCursor); // Hand cursor
+    connect(ui->notificationLabel, &QLabel::linkActivated, this, &MainWindow::onNotificationLabelClicked);
+
+
     connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_searchInput_textChanged);
     connect(ui->resetSearchButton, &QPushButton::clicked, this, &MainWindow::on_resetSearchButton_clicked);
 
@@ -59,7 +74,31 @@ MainWindow::~MainWindow()
     delete tableModel;
     delete ui;
 }
+void MainWindow::onNotificationLabelClicked()
+{
+    resetNotificationCount(); // Reset when user clicks the label
+}
+void MainWindow::updateNotificationCount(int change)
+{
+    notificationCount += change;
+    if (notificationCount < 0) notificationCount = 0;
 
+    qDebug() << "Before update - Count:" << notificationCount; // Debug
+    if (notificationCount > 0) {
+        ui->notificationLabel->setStyleSheet("background-color: #D93025; color: white; border-radius: 10px; padding: 2px 6px;");
+    } else {
+        ui->notificationLabel->setStyleSheet("font-weight: bold; color: #3A5DAE;");
+    }
+    ui->notificationLabel->setText(QString("Notifications: %1").arg(notificationCount));
+    qDebug() << "After update - Count:" << notificationCount; // Debug
+}
+void MainWindow::resetNotificationCount()
+{
+    notificationCount = 0;
+    ui->notificationLabel->setStyleSheet("font-weight: bold; color: #3A5DAE;");
+    ui->notificationLabel->setText("Notifications: 0");
+    qDebug() << "Notification count reset";
+}
 void MainWindow::exportToPdf()
 {
     refreshTableView();
@@ -194,7 +233,6 @@ void MainWindow::on_addButtonclicked()
     QDate datef = ui->date->date();
     int time = ui->timeb->value();
     double prix = ui->prixb->value();
-
     // Check each field one by one
     if (formation.isEmpty())
     {
@@ -243,7 +281,8 @@ void MainWindow::on_addButtonclicked()
     if (f.ajoutforma())
     {
         QMessageBox::information(this, "Success", "Formation added successfully!");
-        refreshTableView();
+        updateNotificationCount(1); // Increment count
+        refreshTableView(); // Refresh table, but don’t reset count
     }
     else
     {
@@ -254,15 +293,27 @@ void MainWindow::on_addButtonclicked()
 void MainWindow::refreshTableView()
 {
     formations f;
-    if (tableModel)
-    {
+    if (tableModel) {
         delete tableModel;
+        tableModel = nullptr;
     }
     tableModel = f.afficher();
-    qDebug() << "RefreshTableView - Row count:" << (tableModel ? tableModel->rowCount() : 0);
+    if (!tableModel) {
+        qDebug() << "Error: Failed to retrieve table model";
+        QMessageBox::warning(this, "Error", "Failed to load formation data.");
+        return;
+    }
+    qDebug() << "RefreshTableView - Row count:" << tableModel->rowCount()
+             << "Column count:" << tableModel->columnCount();
+    if (!proxyModel) {
+        qDebug() << "Error: proxyModel is not initialized";
+        QMessageBox::critical(this, "Error", "Table view proxy model is not initialized.");
+        return;
+    }
     proxyModel->setSourceModel(tableModel);
     ui->tabtr->setModel(proxyModel);
     ui->tabtr->resizeColumnsToContents();
+
 }
 #include <QInputDialog>
 
@@ -289,6 +340,7 @@ void MainWindow::on_deleteButtonClicked()
     if (formations::deleteFormation(idfor))
     {
         QMessageBox::information(this, "Succès", "Formation supprimée avec succès !");
+        updateNotificationCount(1); // Increment count
         refreshTableView();
     }
     else
@@ -335,11 +387,12 @@ void MainWindow::on_updateButtonClicked()
         QString newTrainer = dialog.getTrainer();
         QDate newDate = dialog.getDate();
         int newTime = dialog.getTime();
-        double newPrix = dialog.getPrix(); // Already a double
+        double newPrix = dialog.getPrix();
 
         if (f.updateFormation(idfor, newFormation, newDescription, newTrainer, newDate, newTime, newPrix))
         {
             QMessageBox::information(this, "Succès", "Formation mise à jour avec succès !");
+            updateNotificationCount(1); // Increment count
             refreshTableView();
         }
         else
@@ -348,9 +401,7 @@ void MainWindow::on_updateButtonClicked()
         }
     }
 }
-{
-    '"omarrrrrrrrrrrrrrrrrrr"'
-}
+
 
 void MainWindow::on_searchInput_textChanged(const QString &text)
 {

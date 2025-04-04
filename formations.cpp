@@ -106,15 +106,15 @@ void formations::setPrix(double prix)
 bool formations::ajoutforma()
 {
     QSqlQuery query;
-    query.prepare("INSERT INTO formations (formation, description, trainer, datef, time, prix) "
-                  "VALUES (:formation, :description, :trainer, :datef, :time, :prix)");
+    query.prepare("INSERT INTO AHMED.FORMATIONS (IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX) "
+                  "VALUES (FORMATIONS_SEQ.NEXTVAL, :formation, :description, :trainer, :datef, :time, :prix)");
 
     query.bindValue(":formation", formation);
     query.bindValue(":description", description);
     query.bindValue(":trainer", trainer);
     query.bindValue(":datef", datef);
     query.bindValue(":time", time);
-    query.bindValue(":prix", prix); // Bind as double
+    query.bindValue(":prix", prix);
 
     if (!query.exec())
     {

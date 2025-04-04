@@ -4,12 +4,10 @@
 #include <QMainWindow>
 #include <QSqlQueryModel>
 #include <QSortFilterProxyModel>
+#include <QLabel> // Include for QLabel
 
 QT_BEGIN_NAMESPACE
-namespace Ui
-{
-    class MainWindow;
-}
+namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -29,6 +27,8 @@ private slots:
     void on_searchInput_textChanged(const QString &text);
     void on_resetSearchButton_clicked();
     void exportToPdf();
+    void onNotificationLabelClicked();
+
 
 private:
     Ui::MainWindow *ui;
@@ -36,10 +36,14 @@ private:
     bool isDarkTheme;
     QSqlQueryModel *tableModel;
     QSortFilterProxyModel *proxyModel;
+    int notificationCount; // New: Track unread notifications
+    QLabel *notificationLabel; // New: Display notification count
     void applyDarkTheme();
     void applyLightTheme();
     QWidget *sidebarWidget;
-    void refreshTableView();
+    void updateNotificationCount(int change);
+    void resetNotificationCount();
+    void refreshTableView(); // New: Reset count when viewed
 };
 
 #endif // MAINWINDOW_H

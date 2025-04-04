@@ -15,7 +15,7 @@ CC            = gcc
 CXX           = g++
 DEFINES       = -DUNICODE -D_UNICODE -DWIN32 -DMINGW_HAS_SECURE_API=1 -DQT_DEPRECATED_WARNINGS -DQT_QML_DEBUG -DQT_PRINTSUPPORT_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_SQL_LIB -DQT_CORE_LIB
 CFLAGS        = -fno-keep-inline-dllexport -g -Wall -Wextra -Wextra $(DEFINES)
-CXXFLAGS      = -fno-keep-inline-dllexport -g -Wall -Wextra -Wextra -fexceptions -mthreads $(DEFINES)
+CXXFLAGS      = -fno-keep-inline-dllexport -O0 -g -Wall -Wextra -Wextra -fexceptions -mthreads $(DEFINES)
 INCPATH       = -I../../../projetdes -I. -I../../../../Qtesp/6.7.3/mingw_64/include -I../../../../Qtesp/6.7.3/mingw_64/include/QtPrintSupport -I../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets -I../../../../Qtesp/6.7.3/mingw_64/include/QtGui -I../../../../Qtesp/6.7.3/mingw_64/include/QtSql -I../../../../Qtesp/6.7.3/mingw_64/include/QtCore -Idebug -I. -I/include -I../../../../Qtesp/6.7.3/mingw_64/mkspecs/win32-g++ 
 LINKER      =        g++
 LFLAGS        =        -Wl,-subsystem,console -mthreads
@@ -117,7 +117,7 @@ compiler_moc_predefs_make_all: debug/moc_predefs.h
 compiler_moc_predefs_clean:
 	-$(DEL_FILE) debug\moc_predefs.h
 debug/moc_predefs.h: ../../../../Qtesp/6.7.3/mingw_64/mkspecs/features/data/dummy.cpp
-	g++ -fno-keep-inline-dllexport -g -Wall -Wextra -Wextra -dM -E -o debug\moc_predefs.h ..\..\..\..\Qtesp\6.7.3\mingw_64\mkspecs\features\data\dummy.cpp
+	g++ -fno-keep-inline-dllexport -O0 -g -Wall -Wextra -Wextra -dM -E -o debug\moc_predefs.h ..\..\..\..\Qtesp\6.7.3\mingw_64\mkspecs\features\data\dummy.cpp
 
 compiler_moc_header_make_all: debug/moc_mainwindow.cpp debug/moc_updatetrainingdialog.cpp
 compiler_moc_header_clean:
@@ -327,6 +327,11 @@ debug/moc_mainwindow.cpp: ../../mainwindow.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qsortfilterproxymodel.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qabstractproxymodel.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qregularexpression.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qlabel.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qframe.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qpicture.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qtextdocument.h \
 		debug/moc_predefs.h \
 		../../../../Qtesp/6.7.3/mingw_64/bin/moc.exe
 	D:\Qtesp\6.7.3\mingw_64\bin\moc.exe $(DEFINES) --include D:/desktopproject/projetdes/build/Desktop_Qt_6_7_3_MinGW_64_bit-Debug/debug/moc_predefs.h -ID:/Qtesp/6.7.3/mingw_64/mkspecs/win32-g++ -ID:/desktopproject/projetdes -ID:/Qtesp/6.7.3/mingw_64/include -ID:/Qtesp/6.7.3/mingw_64/include/QtPrintSupport -ID:/Qtesp/6.7.3/mingw_64/include/QtWidgets -ID:/Qtesp/6.7.3/mingw_64/include/QtGui -ID:/Qtesp/6.7.3/mingw_64/include/QtSql -ID:/Qtesp/6.7.3/mingw_64/include/QtCore -I. -ID:/Qtesp/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include/c++ -ID:/Qtesp/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include/c++/x86_64-w64-mingw32 -ID:/Qtesp/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include/c++/backward -ID:/Qtesp/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include -ID:/Qtesp/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include-fixed -ID:/Qtesp/Tools/mingw1120_64/x86_64-w64-mingw32/include ..\..\mainwindow.h -o debug\moc_mainwindow.cpp
@@ -1020,6 +1025,11 @@ debug/main.o: ../../main.cpp ../../mainwindow.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qsortfilterproxymodel.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qabstractproxymodel.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qregularexpression.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qlabel.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qframe.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qpicture.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qtextdocument.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QApplication \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qapplication.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QMessageBox \
@@ -1239,6 +1249,11 @@ debug/mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qsortfilterproxymodel.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qabstractproxymodel.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qregularexpression.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qlabel.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qframe.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qpicture.h \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qtextdocument.h \
 		ui_mainwindow.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/QVariant \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QApplication \
@@ -1254,7 +1269,6 @@ debug/mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qstyle.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qtabbar.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qrubberband.h \
-		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qframe.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QDateEdit \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qdatetimeedit.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qtimezone.h \
@@ -1274,10 +1288,6 @@ debug/mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qabstractitemview.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qabstractscrollarea.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/qitemselectionmodel.h \
-		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QLabel \
-		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qlabel.h \
-		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qpicture.h \
-		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qtextdocument.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QLineEdit \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/qlineedit.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtGui/qtextcursor.h \
@@ -1328,7 +1338,9 @@ debug/mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
 		../../updatetrainingdialog.h \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtWidgets/QDialog \
 		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/QRegularExpression \
-		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/QDateTime
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtCore/QDateTime \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtSql/QSqlError \
+		../../../../../../Qtesp/6.7.3/mingw_64/include/QtSql/qsqlerror.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o debug\mainwindow.o ..\..\mainwindow.cpp
 
 debug/updatetrainingdialog.o: ../../updatetrainingdialog.cpp ../../updatetrainingdialog.h \
