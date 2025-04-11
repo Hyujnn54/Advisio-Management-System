@@ -344,7 +344,7 @@
           <item>
            <widget class="QTabWidget" name="tabWidget">
             <property name="currentIndex">
-             <number>0</number>
+             <number>2</number>
             </property>
             <widget class="QWidget" name="ClientForm">
              <property name="contextMenuPolicy">
@@ -480,26 +480,7 @@
                 </property>
                 <layout class="QHBoxLayout" name="searchLayout">
                  <item>
-                  <widget class="QComboBox" name="searchCriteriaComboBox">
-                   <item>
-                    <property name="text">
-                     <string>Name</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Quantity</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Purchase Date</string>
-                    </property>
-                   </item>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="searchInput">
+                  <widget class="QLineEdit" name="searchLineEdit">
                    <property name="placeholderText">
                     <string>Type to search...</string>
                    </property>
@@ -560,6 +541,27 @@
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
+                 <widget class="QPushButton" name="exportPdfButton">
+                  <property name="text">
+                   <string>PDF</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="downloadHistoryButton">
+                  <property name="text">
+                   <string>History</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="clearHistoryButton">
+                  <property name="text">
+                   <string>Clear History</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
                  <spacer name="horizontalSpacer_2">
                   <property name="orientation">
                    <enum>Qt::Orientation::Horizontal</enum>
@@ -583,13 +585,6 @@
                  <widget class="QPushButton" name="updateButton">
                   <property name="text">
                    <string>Update</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="exportPdfButton">
-                  <property name="text">
-                   <string>PDF</string>
                   </property>
                  </widget>
                 </item>
@@ -668,9 +663,22 @@
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayoutText">
                  <item>
-                  <widget class="QTextEdit" name="statsDisplay">
-                   <property name="readOnly">
-                    <bool>true</bool>
+                  <widget class="QChartView" name="chartView" native="true">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QChartView" name="stackedBarChartView" native="true">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
                    </property>
                   </widget>
                  </item>
@@ -715,6 +723,14 @@
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QChartView</class>
+   <extends>QWidget</extends>
+   <header>QtCharts/QChartView</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
