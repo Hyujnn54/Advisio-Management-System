@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+#include "formationwindow.h"
 #include <QApplication>
 #include <QMessageBox>
 #include "connection.h"
@@ -10,10 +10,9 @@ int main(int argc, char *argv[])
 
     Connection c;
     bool test = c.createconnect();
-    MainWindow w;
+    FormationWindow w;
     if (test)
     {
-
         w.show();
         QMessageBox::information(nullptr, QObject::tr("database is open"),
                                  QObject::tr("connection successful.\n"
