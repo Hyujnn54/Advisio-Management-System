@@ -1,20 +1,30 @@
-#include "connection.h"
+#include <QSqlError>
+#include <QDebug>
 
-Connection::Connection()
-{
+Connection::Connection() {
+    // Initialize db in constructor, but don't open it yet
+    db = QSqlDatabase::addDatabase("QODBC");
 }
 
-bool Connection::createconnect()
-{
-    bool test = false;
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("Source_projet"); // inserer le nom de la source de données
-    db.setUserName("ahmed");             // inserer nom de l'utilisateur
-    db.setPassword("2004");              // inserer mot de passe de cet utilisateur
+bool Connection::createconnect() {
+    // Set database credentials
+    db.setDatabaseName("Source_projet");
+    db.setUserName("ahmed");
+    db.setPassword("2004");
 
-    if (db.open())
-        test = true;
+    // Try to open the connection
+    if (!db.open()) {
+        qDebug() << "Database connection failed:" << db.lastError().text();
+        return false;
+    }
 
-    return test;
+    qDebug() << "Database connection successful";
+    return true;
+}
+
+void Connection::closeconnect() {
+    if (db.isOpen()) {
+        db.close();
+    }
 }
 
