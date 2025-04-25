@@ -2,6 +2,7 @@
 #define CHARTWINDOW_H
 
 #include "client.h"
+#include "formations.h" // Changed from training.h to formations.h
 #include <QMainWindow>
 #include <QtCharts/QChartView>
 #include <QtCharts/QBarSeries>
@@ -11,7 +12,7 @@
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QDateTimeAxis>
-#include <QSqlQuery> // Added for QSqlQuery
+#include <QSqlQuery>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ChartWindow; }
@@ -26,6 +27,7 @@ public:
     ~ChartWindow();
 
 private slots:
+    void on_dataTypeComboBox_currentIndexChanged(int index);
     void on_refreshChartButton_clicked();
     void on_statsFilterComboBox_currentIndexChanged(int index);
     void on_chartTypeComboBox_currentIndexChanged(int index);
@@ -37,6 +39,7 @@ private slots:
 private:
     Ui::ChartWindow *ui;
     Client Etmp;
+    formations Ttmp; // Changed from Training to formations
     QString currentChartType;
     QMap<QString, int> currentDataMap;
     QBarSet *currentBarSet;
@@ -45,7 +48,7 @@ private:
 
     void updateChart();
     void populateFilterValues();
-    void updateChartOptions(); // Added declaration
+    void updateChartOptions();
 };
 
 #endif // CHARTWINDOW_H

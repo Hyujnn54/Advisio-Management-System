@@ -32,6 +32,8 @@ public:
     QGroupBox *chartGroupBox;
     QVBoxLayout *chartLayout;
     QHBoxLayout *filterLayout;
+    QLabel *dataTypeLabel;
+    QComboBox *dataTypeComboBox;
     QLabel *filterLabel;
     QComboBox *statsFilterComboBox;
     QComboBox *filterValueComboBox;
@@ -58,6 +60,18 @@ public:
         chartLayout->setObjectName("chartLayout");
         filterLayout = new QHBoxLayout();
         filterLayout->setObjectName("filterLayout");
+        dataTypeLabel = new QLabel(chartGroupBox);
+        dataTypeLabel->setObjectName("dataTypeLabel");
+
+        filterLayout->addWidget(dataTypeLabel);
+
+        dataTypeComboBox = new QComboBox(chartGroupBox);
+        dataTypeComboBox->addItem(QString());
+        dataTypeComboBox->addItem(QString());
+        dataTypeComboBox->setObjectName("dataTypeComboBox");
+
+        filterLayout->addWidget(dataTypeComboBox);
+
         filterLabel = new QLabel(chartGroupBox);
         filterLabel->setObjectName("filterLabel");
 
@@ -130,7 +144,11 @@ public:
     void retranslateUi(QMainWindow *ChartWindow)
     {
         ChartWindow->setWindowTitle(QCoreApplication::translate("ChartWindow", "Consultation Statistics Chart", nullptr));
-        chartGroupBox->setTitle(QCoreApplication::translate("ChartWindow", "Consultation Statistics", nullptr));
+        chartGroupBox->setTitle(QCoreApplication::translate("ChartWindow", "Statistics", nullptr));
+        dataTypeLabel->setText(QCoreApplication::translate("ChartWindow", "Data Type:", nullptr));
+        dataTypeComboBox->setItemText(0, QCoreApplication::translate("ChartWindow", "Clients", nullptr));
+        dataTypeComboBox->setItemText(1, QCoreApplication::translate("ChartWindow", "Trainings", nullptr));
+
         filterLabel->setText(QCoreApplication::translate("ChartWindow", "Filter by:", nullptr));
         statsFilterComboBox->setItemText(0, QCoreApplication::translate("ChartWindow", "By Sector", nullptr));
         statsFilterComboBox->setItemText(1, QCoreApplication::translate("ChartWindow", "By Date", nullptr));

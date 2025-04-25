@@ -10,25 +10,24 @@
 // Default constructor
 formations::formations()
     : idfor(0),
-      formation(""),
-      description(""),
-      trainer(""),
-      datef(QDate::currentDate()),
-      time(0),
-      prix(0.0) // Initialize as double
+    formation(""),
+    description(""),
+    trainer(""),
+    datef(QDate::currentDate()),
+    time(0),
+    prix(0.0)
 {
 }
-
 
 // Parameterized constructor
 formations::formations(int idfor, QString &formation, QString &description, QString &trainer, QDate &datef, int &time, double &prix)
     : idfor(idfor),
-      formation(formation),
-      description(description),
-      trainer(trainer),
-      datef(datef),
-      time(time),
-      prix(prix)
+    formation(formation),
+    description(description),
+    trainer(trainer),
+    datef(datef),
+    time(time),
+    prix(prix)
 {
 }
 
@@ -64,7 +63,7 @@ int formations::getTime() const
 }
 
 double formations::getPrix() const
-{ // Change return type to double
+{
     return prix;
 }
 
@@ -100,7 +99,7 @@ void formations::setTime(int time)
 }
 
 void formations::setPrix(double prix)
-{ // Change parameter type to double
+{
     this->prix = prix;
 }
 
@@ -135,7 +134,7 @@ QSqlQueryModel *formations::afficher()
         model->setQuery(QString());
         return model;
     }
-    model->setQuery("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM formations");
+    model->setQuery("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM AHMED.FORMATIONS");
     if (model->lastError().isValid())
     {
         qDebug() << "SQL Error:" << model->lastError().text();
@@ -154,10 +153,53 @@ QSqlQueryModel *formations::afficher()
     }
     return model;
 }
+
+QSqlQueryModel *formations::searchByType(const QString &type)
+{
+    QSqlQueryModel *model = new QSqlQueryModel();
+    QSqlQuery query;
+    query.prepare("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM AHMED.FORMATIONS WHERE FORMATION = :formation");
+    query.bindValue(":formation", type);
+    if (!query.exec())
+    {
+        qDebug() << "SQL Error in searchByType:" << query.lastError().text();
+    }
+    model->setQuery(query);
+    return model;
+}
+
+QSqlQueryModel *formations::searchByTrainer(const QString &trainer)
+{
+    QSqlQueryModel *model = new QSqlQueryModel();
+    QSqlQuery query;
+    query.prepare("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM AHMED.FORMATIONS WHERE TRAINER = :trainer");
+    query.bindValue(":trainer", trainer);
+    if (!query.exec())
+    {
+        qDebug() << "SQL Error in searchByTrainer:" << query.lastError().text();
+    }
+    model->setQuery(query);
+    return model;
+}
+
+QSqlQueryModel *formations::getTrainingsForDate(const QDate &date)
+{
+    QSqlQueryModel *model = new QSqlQueryModel();
+    QSqlQuery query;
+    query.prepare("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM AHMED.FORMATIONS WHERE DATEF = :datef");
+    query.bindValue(":datef", date);
+    if (!query.exec())
+    {
+        qDebug() << "SQL Error in getTrainingsForDate:" << query.lastError().text();
+    }
+    model->setQuery(query);
+    return model;
+}
+
 bool formations::deleteFormation(int idfor)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM FORMATIONS WHERE IDFORM = :id");
+    query.prepare("DELETE FROM AHMED.FORMATIONS WHERE IDFORM = :id");
     query.bindValue(":id", idfor);
 
     if (!query.exec())
@@ -179,8 +221,8 @@ bool formations::updateFormation(int idfor, const QString &newFormation, const Q
                                  const QString &newTrainer, const QDate &newDatef, int newTime, double newPrix)
 {
     QSqlQuery query;
-    query.prepare("UPDATE formations SET formation = :formation, description = :description, "
-                  "trainer = :trainer, datef = :datef, time = :time, prix = :prix "
+    query.prepare("UPDATE AHMED.FORMATIONS SET FORMATION = :formation, DESCRIPTION = :description, "
+                  "TRAINER = :trainer, DATEF = :datef, TIME = :time, PRIX = :prix "
                   "WHERE IDFORM = :id");
 
     query.bindValue(":formation", newFormation);
@@ -188,7 +230,7 @@ bool formations::updateFormation(int idfor, const QString &newFormation, const Q
     query.bindValue(":trainer", newTrainer);
     query.bindValue(":datef", newDatef);
     query.bindValue(":time", newTime);
-    query.bindValue(":prix", newPrix); // Bind as double
+    query.bindValue(":prix", newPrix);
     query.bindValue(":id", idfor);
 
     if (!query.exec())
@@ -209,7 +251,7 @@ bool formations::updateFormation(int idfor, const QString &newFormation, const Q
 bool formations::exists(int idfor)
 {
     QSqlQuery query;
-    query.prepare("SELECT COUNT(*) FROM formations WHERE idform = :idform");
+    query.prepare("SELECT COUNT(*) FROM AHMED.FORMATIONS WHERE IDFORM = :idform");
     query.bindValue(":idform", idfor);
 
     if (query.exec())

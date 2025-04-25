@@ -36,10 +36,11 @@ namespace {
 struct qt_meta_stringdata_CLASSChartWindowENDCLASS_t {};
 constexpr auto qt_meta_stringdata_CLASSChartWindowENDCLASS = QtMocHelpers::stringData(
     "ChartWindow",
-    "on_refreshChartButton_clicked",
+    "on_dataTypeComboBox_currentIndexChanged",
     "",
-    "on_statsFilterComboBox_currentIndexChanged",
     "index",
+    "on_refreshChartButton_clicked",
+    "on_statsFilterComboBox_currentIndexChanged",
     "on_chartTypeComboBox_currentIndexChanged",
     "on_resetChartButton_clicked",
     "on_pieSliceHovered",
@@ -62,7 +63,7 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSChartWindowENDCLASS[] = {
       12,       // revision
        0,       // classname
        0,    0, // classinfo
-       7,   14, // methods
+       8,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -70,22 +71,24 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSChartWindowENDCLASS[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    0,   56,    2, 0x08,    1 /* Private */,
-       3,    1,   57,    2, 0x08,    2 /* Private */,
-       5,    1,   60,    2, 0x08,    4 /* Private */,
-       6,    0,   63,    2, 0x08,    6 /* Private */,
-       7,    2,   64,    2, 0x08,    7 /* Private */,
-      11,    2,   69,    2, 0x08,   10 /* Private */,
-      13,    2,   74,    2, 0x08,   13 /* Private */,
+       1,    1,   62,    2, 0x08,    1 /* Private */,
+       4,    0,   65,    2, 0x08,    3 /* Private */,
+       5,    1,   66,    2, 0x08,    4 /* Private */,
+       6,    1,   69,    2, 0x08,    6 /* Private */,
+       7,    0,   72,    2, 0x08,    8 /* Private */,
+       8,    2,   73,    2, 0x08,    9 /* Private */,
+      12,    2,   78,    2, 0x08,   12 /* Private */,
+      14,    2,   83,    2, 0x08,   15 /* Private */,
 
  // slots: parameters
+    QMetaType::Void, QMetaType::Int,    3,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::Int,    4,
-    QMetaType::Void, QMetaType::Int,    4,
+    QMetaType::Void, QMetaType::Int,    3,
+    QMetaType::Void, QMetaType::Int,    3,
     QMetaType::Void,
-    QMetaType::Void, 0x80000000 | 8, QMetaType::Bool,    9,   10,
-    QMetaType::Void, QMetaType::Bool, QMetaType::Int,   12,    4,
-    QMetaType::Void, QMetaType::QPointF, QMetaType::Bool,   14,   10,
+    QMetaType::Void, 0x80000000 | 9, QMetaType::Bool,   10,   11,
+    QMetaType::Void, QMetaType::Bool, QMetaType::Int,   13,    3,
+    QMetaType::Void, QMetaType::QPointF, QMetaType::Bool,   15,   11,
 
        0        // eod
 };
@@ -99,6 +102,9 @@ Q_CONSTINIT const QMetaObject ChartWindow::staticMetaObject = { {
     qt_incomplete_metaTypeArray<qt_meta_stringdata_CLASSChartWindowENDCLASS_t,
         // Q_OBJECT / Q_GADGET
         QtPrivate::TypeAndForceComplete<ChartWindow, std::true_type>,
+        // method 'on_dataTypeComboBox_currentIndexChanged'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<int, std::false_type>,
         // method 'on_refreshChartButton_clicked'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'on_statsFilterComboBox_currentIndexChanged'
@@ -131,19 +137,20 @@ void ChartWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
         auto *_t = static_cast<ChartWindow *>(_o);
         (void)_t;
         switch (_id) {
-        case 0: _t->on_refreshChartButton_clicked(); break;
-        case 1: _t->on_statsFilterComboBox_currentIndexChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 2: _t->on_chartTypeComboBox_currentIndexChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 3: _t->on_resetChartButton_clicked(); break;
-        case 4: _t->on_pieSliceHovered((*reinterpret_cast< std::add_pointer_t<QPieSlice*>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
-        case 5: _t->on_barHovered((*reinterpret_cast< std::add_pointer_t<bool>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<int>>(_a[2]))); break;
-        case 6: _t->on_lineHovered((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
+        case 0: _t->on_dataTypeComboBox_currentIndexChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 1: _t->on_refreshChartButton_clicked(); break;
+        case 2: _t->on_statsFilterComboBox_currentIndexChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 3: _t->on_chartTypeComboBox_currentIndexChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 4: _t->on_resetChartButton_clicked(); break;
+        case 5: _t->on_pieSliceHovered((*reinterpret_cast< std::add_pointer_t<QPieSlice*>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
+        case 6: _t->on_barHovered((*reinterpret_cast< std::add_pointer_t<bool>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<int>>(_a[2]))); break;
+        case 7: _t->on_lineHovered((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
         switch (_id) {
         default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
-        case 4:
+        case 5:
             switch (*reinterpret_cast<int*>(_a[1])) {
             default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
             case 0:
@@ -173,13 +180,13 @@ int ChartWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 7)
+        if (_id < 8)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 7;
+        _id -= 8;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 7)
+        if (_id < 8)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 7;
+        _id -= 8;
     }
     return _id;
 }

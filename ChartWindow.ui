@@ -18,11 +18,32 @@
     <item>
      <widget class="QGroupBox" name="chartGroupBox">
       <property name="title">
-       <string>Consultation Statistics</string>
+       <string>Statistics</string>
       </property>
       <layout class="QVBoxLayout" name="chartLayout">
        <item>
         <layout class="QHBoxLayout" name="filterLayout">
+         <item>
+          <widget class="QLabel" name="dataTypeLabel">
+           <property name="text">
+            <string>Data Type:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="dataTypeComboBox">
+           <item>
+            <property name="text">
+             <string>Clients</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Trainings</string>
+            </property>
+           </item>
+          </widget>
+         </item>
          <item>
           <widget class="QLabel" name="filterLabel">
            <property name="text">

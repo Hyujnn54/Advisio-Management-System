@@ -12,7 +12,11 @@ ChartWindow::ChartWindow(QWidget *parent) :
 
     QSqlQueryModel *testModel = Etmp.afficher();
     qDebug() << "Initial Client Data Row Count:" << testModel->rowCount();
+    testModel = Ttmp.afficher();
+    qDebug() << "Initial Training Data Row Count:" << testModel->rowCount();
 
+    connect(ui->dataTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &ChartWindow::on_dataTypeComboBox_currentIndexChanged);
     connect(ui->refreshChartButton, &QPushButton::clicked, this, &ChartWindow::on_refreshChartButton_clicked);
     connect(ui->statsFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ChartWindow::on_statsFilterComboBox_currentIndexChanged);
@@ -32,52 +36,89 @@ ChartWindow::~ChartWindow()
 
 void ChartWindow::updateChart()
 {
+    QString dataType = ui->dataTypeComboBox->currentText();
     QString filterType = ui->statsFilterComboBox->currentText();
     QString filterValue = ui->filterValueComboBox->currentText();
-    qDebug() << "Filter Type:" << filterType << "Filter Value:" << filterValue << "Chart Type:" << currentChartType;
+    qDebug() << "Data Type:" << dataType << "Filter Type:" << filterType << "Filter Value:" << filterValue << "Chart Type:" << currentChartType;
 
     currentDataMap.clear();
-    lineDataMap.clear(); // Clear lineDataMap for line charts
+    lineDataMap.clear();
 
-    if (filterType == "By Sector") {
-        QSqlQueryModel *model = filterValue.isEmpty() ? Etmp.afficher() : Etmp.searchBySector(filterValue);
-        qDebug() << "Sector Model Row Count:" << model->rowCount();
-        for (int row = 0; row < model->rowCount(); ++row) {
-            QString sector = model->data(model->index(row, 1)).toString();
-            currentDataMap[sector] += 1;
-        }
-    } else if (filterType == "By Date") {
-        QDate date = QDate::fromString(filterValue, "yyyy-MM-dd");
-        if (date.isValid()) {
-            QSqlQueryModel *model = Etmp.getConsultationsForDate(date);
-            qDebug() << "Date Model Row Count:" << model->rowCount();
+    if (dataType == "Clients") {
+        if (filterType == "By Sector") {
+            QSqlQueryModel *model = filterValue.isEmpty() ? Etmp.afficher() : Etmp.searchBySector(filterValue);
+            qDebug() << "Client Sector Model Row Count:" << model->rowCount();
             for (int row = 0; row < model->rowCount(); ++row) {
-                QString name = model->data(model->index(row, 0)).toString();
-                currentDataMap[name] += 1;
+                QString sector = model->data(model->index(row, 1)).toString();
+                currentDataMap[sector] += 1;
             }
+        } else if (filterType == "By Date") {
+            QDate date = QDate::fromString(filterValue, "yyyy-MM-dd");
+            if (date.isValid()) {
+                QSqlQueryModel *model = Etmp.getConsultationsForDate(date);
+                qDebug() << "Client Date Model Row Count:" << model->rowCount();
+                for (int row = 0; row < model->rowCount(); ++row) {
+                    QString name = model->data(model->index(row, 0)).toString();
+                    currentDataMap[name] += 1;
+                }
 
-            // For line chart: populate lineDataMap with consultations per day
-            QDate startDate = date.addDays(-7); // Last 7 days
-            QDate endDate = date;
-            for (QDate d = startDate; d <= endDate; d = d.addDays(1)) {
-                QSqlQueryModel *dailyModel = Etmp.getConsultationsForDate(d);
-                lineDataMap[d] = dailyModel->rowCount();
+                QDate startDate = date.addDays(-7);
+                QDate endDate = date;
+                for (QDate d = startDate; d <= endDate; d = d.addDays(1)) {
+                    QSqlQueryModel *dailyModel = Etmp.getConsultationsForDate(d);
+                    lineDataMap[d] = dailyModel->rowCount();
+                }
+            } else {
+                qDebug() << "Invalid date:" << filterValue;
             }
-        } else {
-            qDebug() << "Invalid date:" << filterValue;
+        } else if (filterType == "By Consultant") {
+            bool ok;
+            int consultantId = filterValue.toInt(&ok);
+            if (ok) {
+                QSqlQueryModel *model = Etmp.searchByConsultant(QString::number(consultantId));
+                qDebug() << "Client Consultant Model Row Count:" << model->rowCount();
+                for (int row = 0; row < model->rowCount(); ++row) {
+                    QString name = model->data(model->index(row, 0)).toString();
+                    currentDataMap[name] += 1;
+                }
+            } else {
+                qDebug() << "Invalid consultant ID:" << filterValue;
+            }
         }
-    } else if (filterType == "By Consultant") {
-        bool ok;
-        int consultantId = filterValue.toInt(&ok);
-        if (ok) {
-            QSqlQueryModel *model = Etmp.searchByConsultant(QString::number(consultantId));
-            qDebug() << "Consultant Model Row Count:" << model->rowCount();
+    } else if (dataType == "Trainings") {
+        if (filterType == "By Formation") {
+            QSqlQueryModel *model = filterValue.isEmpty() ? Ttmp.afficher() : Ttmp.searchByType(filterValue);
+            qDebug() << "Training Formation Model Row Count:" << model->rowCount();
             for (int row = 0; row < model->rowCount(); ++row) {
-                QString name = model->data(model->index(row, 0)).toString();
-                currentDataMap[name] += 1;
+                QString formation = model->data(model->index(row, 1)).toString(); // Column 1 is FORMATION
+                currentDataMap[formation] += 1;
             }
-        } else {
-            qDebug() << "Invalid consultant ID:" << filterValue;
+        } else if (filterType == "By Date") {
+            QDate date = QDate::fromString(filterValue, "yyyy-MM-dd"); // Updated format
+            if (date.isValid()) {
+                QSqlQueryModel *model = Ttmp.getTrainingsForDate(date);
+                qDebug() << "Training Date Model Row Count:" << model->rowCount();
+                for (int row = 0; row < model->rowCount(); ++row) {
+                    QString formation = model->data(model->index(row, 1)).toString(); // Column 1 is FORMATION
+                    currentDataMap[formation] += 1;
+                }
+
+                QDate startDate = date.addDays(-7);
+                QDate endDate = date;
+                for (QDate d = startDate; d <= endDate; d = d.addDays(1)) {
+                    QSqlQueryModel *dailyModel = Ttmp.getTrainingsForDate(d);
+                    lineDataMap[d] = dailyModel->rowCount();
+                }
+            } else {
+                qDebug() << "Invalid date:" << filterValue;
+            }
+        } else if (filterType == "By Trainer") {
+            QSqlQueryModel *model = Ttmp.searchByTrainer(filterValue); // TRAINER is a QString
+            qDebug() << "Training Trainer Model Row Count:" << model->rowCount();
+            for (int row = 0; row < model->rowCount(); ++row) {
+                QString formation = model->data(model->index(row, 1)).toString(); // Column 1 is FORMATION
+                currentDataMap[formation] += 1;
+            }
         }
     }
 
@@ -89,7 +130,9 @@ void ChartWindow::updateChart()
     }
 
     QChart *chart = new QChart();
-    chart->setTitle("Number of Consultations per " + filterType.split(" ").last().toLower());
+    QString chartTitle = dataType == "Clients" ? "Number of Consultations per " : "Number of Trainings per ";
+    chartTitle += filterType.split(" ").last().toLower();
+    chart->setTitle(chartTitle);
     chart->setAnimationOptions(QChart::SeriesAnimations);
     chart->setBackgroundBrush(QBrush(QColor(0, 128, 0, 100)));
     chart->setPlotAreaBackgroundBrush(QBrush(QColor(0, 128, 0, 100)));
@@ -98,7 +141,7 @@ void ChartWindow::updateChart()
     if (currentChartType == "Bar Chart") {
         qDebug() << "Creating Bar Chart...";
         QBarSeries *series = new QBarSeries();
-        currentBarSet = new QBarSet("Consultations");
+        currentBarSet = new QBarSet(dataType == "Clients" ? "Consultations" : "Trainings");
 
         for (auto it = currentDataMap.begin(); it != currentDataMap.end(); ++it) {
             *currentBarSet << it.value();
@@ -129,7 +172,6 @@ void ChartWindow::updateChart()
         chart->addAxis(axisY, Qt::AlignLeft);
         series->attachAxis(axisY);
 
-        // Connect hover signal
         connect(series, &QBarSeries::hovered, this, &ChartWindow::on_barHovered);
     } else if (currentChartType == "Pie Chart") {
         qDebug() << "Creating Pie Chart...";
@@ -155,19 +197,17 @@ void ChartWindow::updateChart()
 
         chart->addSeries(series);
 
-        // Connect hover signal
         connect(series, &QPieSeries::hovered, this, &ChartWindow::on_pieSliceHovered);
     } else if (currentChartType == "Line Chart") {
         qDebug() << "Creating Line Chart...";
         QLineSeries *series = new QLineSeries();
 
-        // Populate the line series with data from lineDataMap
         QDateTimeAxis *axisX = new QDateTimeAxis();
         axisX->setFormat("yyyy-MM-dd");
         axisX->setTitleText("Date");
 
         QValueAxis *axisY = new QValueAxis();
-        axisY->setTitleText("Consultations");
+        axisY->setTitleText(dataType == "Clients" ? "Consultations" : "Trainings");
         axisY->setLabelFormat("%d");
 
         int maxValue = 0;
@@ -201,7 +241,6 @@ void ChartWindow::updateChart()
         chart->addAxis(axisY, Qt::AlignLeft);
         series->attachAxis(axisY);
 
-        // Connect hover signal
         connect(series, &QLineSeries::hovered, this, &ChartWindow::on_lineHovered);
     }
 
@@ -214,25 +253,62 @@ void ChartWindow::updateChart()
 void ChartWindow::populateFilterValues()
 {
     ui->filterValueComboBox->clear();
+    QString dataType = ui->dataTypeComboBox->currentText();
     QString filterType = ui->statsFilterComboBox->currentText();
 
-    if (filterType == "By Sector") {
-        QSqlQuery query("SELECT DISTINCT SECTOR FROM AHMED.CLIENTS");
-        while (query.next()) {
-            ui->filterValueComboBox->addItem(query.value(0).toString());
+    if (dataType == "Clients") {
+        if (filterType == "By Sector") {
+            QSqlQuery query("SELECT DISTINCT SECTOR FROM AHMED.CLIENTS");
+            while (query.next()) {
+                ui->filterValueComboBox->addItem(query.value(0).toString());
+            }
+        } else if (filterType == "By Date") {
+            QSqlQuery query("SELECT DISTINCT CONSULTATION_TIMESTAMP FROM AHMED.CLIENTS");
+            while (query.next()) {
+                ui->filterValueComboBox->addItem(query.value(0).toDateTime().toString("yyyy-MM-dd"));
+            }
+        } else if (filterType == "By Consultant") {
+            QSqlQuery query("SELECT DISTINCT CONSULTANT_ID FROM AHMED.CLIENTS");
+            while (query.next()) {
+                ui->filterValueComboBox->addItem(query.value(0).toString());
+            }
         }
-    } else if (filterType == "By Date") {
-        QSqlQuery query("SELECT DISTINCT CONSULTATION_TIMESTAMP FROM AHMED.CLIENTS");
-        while (query.next()) {
-            ui->filterValueComboBox->addItem(query.value(0).toDateTime().toString("yyyy-MM-dd"));
-        }
-    } else if (filterType == "By Consultant") {
-        QSqlQuery query("SELECT DISTINCT CONSULTANT_ID FROM AHMED.CLIENTS");
-        while (query.next()) {
-            ui->filterValueComboBox->addItem(query.value(0).toString());
+    } else if (dataType == "Trainings") {
+        if (filterType == "By Formation") {
+            QSqlQuery query("SELECT DISTINCT FORMATION FROM AHMED.FORMATIONS");
+            while (query.next()) {
+                ui->filterValueComboBox->addItem(query.value(0).toString());
+            }
+        } else if (filterType == "By Date") {
+            QSqlQuery query("SELECT DISTINCT DATEF FROM AHMED.FORMATIONS");
+            while (query.next()) {
+                ui->filterValueComboBox->addItem(query.value(0).toDate().toString("yyyy-MM-dd"));
+            }
+        } else if (filterType == "By Trainer") {
+            QSqlQuery query("SELECT DISTINCT TRAINER FROM AHMED.FORMATIONS");
+            while (query.next()) {
+                ui->filterValueComboBox->addItem(query.value(0).toString());
+            }
         }
     }
-    qDebug() << "Filter Values Populated for" << filterType << ":" << ui->filterValueComboBox->count() << "items";
+    qDebug() << "Filter Values Populated for" << dataType << "-" << filterType << ":" << ui->filterValueComboBox->count() << "items";
+}
+
+void ChartWindow::on_dataTypeComboBox_currentIndexChanged(int /*index*/)
+{
+    QString dataType = ui->dataTypeComboBox->currentText();
+    ui->statsFilterComboBox->clear();
+    if (dataType == "Clients") {
+        ui->statsFilterComboBox->addItem("By Sector");
+        ui->statsFilterComboBox->addItem("By Date");
+        ui->statsFilterComboBox->addItem("By Consultant");
+    } else if (dataType == "Trainings") {
+        ui->statsFilterComboBox->addItem("By Formation");
+        ui->statsFilterComboBox->addItem("By Date");
+        ui->statsFilterComboBox->addItem("By Trainer");
+    }
+    populateFilterValues();
+    updateChart();
 }
 
 void ChartWindow::on_refreshChartButton_clicked()
@@ -255,7 +331,8 @@ void ChartWindow::on_chartTypeComboBox_currentIndexChanged(int /*index*/)
 void ChartWindow::on_resetChartButton_clicked()
 {
     qDebug() << "Resetting chart to default...";
-    ui->statsFilterComboBox->setCurrentIndex(0); // "By Sector"
+    ui->dataTypeComboBox->setCurrentIndex(0); // "Clients"
+    ui->statsFilterComboBox->setCurrentIndex(0); // "By Sector" or "By Formation"
     ui->filterValueComboBox->setCurrentIndex(-1); // Clear selection
     ui->chartTypeComboBox->setCurrentIndex(0); // "Bar Chart"
     currentChartType = "Bar Chart";
@@ -277,7 +354,9 @@ void ChartWindow::on_pieSliceHovered(QPieSlice *slice, bool state)
                 break;
             }
         }
-        ui->chartDetailsLabel->setText(QString("Category: %1\nConsultations: %2").arg(fullName).arg(value));
+        QString dataType = ui->dataTypeComboBox->currentText();
+        QString label = dataType == "Clients" ? "Consultations" : "Trainings";
+        ui->chartDetailsLabel->setText(QString("Category: %1\n%2: %3").arg(fullName).arg(label).arg(value));
     } else {
         ui->chartDetailsLabel->setText("Hover over a chart element for details");
     }
@@ -289,40 +368,36 @@ void ChartWindow::on_barHovered(bool status, int index)
 
     QChart *chart = ui->statsChartView->chart();
     if (status) {
-        // Disable animations to prevent reset
         chart->setAnimationOptions(QChart::NoAnimation);
 
-        // Store the original value and increase the height slightly to "pop out"
         qreal originalValue = currentBarSet->at(index);
-        currentBarSet->replace(index, originalValue + 0.2); // Add a small increase
+        currentBarSet->replace(index, originalValue + 0.2);
 
-        // Highlight by changing the pen color (outline) instead of brush
         QPen pen = currentBarSet->pen();
         pen.setColor(Qt::cyan);
-        pen.setWidth(2); // Thicker outline
+        pen.setWidth(2);
         currentBarSet->setPen(pen);
 
         hoveredBarIndex = index;
 
         QString category = currentDataMap.keys().at(index);
-        int value = qRound(originalValue); // Use original value for display
-        ui->chartDetailsLabel->setText(QString("Category: %1\nConsultations: %2").arg(category).arg(value));
+        int value = qRound(originalValue);
+        QString dataType = ui->dataTypeComboBox->currentText();
+        QString label = dataType == "Clients" ? "Consultations" : "Trainings";
+        ui->chartDetailsLabel->setText(QString("Category: %1\n%2: %3").arg(category).arg(label).arg(value));
     } else {
-        // Revert the height
         if (hoveredBarIndex != -1) {
             qreal originalValue = currentBarSet->at(hoveredBarIndex) - 0.2;
             currentBarSet->replace(hoveredBarIndex, originalValue);
 
-            // Revert the pen
             QPen pen = currentBarSet->pen();
-            pen.setColor(Qt::black); // Default outline color
-            pen.setWidth(0); // Default width
+            pen.setColor(Qt::black);
+            pen.setWidth(0);
             currentBarSet->setPen(pen);
 
             hoveredBarIndex = -1;
         }
 
-        // Re-enable animations
         chart->setAnimationOptions(QChart::SeriesAnimations);
 
         ui->chartDetailsLabel->setText("Hover over a chart element for details");
@@ -332,7 +407,6 @@ void ChartWindow::on_barHovered(bool status, int index)
 void ChartWindow::on_lineHovered(QPointF point, bool state)
 {
     if (state) {
-        // Find the closest date in lineDataMap to the hovered point's x-value
         QDate closestDate;
         int value = 0;
         qreal minDistance = std::numeric_limits<qreal>::max();
@@ -348,9 +422,12 @@ void ChartWindow::on_lineHovered(QPointF point, bool state)
             }
         }
 
-        if (minDistance <= 1) { // Allow a small tolerance for matching dates
-            ui->chartDetailsLabel->setText(QString("Date: %1\nConsultations: %2")
+        if (minDistance <= 1) {
+            QString dataType = ui->dataTypeComboBox->currentText();
+            QString label = dataType == "Clients" ? "Consultations" : "Trainings";
+            ui->chartDetailsLabel->setText(QString("Date: %1\n%2: %3")
                                                .arg(closestDate.toString("yyyy-MM-dd"))
+                                               .arg(label)
                                                .arg(value));
         } else {
             ui->chartDetailsLabel->setText("Hover over a point for details");
