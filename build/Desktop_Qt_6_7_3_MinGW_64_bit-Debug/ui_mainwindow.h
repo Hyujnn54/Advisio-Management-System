@@ -105,6 +105,7 @@ public:
     QPushButton *modifyBtn;
     QPushButton *saveUpdateBtn;
     QPushButton *downloadBtn;
+    QPushButton *generateQRCodeBtn;
     QWidget *tab;
     QVBoxLayout *verticalLayoutStats;
     QWidget *chartsContainer;
@@ -441,6 +442,11 @@ public:
 
         horizontalLayout_4->addWidget(downloadBtn);
 
+        generateQRCodeBtn = new QPushButton(listEmployee);
+        generateQRCodeBtn->setObjectName("generateQRCodeBtn");
+
+        horizontalLayout_4->addWidget(generateQRCodeBtn);
+
 
         verticalLayout_6->addLayout(horizontalLayout_4);
 
@@ -542,6 +548,7 @@ public:
         modifyBtn->setText(QCoreApplication::translate("MainWindow", "Update", nullptr));
         saveUpdateBtn->setText(QCoreApplication::translate("MainWindow", "Save Update", nullptr));
         downloadBtn->setText(QCoreApplication::translate("MainWindow", "Download", nullptr));
+        generateQRCodeBtn->setText(QCoreApplication::translate("MainWindow", "Generate QR Code", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(listEmployee), QCoreApplication::translate("MainWindow", "Manage Employees", nullptr));
         refreshStatsButton->setText(QCoreApplication::translate("MainWindow", "Refresh Statistics", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab), QCoreApplication::translate("MainWindow", "Statistics", nullptr));

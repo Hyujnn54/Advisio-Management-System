@@ -37,12 +37,17 @@
 #include <QPainter>
 #include <QImage>
 #include <QBuffer>
+#include "qrcodegen/qrcodegen.hpp"
+#include <QHBoxLayout>
+#include <QSerialPort>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , employee(new Employee())
     , employeeModel(new QSqlQueryModel(this))
     , imageDelegate(new ImageDelegate(this))
+    , arduino(new Arduino())
+    , serialBuffer("")
     , isDarkTheme(false)
     , pieChartView(nullptr)
     , barChartView(nullptr)
@@ -111,6 +116,7 @@ MainWindow::MainWindow(QWidget *parent)
                 ui->deleteBtn->setEnabled(hasSelection && loggedInRole == "Admin");
                 ui->modifyBtn->setEnabled(hasSelection && (loggedInRole == "Admin" || loggedInRole == "Manager"));
                 ui->downloadBtn->setEnabled(hasSelection);
+                ui->generateQRCodeBtn->setEnabled(hasSelection); // Enable QR code button on selection
                 qDebug() << "Selection changed, hasSelection:" << hasSelection;
             });
     connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
@@ -177,7 +183,60 @@ MainWindow::MainWindow(QWidget *parent)
         });
     }
 
+
     updateUIBasedOnRole();
+    // Initialize Arduino serial connection
+    QString portName = "COM4"; // Adjust this to your Arduino's port
+    if (arduino->connectArduino(portName)) {
+        qDebug() << "Arduino connected successfully";
+        connect(arduino, &Arduino::dataAvailable, this, &MainWindow::handleSerialData);
+    } else {
+        qDebug() << "Failed to connect to Arduino";
+        QMessageBox::warning(this, "Arduino Error", "Failed to connect to Arduino on port " + portName);
+    }
+
+    // ... (rest of the constructor remains unchanged)
+}
+
+void MainWindow::handleSerialData()
+{
+    // Read all available data and append to the buffer
+    QByteArray data = arduino->readData();
+    serialBuffer += QString(data);
+
+    // Process complete lines (ending with \n)
+    int newlineIndex;
+    while ((newlineIndex = serialBuffer.indexOf('\n')) != -1) {
+        // Extract the complete line (excluding \n)
+        QString uid = serialBuffer.left(newlineIndex).trimmed();
+        serialBuffer.remove(0, newlineIndex + 1); // Remove the processed line from the buffer
+
+        if (uid.isEmpty()) {
+            continue;
+        }
+
+        qDebug() << "Received RFID UID from Arduino:" << uid;
+
+        // Look up the employee with the matching RFID_UID
+        QSqlQuery query;
+        query.prepare("SELECT ID, FIRST_NAME, LAST_NAME FROM EMPLOYEE WHERE RFID_UID = :uid");
+        query.bindValue(":uid", uid);
+        if (!query.exec()) {
+            qDebug() << "Query Error:" << query.lastError().text();
+            QMessageBox::warning(this, "Database Error", "Failed to execute query: " + query.lastError().text());
+            continue;
+        }
+        if (query.next()) {
+            int employeeId = query.value("ID").toInt();
+            QString firstName = query.value("FIRST_NAME").toString();
+            QString lastName = query.value("LAST_NAME").toString();
+            qDebug() << "Employee found - ID:" << employeeId << "Name:" << firstName << lastName;
+            QMessageBox::information(this, "Employee Found", "RFID card belongs to Employee ID: " + QString::number(employeeId) + "\nName: " + firstName + " " + lastName);
+        } else {
+            qDebug() << "No employee found with RFID UID:" << uid;
+            QMessageBox::warning(this, "No Match", "No employee found with RFID UID " + uid + ".");
+        }
+    }
 }
 MainWindow::~MainWindow()
 {
@@ -251,6 +310,7 @@ void MainWindow::setupConnections()
     disconnect(ui->resetSearchButton, &QPushButton::clicked, this, &MainWindow::on_resetSearchButtonclicked);
     disconnect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::searchEmployees);
     disconnect(ui->logoutButton, &QPushButton::clicked, this, &::MainWindow::on_logoutButtonclicked);
+    disconnect(ui->generateQRCodeBtn, &QPushButton::clicked, this, &MainWindow::on_generateQRCodeBtnClicked);
 
     // Set up new connections
     connect(ui->addButton, &QPushButton::clicked, this, &MainWindow::on_addButtonclicked);
@@ -261,6 +321,7 @@ void MainWindow::setupConnections()
     connect(ui->resetSearchButton, &QPushButton::clicked, this, &MainWindow::on_resetSearchButtonclicked);
     connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::searchEmployees);
     connect(ui->logoutButton, &QPushButton::clicked, this, &::MainWindow::on_logoutButtonclicked);
+    connect(ui->generateQRCodeBtn, &QPushButton::clicked, this, &MainWindow::on_generateQRCodeBtnClicked);
 
 
 }
@@ -672,7 +733,7 @@ void MainWindow::searchEmployees()
     QString criteria = ui->searchCriteriaComboBox->currentText().trimmed();
     QString input = ui->searchInput->text().trimmed();
 
-    QString queryStr = "SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY FROM EMPLOYEE";
+    QString queryStr = "SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY,ROLE,RFID_UID FROM EMPLOYEE";
     bool hasFilter = !input.isEmpty();
 
     if (hasFilter) {
@@ -748,7 +809,7 @@ void MainWindow::sortEmployees(int column)
     // Get the current search criteria and input
     QString criteria = ui->searchCriteriaComboBox->currentText();
     QString input = ui->searchInput->text();
-    QString queryStr = "SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY FROM EMPLOYEE";
+    QString queryStr = "SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY,ROLE,RFID_UID FROM EMPLOYEE";
 
     // Apply search filter if present
     if (!input.isEmpty()) {
@@ -1049,7 +1110,85 @@ void MainWindow::applyLightTheme() {
     )";
     qApp->setStyleSheet(styleSheet);
 }
+QString MainWindow::generateQRCodeForEmployee(int id)
+{
+    // Encode the employee ID as a string
+    return QString::number(id);
+}
 
+QImage MainWindow::generateQRCodeImage(const QString &text, int scale)
+{
+    using namespace qrcodegen;
+
+    // Generate the QR Code
+    QrCode qr = QrCode::encodeText(text.toStdString().c_str(), QrCode::Ecc::MEDIUM);
+
+    // Get the size of the QR code (it's a square)
+    int size = qr.getSize();
+    QImage image(size * scale, size * scale, QImage::Format_RGB32);
+    image.fill(Qt::white); // Background color
+
+    QPainter painter(&image);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(Qt::black); // QR code color
+
+    // Draw the QR code
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            if (qr.getModule(x, y)) {
+                painter.drawRect(x * scale, y * scale, scale, scale);
+            }
+        }
+    }
+
+    painter.end();
+    return image;
+}
+
+void MainWindow::showQRCodeDialog(const QImage &qrImage, int id)
+{
+    QDialog *dialog = new QDialog(this);
+    dialog->setWindowTitle("Employee QR Code");
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+
+    QLabel *qrLabel = new QLabel(dialog);
+    qrLabel->setPixmap(QPixmap::fromImage(qrImage));
+    layout->addWidget(qrLabel);
+
+    QPushButton *saveButton = new QPushButton("Save QR Code", dialog);
+    layout->addWidget(saveButton);
+
+    connect(saveButton, &QPushButton::clicked, this, [this, qrImage, id, dialog]() {
+        QString fileName = QFileDialog::getSaveFileName(this, tr("Save QR Code"),
+                                                        QString("employee_qr_%1.png").arg(id),
+                                                        tr("PNG Files (*.png)"));
+        if (!fileName.isEmpty()) {
+            qrImage.save(fileName);
+            QMessageBox::information(this, "Success", "QR Code saved successfully!");
+        }
+        dialog->accept();
+    });
+
+    dialog->setLayout(layout);
+    dialog->exec();
+    delete dialog;
+}
+
+void MainWindow::on_generateQRCodeBtnClicked()
+{
+    qDebug() << "on_generateQRCodeBtnClicked called";
+    QModelIndexList selected = ui->tableView->selectionModel()->selectedRows();
+    if (selected.isEmpty()) {
+        QMessageBox::warning(this, "Error", "No employee selected!");
+        return;
+    }
+
+    int row = selected.at(0).row();
+    int employeeId = employeeModel->data(employeeModel->index(row, 0)).toInt();
+    QString qrData = generateQRCodeForEmployee(employeeId);
+    QImage qrImage = generateQRCodeImage(qrData);
+    showQRCodeDialog(qrImage, employeeId);
+}
 void MainWindow::applyDarkTheme() {
     QString styleSheet = R"(
         QWidget {

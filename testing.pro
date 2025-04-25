@@ -2,6 +2,7 @@ QT       += core gui
 QT       += sql
 QT       += charts
 QT       += printsupport
+QT       += serialport
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
@@ -11,15 +12,18 @@ CONFIG += console
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    arduino.cpp \
     connection.cpp \
     employee.cpp \
     imageDelegate.cpp \
     main.cpp \
     mainwindow.cpp \
     sign.cpp \
-    updateemployeedialog.cpp
+    updateemployeedialog.cpp \
+    qrcodegen/qrcodegen.cpp
 
 HEADERS += \
+    arduino.h \
     connection.h \
     employee.h \
     imageDelegate.h \
@@ -44,6 +48,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 
 # Include Paths
+INCLUDEPATH += C:\Users\Admin\Documents\testing\qrcodegen
 INCLUDEPATH += C:/opencv/build/install/include
 
 LIBS += -LC:/opencv/build/lib \

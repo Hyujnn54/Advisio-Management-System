@@ -125,7 +125,7 @@ bool Employee::ajouter() {
 QSqlQueryModel *Employee::loadEmployees(){
     QSqlQueryModel* model = new QSqlQueryModel();
     QSqlQuery query;
-    query.prepare("SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY,IMAGE,ROLE FROM EMPLOYEE");
+    query.prepare("SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY,IMAGE,ROLE,RFID_UID FROM EMPLOYEE");
 
     if (query.exec()) {
         model->setQuery(std::move(query));
@@ -142,6 +142,7 @@ QSqlQueryModel *Employee::loadEmployees(){
         model->setHeaderData(10, Qt::Horizontal, QObject::tr("Speciality"));
         model->setHeaderData(11, Qt::Horizontal, QObject::tr("Image"));
         model->setHeaderData(12, Qt::Horizontal, QObject::tr("Role"));
+        model->setHeaderData(13, Qt::Horizontal, QObject::tr("RFID_UID"));
     } else {
         qDebug() << "Error loading employee list:" << query.lastError().text();
         delete model; // Clean up if query fails

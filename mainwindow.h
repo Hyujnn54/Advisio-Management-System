@@ -10,6 +10,7 @@
 #include <QtCharts/QChart>
 #include <QtCharts/QValueAxis>
 #include <QGraphicsLayout>
+#include "arduino.h"
 #include "employee.h"
 #include "imageDelegate.h"
 QT_BEGIN_NAMESPACE
@@ -40,11 +41,15 @@ private slots:
     void toggleSidebar();
     void on_logoutButtonclicked();
     void on_refreshStatsButtonClicked();
+    void on_generateQRCodeBtnClicked();
+    void handleSerialData();
 private:
     Ui::MainWindow *ui;
     Employee *employee;
     QSqlQueryModel *employeeModel;
     ImageDelegate *imageDelegate;
+    Arduino *arduino;
+    QString serialBuffer;
     void setupConnections();
     QMap<int, Qt::SortOrder> sortOrders; // Track sort order per column
     void handleHeaderClicked(int column);
@@ -56,5 +61,8 @@ private:
     void updateStatistics();
     QChartView *pieChartView;
     QChartView *barChartView;
+    QImage generateQRCodeImage(const QString &text, int scale = 10); // Generate QR code as QImage
+    QString generateQRCodeForEmployee(int id); // Generate QR code data for employee ID
+    void showQRCodeDialog(const QImage &qrImage, int id);
 };
 #endif // MAINWINDOW_H
