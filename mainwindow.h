@@ -7,7 +7,7 @@
 #include "ChartWindow.h"
 #include <QMainWindow>
 #include <QSqlQueryModel>
-#include <QSqlTableModel> // Added this include
+#include <QSqlTableModel>
 #include <QSortFilterProxyModel>
 #include <QNetworkAccessManager>
 #include <QCalendarWidget>
@@ -89,6 +89,10 @@ private:
     void addNotification(const QString &action, const QString &details);
     void updateNotificationLabel();
 
+    // Debouncing for calendar selection
+    QDateTime lastCalendarUpdate;
+    static const int DEBOUNCE_INTERVAL_MS;
+
     // Shared Methods
     void applyDarkTheme();
     void applyLightTheme();
@@ -114,7 +118,9 @@ private:
     void refreshTrainingTableView();
     void sendSmsNotification(const QString &phoneNumber, const QString &formationName, const QDate &date);
 
-    QSqlTableModel *consultationTableModel;
+    QSqlQueryModel *consultationTableModel;
+    QDateTime lastTrainingTableRefresh;
+    static const int TRAINING_REFRESH_INTERVAL_MS;
 };
 
 #endif // MAINWINDOW_H

@@ -16,6 +16,8 @@
 #include <QSettings>
 #include <QNetworkReply>
 #include <QToolTip>
+const int MainWindow::DEBOUNCE_INTERVAL_MS = 500;
+const int MainWindow::TRAINING_REFRESH_INTERVAL_MS = 1000;
 
 MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     : QMainWindow(parent),
@@ -30,7 +32,9 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     trainingProxyModel(new QSortFilterProxyModel(this)),
     emailAttempts(0),
     emailSuccesses(0),
-    consultationTableModel(nullptr) // Initialize to nullptr
+    lastCalendarUpdate{}, // Moved to match declaration order
+    consultationTableModel(nullptr),
+    lastTrainingTableRefresh{}
 {
     ui->setupUi(this);
     applyLightTheme();
@@ -72,9 +76,15 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     ui->clientTableView->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->clientTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     if (m_dbConnected) {
+        qDebug() << "Setting clientTableModel query...";
         clientTableModel->setQuery("SELECT c.NAME, c.SECTOR, c.CONTACT_INFO, c.EMAIL, c.CONSULTATION_DATE, "
                                    "e.FIRST_NAME || ' ' || e.LAST_NAME AS CONSULTANT_NAME "
                                    "FROM AHMED.CLIENTS c LEFT JOIN AHMED.EMPLOYEE e ON c.CONSULTANT_ID = e.ID");
+        if (clientTableModel->lastError().isValid()) {
+            qDebug() << "clientTableModel Query Error:" << clientTableModel->lastError().text();
+        } else {
+            qDebug() << "clientTableModel query set successfully.";
+        }
         clientProxyModel->setSourceModel(clientTableModel);
         ui->clientTableView->setModel(clientProxyModel);
         ui->clientTableView->resizeColumnsToContents();
@@ -82,10 +92,18 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
 
     // Initialize consultation table model
     if (m_dbConnected) {
-        consultationTableModel = new QSqlTableModel(this);
-        consultationTableModel->setTable("AHMED.CLIENTS");
+        consultationTableModel = new QSqlQueryModel(this);
+        qDebug() << "Setting initial consultationTableModel query...";
+        consultationTableModel->setQuery("SELECT c.NAME, c.SECTOR, c.CONTACT_INFO, c.EMAIL, c.CONSULTATION_DATE, "
+                                         "e.FIRST_NAME || ' ' || e.LAST_NAME AS CONSULTANT_NAME "
+                                         "FROM AHMED.CLIENTS c LEFT JOIN AHMED.EMPLOYEE e ON c.CONSULTANT_ID = e.ID "
+                                         "WHERE 1=0");
+        if (consultationTableModel->lastError().isValid()) {
+            qDebug() << "Initial consultationTableModel Query Error:" << consultationTableModel->lastError().text();
+        } else {
+            qDebug() << "Initial consultationTableModel query set successfully.";
+        }
         ui->clientDateConsultationsView->setModel(consultationTableModel);
-        consultationTableModel->select(); // Initial load
         ui->clientDateConsultationsView->resizeColumnsToContents();
     }
 
@@ -128,7 +146,6 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     }
 
     connect(ui->clientUpdateButton, &QPushButton::clicked, this, &MainWindow::on_clientUpdateButtonClicked);
-    // Connect signals (removed manual connections for client section buttons)
     connect(ui->menuButton, &QPushButton::clicked, this, &MainWindow::toggleSidebar);
     connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
     connect(ui->clientTableView->horizontalHeader(), &QHeaderView::sectionClicked, this, &MainWindow::on_clientTableViewHeaderClicked);
@@ -157,7 +174,7 @@ MainWindow::~MainWindow()
     delete clientProxyModel;
     delete trainingTableModel;
     delete trainingProxyModel;
-    delete consultationTableModel; // Added
+    delete consultationTableModel;
     delete emailSender;
     delete networkManager;
     delete ui;
@@ -177,36 +194,14 @@ void MainWindow::on_statisticsButton_clicked()
 
 void MainWindow::on_clientSectionButton_clicked()
 {
-    int clientPageIndex = -1;
-    for (int i = 0; i < ui->mainStackedWidget->count(); ++i) {
-        if (ui->mainStackedWidget->widget(i)->findChild<QTabWidget*>("clientTabWidget")) {
-            clientPageIndex = i;
-            break;
-        }
-    }
-    if (clientPageIndex != -1) {
-        ui->mainStackedWidget->setCurrentIndex(clientPageIndex);
-        refreshClientTable();
-    } else {
-        QMessageBox::critical(this, "UI Error", "Failed to switch to Client Section.");
-    }
+    ui->mainStackedWidget->setCurrentWidget(ui->clientPage); // Adjust 'clientPage' to the correct name
+    refreshClientTable();
 }
 
 void MainWindow::on_trainingSectionButton_clicked()
 {
-    int trainingPageIndex = -1;
-    for (int i = 0; i < ui->mainStackedWidget->count(); ++i) {
-        if (ui->mainStackedWidget->widget(i)->findChild<QWidget*>("trainingTabWidget")) {
-            trainingPageIndex = i;
-            break;
-        }
-    }
-    if (trainingPageIndex != -1) {
-        ui->mainStackedWidget->setCurrentIndex(trainingPageIndex);
-        refreshTrainingTableView();
-    } else {
-        QMessageBox::critical(this, "UI Error", "Failed to switch to Training Section.");
-    }
+    ui->mainStackedWidget->setCurrentWidget(ui->trainingPage);
+    refreshTrainingTableView();
 }
 
 void MainWindow::on_clientAddButton_clicked()
@@ -355,6 +350,14 @@ void MainWindow::on_clientTableViewHeaderClicked(int logicalIndex)
 
 void MainWindow::on_clientConsultationCalendar_selectionChanged()
 {
+    QDateTime currentTime = QDateTime::currentDateTime();
+    if (lastCalendarUpdate.isValid() &&
+        lastCalendarUpdate.msecsTo(currentTime) < DEBOUNCE_INTERVAL_MS) {
+        qDebug() << "Skipping calendar update due to debounce.";
+        return;
+    }
+    lastCalendarUpdate = currentTime;
+
     QDate selectedDate = ui->clientConsultationCalendar->selectedDate();
     ui->clientSelectedDateLabel->setText("Selected date: " + selectedDate.toString("yyyy-MM-dd"));
 
@@ -374,20 +377,13 @@ void MainWindow::on_clientConsultationCalendar_selectionChanged()
         }
     }
 
-    // Start a transaction
-    if (!db.transaction()) {
-        qDebug() << "Failed to start transaction:" << db.lastError().text();
-        ui->clientConsultationCountLabel->setText("Consultations: Error");
-        return;
-    }
-
     // Query to count consultations on the selected date
     QSqlQuery query(db);
     query.prepare("SELECT COUNT(*) FROM AHMED.CLIENTS WHERE TRUNC(CONSULTATION_DATE) = TO_DATE(:selectedDate, 'YYYY-MM-DD')");
     query.bindValue(":selectedDate", selectedDate.toString("yyyy-MM-dd"));
+    qDebug() << "Executing count query...";
     if (!query.exec()) {
         qDebug() << "Consultation Count Query Error:" << query.lastError().text();
-        db.rollback();
         ui->clientConsultationCountLabel->setText("Consultations: Error");
         return;
     }
@@ -396,22 +392,40 @@ void MainWindow::on_clientConsultationCalendar_selectionChanged()
     if (query.next()) {
         count = query.value(0).toInt();
     }
+    qDebug() << "Count query executed successfully.";
     ui->clientConsultationCountLabel->setText(QString("Consultations: %1").arg(count));
+
+    // Explicitly finish the query to release resources
+    query.finish();
+    query.clear();
 
     // Update the table with consultations for the selected date
     if (consultationTableModel) {
-        consultationTableModel->setFilter(QString("TRUNC(CONSULTATION_DATE) = TO_DATE('%1', 'YYYY-MM-DD')")
-                                              .arg(selectedDate.toString("yyyy-MM-dd")));
-        consultationTableModel->select();
-        ui->clientDateConsultationsView->resizeColumnsToContents();
-    }
+        // Ensure the table view is using the correct model
+        if (ui->clientDateConsultationsView->model() != consultationTableModel) {
+            ui->clientDateConsultationsView->setModel(consultationTableModel);
+        }
 
-    // Commit the transaction
-    if (!db.commit()) {
-        qDebug() << "Failed to commit transaction:" << db.lastError().text();
-        db.rollback();
-        ui->clientConsultationCountLabel->setText("Consultations: Error");
-        return;
+        // Update the query to filter by the selected date
+        QString queryStr = QString(
+                               "SELECT c.NAME, c.SECTOR, c.CONTACT_INFO, c.EMAIL, c.CONSULTATION_DATE, "
+                               "e.FIRST_NAME || ' ' || e.LAST_NAME AS CONSULTANT_NAME "
+                               "FROM AHMED.CLIENTS c LEFT JOIN AHMED.EMPLOYEE e ON c.CONSULTANT_ID = e.ID "
+                               "WHERE TRUNC(c.CONSULTATION_DATE) = TO_DATE('%1', 'YYYY-MM-DD')"
+                               ).arg(selectedDate.toString("yyyy-MM-dd"));
+
+        qDebug() << "Setting consultationTableModel query...";
+        consultationTableModel->setQuery(queryStr);
+
+        // Verify if the query executed successfully
+        if (consultationTableModel->lastError().isValid()) {
+            qDebug() << "Consultation Table Query Error:" << consultationTableModel->lastError().text();
+            ui->clientConsultationCountLabel->setText("Consultations: Error");
+            return;
+        }
+        qDebug() << "consultationTableModel query set successfully.";
+
+        ui->clientDateConsultationsView->resizeColumnsToContents();
     }
 }
 
@@ -1049,37 +1063,73 @@ bool MainWindow::isValidDateTime(const QDateTime &dateTime)
 
 void MainWindow::setupCalendarView()
 {
-    ui->clientConsultationCalendar->setFirstDayOfWeek(Qt::Monday);
-    connect(ui->clientConsultationCalendar, &QCalendarWidget::selectionChanged,
-            this, &MainWindow::on_clientConsultationCalendar_selectionChanged);
-    connect(ui->clientConsultationCalendar, &QCalendarWidget::activated,
-            this, &MainWindow::on_clientConsultationCalendar_activated);
-    updateCalendarConsultations();
-    updateSelectedDateInfo(ui->clientConsultationCalendar->selectedDate());
+    qDebug() << "Entering setupCalendarView...";
+
+    // Set the calendar's date range (example)
+    ui->clientConsultationCalendar->setMinimumDate(QDate(2020, 1, 1));
+    ui->clientConsultationCalendar->setMaximumDate(QDate(2030, 12, 31));
+
+    // Highlight dates with consultations
+    qDebug() << "Calling highlightDatesWithConsultations...";
+    highlightDatesWithConsultations();
+
+    // Update the selected date info (initially set to today)
+    qDebug() << "Calling updateSelectedDateInfo...";
+    updateSelectedDateInfo(QDate::currentDate());
+
+    qDebug() << "Exiting setupCalendarView...";
 }
 
 void MainWindow::highlightDatesWithConsultations()
 {
-    ui->clientConsultationCalendar->setDateTextFormat(QDate(), QTextCharFormat());
-    QTextCharFormat consultationFormat;
-    consultationFormat.setBackground(QColor(100, 150, 255, 100));
-    QSqlQuery query("SELECT CONSULTATION_DATE FROM AHMED.CLIENTS");
-    while (query.next()) {
-        QDate date = query.value(0).toDateTime().date();
-        ui->clientConsultationCalendar->setDateTextFormat(date, consultationFormat);
+    qDebug() << "Entering highlightDatesWithConsultations...";
+
+    if (!m_dbConnected) {
+        qDebug() << "Database not connected, skipping highlightDatesWithConsultations.";
+        return;
     }
+
+    // Create a separate database connection for this query
+    QSqlDatabase db = QSqlDatabase::cloneDatabase(QSqlDatabase::database(), "highlightConnection");
+    if (!db.open()) {
+        qDebug() << "Failed to open highlightConnection:" << db.lastError().text();
+        return;
+    }
+
+    QSqlQuery query(db);
+    qDebug() << "Preparing query to fetch consultation dates...";
+    query.prepare("SELECT DISTINCT TRUNC(CONSULTATION_DATE) AS CONSULTATION_DAY FROM AHMED.CLIENTS");
+
+    qDebug() << "Executing query to fetch consultation dates...";
+    if (!query.exec()) {
+        qDebug() << "Error fetching consultation dates:" << query.lastError().text();
+        db.close();
+        return;
+    }
+
+    QTextCharFormat format;
+    format.setBackground(Qt::yellow); // Highlight color
+
+    while (query.next()) {
+        QDate date = query.value("CONSULTATION_DAY").toDate();
+        ui->clientConsultationCalendar->setDateTextFormat(date, format);
+    }
+
+    qDebug() << "Finished highlighting dates.";
+
+    // Clean up the query and close the connection
+    query.finish();
+    query.clear();
+    db.close();
+
+    qDebug() << "Exiting highlightDatesWithConsultations...";
 }
 
 void MainWindow::updateSelectedDateInfo(const QDate &date)
 {
-    ui->clientSelectedDateLabel->setText(QString("Selected date: %1").arg(date.toString("yyyy-MM-dd")));
-    if (m_dbConnected) {
-        QSqlQueryModel *model = client.getConsultationsForDate(date);
-        ui->clientDateConsultationsView->setModel(model);
-        ui->clientDateConsultationsView->resizeColumnsToContents();
-    }
+    ui->clientConsultationCalendar->setSelectedDate(date);
+    on_clientConsultationCalendar_selectionChanged();
 }
-
 void MainWindow::performClientSearch()
 {
     if (!m_dbConnected) {
@@ -1145,6 +1195,8 @@ void MainWindow::checkAndSendReminders()
         }
         emailAttempts++;
     }
+    query.finish();
+    query.clear();
     QMessageBox::information(this, "Reminders Sent", QString("Sent %1 reminders successfully out of %2 attempts.")
                                                          .arg(emailSuccesses).arg(emailAttempts));
 }
@@ -1187,27 +1239,32 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
 
 void MainWindow::loadEmployees()
 {
-    if (!m_dbConnected) {
-        return;
-    }
-    QSqlQuery query("SELECT ID, FIRST_NAME, LAST_NAME FROM AHMED.EMPLOYEE");
-    if (!query.exec()) {
-        QMessageBox::warning(this, "Error", "Failed to load employees: " + query.lastError().text());
-        return;
-    }
-    ui->clientConsultantComboBox->clear();
+    qDebug() << "Entering loadEmployees...";
+
     employeeMap.clear();
-    ui->clientConsultantComboBox->addItem("Select Consultant...");
+    QSqlQuery query;
+    qDebug() << "Preparing query to fetch employees...";
+    query.prepare("SELECT ID, FIRST_NAME || ' ' || LAST_NAME AS FULL_NAME FROM AHMED.EMPLOYEE");
+
+    qDebug() << "Executing query to fetch employees...";
+    if (!query.exec()) {
+        qDebug() << "Error fetching employees:" << query.lastError().text();
+        return;
+    }
+
     while (query.next()) {
         QString id = query.value("ID").toString();
-        QString fullName = QString("%1 %2").arg(query.value("FIRST_NAME").toString(), query.value("LAST_NAME").toString()).trimmed();
-        employeeMap[fullName] = id;
-        ui->clientConsultantComboBox->addItem(fullName);
+        QString fullName = query.value("FULL_NAME").toString();
+        employeeMap.insert(fullName, id);
     }
-    if (employeeMap.isEmpty()) {
-        ui->clientConsultantComboBox->addItem("No employees found");
-        ui->clientConsultantComboBox->setEnabled(false);
-    }
+
+    qDebug() << "Finished loading employees.";
+
+    // Clean up the query
+    query.finish();
+    query.clear();
+
+    qDebug() << "Exiting loadEmployees...";
 }
 
 void MainWindow::refreshClientTable()
@@ -1242,17 +1299,55 @@ void MainWindow::updateCalendarConsultations()
 
 void MainWindow::refreshTrainingTableView()
 {
-    if (!m_dbConnected) {
+    QDateTime currentTime = QDateTime::currentDateTime();
+    if (lastTrainingTableRefresh.isValid() &&
+        lastTrainingTableRefresh.msecsTo(currentTime) < TRAINING_REFRESH_INTERVAL_MS) {
+        qDebug() << "Skipping training table refresh due to debounce.";
         return;
     }
-    trainingTableModel->setQuery("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM AHMED.FORMATIONS");
-    if (trainingTableModel->lastError().isValid()) {
-        QMessageBox::warning(this, "Error", "Failed to load formation data: " + trainingTableModel->lastError().text());
-        return;
+    lastTrainingTableRefresh = currentTime;
+
+    qDebug() << "Entering refreshTrainingTableView...";
+
+    if (m_dbConnected) {
+        qDebug() << "Setting trainingTableModel query...";
+        trainingTableModel->setQuery("SELECT IDFORM, "
+                                     "FORMATION AS FORMATION_NAME, "
+                                     "DESCRIPTION, "
+                                     "TRAINER, "
+                                     "DATEF AS TRAINING_DATE, "
+                                     "TIME AS DURATION, "
+                                     "PRIX AS PRICE "
+                                     "FROM AHMED.FORMATIONS");
+        if (trainingTableModel->lastError().isValid()) {
+            qDebug() << "trainingTableModel Query Error:" << trainingTableModel->lastError().text();
+            qDebug() << "Query Executed:" << trainingTableModel->query().lastQuery();
+            ui->trainingTableView->setModel(nullptr);
+            QMessageBox::warning(this, "Database Error",
+                                 "Failed to load training data: " + trainingTableModel->lastError().text());
+        } else {
+            qDebug() << "trainingTableModel query set successfully.";
+            trainingProxyModel->setSourceModel(trainingTableModel);
+            ui->trainingTableView->setModel(trainingProxyModel);
+
+            // Set column headers for the table view
+            trainingTableModel->setHeaderData(0, Qt::Horizontal, "ID");
+            trainingTableModel->setHeaderData(1, Qt::Horizontal, "Formation Name");
+            trainingTableModel->setHeaderData(2, Qt::Horizontal, "Description");
+            trainingTableModel->setHeaderData(3, Qt::Horizontal, "Trainer");
+            trainingTableModel->setHeaderData(4, Qt::Horizontal, "Training Date");
+            trainingTableModel->setHeaderData(5, Qt::Horizontal, "Duration");
+            trainingTableModel->setHeaderData(6, Qt::Horizontal, "Price");
+
+            ui->trainingTableView->resizeColumnsToContents();
+        }
+    } else {
+        qDebug() << "Database not connected, skipping refreshTrainingTableView.";
+        ui->trainingTableView->setModel(nullptr);
+        QMessageBox::warning(this, "Database Error", "Database not connected. Training data cannot be loaded.");
     }
-    trainingProxyModel->setSourceModel(trainingTableModel);
-    ui->trainingTableView->setModel(trainingProxyModel);
-    ui->trainingTableView->resizeColumnsToContents();
+
+    qDebug() << "Exiting refreshTrainingTableView...";
 }
 
 void MainWindow::sendSmsNotification(const QString &phoneNumber, const QString &formationName, const QDate &date)

@@ -657,7 +657,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        mainStackedWidget->setCurrentIndex(1);
+        mainStackedWidget->setCurrentIndex(0);
         clientTabWidget->setCurrentIndex(1);
         trainingTabWidget->setCurrentIndex(0);
 
