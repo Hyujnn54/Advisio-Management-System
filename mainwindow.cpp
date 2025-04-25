@@ -194,7 +194,7 @@ MainWindow::MainWindow(QWidget *parent)
         qDebug() << "Failed to connect to Arduino";
         QMessageBox::warning(this, "Arduino Error", "Failed to connect to Arduino on port " + portName);
     }
-
+     statusBar()->setVisible(true);
     // ... (rest of the constructor remains unchanged)
 }
 
@@ -209,7 +209,7 @@ void MainWindow::handleSerialData()
     while ((newlineIndex = serialBuffer.indexOf('\n')) != -1) {
         // Extract the complete line (excluding \n)
         QString uid = serialBuffer.left(newlineIndex).trimmed();
-        serialBuffer.remove(0, newlineIndex + 1); // Remove the processed line from the buffer
+        serialBuffer.remove(0, newlineIndex + 1);
 
         if (uid.isEmpty()) {
             continue;
@@ -224,17 +224,47 @@ void MainWindow::handleSerialData()
         if (!query.exec()) {
             qDebug() << "Query Error:" << query.lastError().text();
             QMessageBox::warning(this, "Database Error", "Failed to execute query: " + query.lastError().text());
+            statusBar()->showMessage("Database Error", 5000);
             continue;
         }
+
         if (query.next()) {
             int employeeId = query.value("ID").toInt();
             QString firstName = query.value("FIRST_NAME").toString();
             QString lastName = query.value("LAST_NAME").toString();
             qDebug() << "Employee found - ID:" << employeeId << "Name:" << firstName << lastName;
+
+            // Query the number of consultations for today
+            QSqlQuery countQuery;
+            countQuery.prepare("SELECT COUNT(*) FROM CLIENTS WHERE CONSULTANT_ID = :employeeId AND TRUNC(CONSULTATION_DATE) = TO_DATE(:today, 'YYYY-MM-DD')");
+            countQuery.bindValue(":employeeId", employeeId);
+            countQuery.bindValue(":today", QDate::currentDate().toString("yyyy-MM-dd")); // Use current date dynamically
+            if (!countQuery.exec()) {
+                qDebug() << "Count Query Error:" << countQuery.lastError().text();
+                statusBar()->showMessage("Error retrieving consultation count", 5000);
+                // Send "0" to Arduino in case of query error
+                arduino->sendData("0");
+            } else if (countQuery.next()) {
+                int consultationCount = countQuery.value(0).toInt();
+                statusBar()->showMessage("Consultations Today for " + firstName + " " + lastName + ": " + QString::number(consultationCount), 5000);
+                qDebug() << "Consultations today for Employee ID" << employeeId << ":" << consultationCount;
+                // Send the consultation count to the Arduino
+                arduino->sendData(QString::number(consultationCount));
+            } else {
+                statusBar()->showMessage("Consultations Today for " + firstName + " " + lastName + ": 0", 5000);
+                qDebug() << "No consultations found for Employee ID" << employeeId;
+                // Send "0" to Arduino if no consultations
+                arduino->sendData("0");
+            }
+
+            // Display employee info in a message box (without consultation count)
             QMessageBox::information(this, "Employee Found", "RFID card belongs to Employee ID: " + QString::number(employeeId) + "\nName: " + firstName + " " + lastName);
         } else {
             qDebug() << "No employee found with RFID UID:" << uid;
             QMessageBox::warning(this, "No Match", "No employee found with RFID UID " + uid + ".");
+            statusBar()->showMessage("No employee found for RFID UID: " + uid, 5000);
+            // Send "0" to Arduino if no employee found
+            arduino->sendData("0");
         }
     }
 }

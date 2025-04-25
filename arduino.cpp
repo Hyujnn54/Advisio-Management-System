@@ -32,3 +32,12 @@ bool Arduino::connectArduino(const QString &portName) {
 QByteArray Arduino::readData() {
     return serialPort->readAll();
 }
+void Arduino::sendData(const QString &data) {
+    if (serialPort->isOpen()) {
+        serialPort->write(data.toUtf8() + "\n"); // Send data with a newline
+        serialPort->flush(); // Ensure data is sent immediately
+        qDebug() << "Sent to Arduino:" << data;
+    } else {
+        qDebug() << "Cannot send data: Serial port is not open";
+    }
+}

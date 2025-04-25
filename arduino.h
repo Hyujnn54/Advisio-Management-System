@@ -12,6 +12,7 @@ public:
     ~Arduino();
     bool connectArduino(const QString &portName);
     QByteArray readData();
+    void sendData(const QString &data);
 
 signals:
     void dataAvailable();
