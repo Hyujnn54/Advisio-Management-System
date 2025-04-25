@@ -2,5 +2,6 @@
     <qresource prefix="/imgs">
         <file>file.ico</file>
         <file>delete.ico</file>
+        <file>../../../Downloads/6372226-removebg-preview.png</file>
     </qresource>
 </RCC>

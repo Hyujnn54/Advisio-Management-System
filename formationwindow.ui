@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>formationwindow</class>
-<widget class="QMainWindow" name="formationwindow">
+ <widget class="QMainWindow" name="formationwindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1298</width>
-    <height>704</height>
+    <width>1202</width>
+    <height>690</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -370,7 +370,7 @@ border-color: rgb(0, 0, 0);
 border-color: rgb(0, 0, 0);</string>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>3</number>
           </property>
           <widget class="QWidget" name="ClientForm">
            <property name="contextMenuPolicy">
@@ -560,21 +560,39 @@ border-color: rgb(0, 0, 0);</string>
               <item>
                <widget class="QPushButton" name="deletef">
                 <property name="text">
-                 <string>Delete</string>
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="img.qrc">
+                  <normaloff>:/imgs/delete.ico</normaloff>:/imgs/delete.ico</iconset>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="updateButton">
                 <property name="text">
-                 <string>Update</string>
+                 <string>update</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="img.qrc">
+                  <normaloff>:/imgs/Downloads/6372226-removebg-preview.png</normaloff>:/imgs/Downloads/6372226-removebg-preview.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>13</width>
+                  <height>12</height>
+                 </size>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="exportButton">
                 <property name="text">
-                 <string>PDF</string>
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="img.qrc">
+                  <normaloff>:/imgs/file.ico</normaloff>:/imgs/file.ico</iconset>
                 </property>
                </widget>
               </item>
@@ -610,6 +628,24 @@ border-color: rgb(0, 0, 0);</string>
             </property>
            </widget>
           </widget>
+          <widget class="QWidget" name="waiting_room">
+           <attribute name="title">
+            <string>Waiting room</string>
+           </attribute>
+           <widget class="QPlainTextEdit" name="setText">
+            <property name="geometry">
+             <rect>
+              <x>170</x>
+              <y>180</y>
+              <width>104</width>
+              <height>70</height>
+             </rect>
+            </property>
+            <property name="plainText">
+             <string/>
+            </property>
+           </widget>
+          </widget>
          </widget>
         </item>
        </layout>
@@ -623,8 +659,8 @@ border-color: rgb(0, 0, 0);</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1298</width>
-     <height>17</height>
+     <width>1202</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>
@@ -637,6 +673,8 @@ border-color: rgb(0, 0, 0);</string>
    <header>qchartview.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="img.qrc"/>
+ </resources>
  <connections/>
 </ui>

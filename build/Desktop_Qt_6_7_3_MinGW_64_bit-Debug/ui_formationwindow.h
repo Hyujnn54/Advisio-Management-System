@@ -11,6 +11,7 @@
 
 #include <QtCharts/QChartView>
 #include <QtCore/QVariant>
+#include <QtGui/QIcon>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDateEdit>
@@ -24,6 +25,7 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenuBar>
+#include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QSpinBox>
@@ -96,6 +98,8 @@ public:
     QWidget *widget;
     QChartView *statsChartView;
     QPushButton *refreshStatsButton;
+    QWidget *waiting_room;
+    QPlainTextEdit *setText;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -103,7 +107,7 @@ public:
     {
         if (formationwindow->objectName().isEmpty())
             formationwindow->setObjectName("formationwindow");
-        formationwindow->resize(1298, 704);
+        formationwindow->resize(1202, 690);
         formationwindow->setStyleSheet(QString::fromUtf8(""));
         centralwidget = new QWidget(formationwindow);
         centralwidget->setObjectName("centralwidget");
@@ -399,16 +403,26 @@ public:
         horizontalLayout_4->setObjectName("horizontalLayout_4");
         deletef = new QPushButton(listClient);
         deletef->setObjectName("deletef");
+        QIcon icon;
+        icon.addFile(QString::fromUtf8(":/imgs/delete.ico"), QSize(), QIcon::Mode::Normal, QIcon::State::Off);
+        deletef->setIcon(icon);
 
         horizontalLayout_4->addWidget(deletef);
 
         updateButton = new QPushButton(listClient);
         updateButton->setObjectName("updateButton");
+        QIcon icon1;
+        icon1.addFile(QString::fromUtf8(":/imgs/Downloads/6372226-removebg-preview.png"), QSize(), QIcon::Mode::Normal, QIcon::State::Off);
+        updateButton->setIcon(icon1);
+        updateButton->setIconSize(QSize(13, 12));
 
         horizontalLayout_4->addWidget(updateButton);
 
         exportButton = new QPushButton(listClient);
         exportButton->setObjectName("exportButton");
+        QIcon icon2;
+        icon2.addFile(QString::fromUtf8(":/imgs/file.ico"), QSize(), QIcon::Mode::Normal, QIcon::State::Off);
+        exportButton->setIcon(icon2);
 
         horizontalLayout_4->addWidget(exportButton);
 
@@ -425,6 +439,12 @@ public:
         refreshStatsButton->setObjectName("refreshStatsButton");
         refreshStatsButton->setGeometry(QRect(10, 480, 80, 18));
         tabWidget->addTab(widget, QString());
+        waiting_room = new QWidget();
+        waiting_room->setObjectName("waiting_room");
+        setText = new QPlainTextEdit(waiting_room);
+        setText->setObjectName("setText");
+        setText->setGeometry(QRect(170, 180, 104, 70));
+        tabWidget->addTab(waiting_room, QString());
 
         verticalLayout_5->addWidget(tabWidget);
 
@@ -434,7 +454,7 @@ public:
         formationwindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(formationwindow);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1298, 17));
+        menubar->setGeometry(QRect(0, 0, 1202, 21));
         formationwindow->setMenuBar(menubar);
         statusbar = new QStatusBar(formationwindow);
         statusbar->setObjectName("statusbar");
@@ -442,7 +462,7 @@ public:
 
         retranslateUi(formationwindow);
 
-        tabWidget->setCurrentIndex(0);
+        tabWidget->setCurrentIndex(3);
 
 
         QMetaObject::connectSlotsByName(formationwindow);
@@ -481,12 +501,14 @@ public:
 
         searchInput->setPlaceholderText(QCoreApplication::translate("formationwindow", "Type to search...", nullptr));
         resetSearchButton->setText(QCoreApplication::translate("formationwindow", "Reset Search", nullptr));
-        deletef->setText(QCoreApplication::translate("formationwindow", "Delete", nullptr));
-        updateButton->setText(QCoreApplication::translate("formationwindow", "Update", nullptr));
-        exportButton->setText(QCoreApplication::translate("formationwindow", "PDF", nullptr));
+        deletef->setText(QString());
+        updateButton->setText(QCoreApplication::translate("formationwindow", "update", nullptr));
+        exportButton->setText(QString());
         tabWidget->setTabText(tabWidget->indexOf(listClient), QCoreApplication::translate("formationwindow", "Manage Training", nullptr));
         refreshStatsButton->setText(QCoreApplication::translate("formationwindow", "Statistics", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(widget), QCoreApplication::translate("formationwindow", "Statistics", nullptr));
+        setText->setPlainText(QString());
+        tabWidget->setTabText(tabWidget->indexOf(waiting_room), QCoreApplication::translate("formationwindow", "Waiting room", nullptr));
     } // retranslateUi
 
 };

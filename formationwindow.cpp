@@ -29,12 +29,14 @@
 #include <QSettings>
 #include <QSqlQueryModel>
 #include <QSqlQuery>
+#include <QSqlDatabase>
 #include <QDebug>
 
 FormationWindow::FormationWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::formationwindow), isDarkTheme(false),
     tableModel(nullptr), proxyModel(new QSortFilterProxyModel(this)),
-    notificationCount(0)
+    notificationCount(0), arduino(nullptr), arduinoTimer(new QTimer(this)),
+    arduinoDataBuffer("")
 {
     ui->setupUi(this);
     applyLightTheme();
@@ -45,13 +47,17 @@ FormationWindow::FormationWindow(QWidget *parent)
     ui->notificationLabel->setText("Notifications: 0");
     ui->notificationLabel->setStyleSheet("font-weight: bold; color: #3A5DAE;");
 
+    // Initialize setText QPlainTextEdit
+    ui->setText->setPlainText("Waiting Room: 0");
+    ui->setText->setStyleSheet("font-weight: bold; color: #3A5DAE; background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; padding: 4px;");
+
     // Connections
     QObject::connect(ui->add, SIGNAL(clicked()), this, SLOT(on_addButtonclicked()));
     QObject::connect(ui->deletef, SIGNAL(clicked()), this, SLOT(on_deleteButtonClicked()));
     QObject::connect(ui->updateButton, SIGNAL(clicked()), this, SLOT(on_updateButtonClicked()));
     connect(ui->themeButton, &QPushButton::clicked, this, &FormationWindow::toggleTheme);
     connect(ui->menuButton, &QPushButton::clicked, this, &FormationWindow::toggleSidebar);
-    connect(ui->exportButton, &QPushButton::clicked, this, &FormationWindow::exportToPdf); // Fixed syntax
+    connect(ui->exportButton, &QPushButton::clicked, this, &FormationWindow::exportToPdf);
     connect(ui->notificationLabel, &QLabel::linkActivated, this, &FormationWindow::onNotificationLabelClicked);
     connect(ui->refreshStatsButton, &QPushButton::clicked, this, &FormationWindow::on_refreshStatsButton_clicked);
     connect(ui->searchInput, &QLineEdit::textChanged, this, &FormationWindow::on_searchInput_textChanged);
@@ -82,17 +88,174 @@ FormationWindow::FormationWindow(QWidget *parent)
     networkManager = new QNetworkAccessManager(this);
     connect(networkManager, &QNetworkAccessManager::finished, this, &FormationWindow::onSmsRequestFinished);
 
+    // Verify database connection
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isValid() || !db.isOpen()) {
+        qDebug() << "Database connection not established";
+        QMessageBox::critical(this, "Database Error", "No active database connection. Please configure the database.");
+    } else {
+        qDebug() << "Database connected:" << db.databaseName();
+    }
+
+    // Initialize Arduino
+    setupArduino();
+
+    // Connect timer to read Arduino data every 5 seconds
+    connect(arduinoTimer, &QTimer::timeout, this, &FormationWindow::readArduinoData);
+    arduinoTimer->start(5000); // Poll every 5 seconds
+
     refreshTableView();
     updateStatistics();
+    updateWaitingRoomCount();
 }
 
 FormationWindow::~FormationWindow()
 {
+    if (arduino) {
+        arduino->closeArduino();
+        delete arduino;
+    }
     delete tableModel;
     delete ui;
 }
 
-// ... rest of the methods remain as provided, with class name updated to FormationWindow
+void FormationWindow::setupArduino()
+{
+    arduino = new Arduino(this);
+    int result = arduino->connectArduino();
+    if (result == 0) {
+        qDebug() << "Arduino connected successfully on port:" << arduino->getSerial()->portName();
+        // Connect serial readyRead signal to read data
+        connect(arduino->getSerial(), &QSerialPort::readyRead, this, &FormationWindow::readArduinoData);
+    } else {
+        qDebug() << "Failed to connect to Arduino. Result:" << result;
+        ui->setText->setPlainText("Waiting Room: Arduino Disconnected");
+        ui->setText->setStyleSheet("font-weight: bold; color: white; background-color: #D93025; border: 1px solid #D93025; border-radius: 4px; padding: 4px;");
+        QMessageBox::warning(this, "Arduino Error", "Could not connect to Arduino. Check connection and try again.");
+    }
+}
+
+void FormationWindow::readArduinoData()
+{
+    if (!arduino || !arduino->getSerial()->isOpen()) {
+        qDebug() << "Arduino not connected or serial port not open";
+        ui->setText->setPlainText("Waiting Room: Arduino Disconnected");
+        ui->setText->setStyleSheet("font-weight: bold; color: white; background-color: #D93025; border: 1px solid #D93025; border-radius: 4px; padding: 4px;");
+        updateWaitingRoomCount(); // Fallback to database count
+        return;
+    }
+
+    QByteArray data = arduino->readFromArduino();
+    if (data.isEmpty()) {
+        qDebug() << "No data received from Arduino";
+        return;
+    }
+
+    // Append the received data to the buffer
+    arduinoDataBuffer += QString::fromUtf8(data).trimmed();
+    qDebug() << "Current Arduino data buffer:" << arduinoDataBuffer;
+
+    // Check if the buffer contains a complete message (ends with a number or newline)
+    QRegularExpression endOfMessage("Total:\\s*\\d+");
+    if (!endOfMessage.match(arduinoDataBuffer).hasMatch()) {
+        qDebug() << "Incomplete message in buffer, waiting for more data";
+        return;
+    }
+
+    // Parse the complete message
+    QRegularExpression re("Total:\\s*(\\d+)");
+    QRegularExpressionMatch match = re.match(arduinoDataBuffer);
+    if (match.hasMatch()) {
+        int count = match.captured(1).toInt();
+        qDebug() << "Parsed people count:" << count;
+        updateMeetingWR(count); // Update database
+        updateWaitingRoomCount(); // Update UI
+    } else {
+        qDebug() << "Invalid Arduino data format in buffer:" << arduinoDataBuffer;
+        updateNotificationCount(1, "Invalid Arduino data format received: " + arduinoDataBuffer);
+    }
+
+    // Clear the buffer after processing
+    arduinoDataBuffer.clear();
+}
+
+void FormationWindow::updateMeetingWR(int count)
+{
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) {
+        qDebug() << "Database not connected";
+        QMessageBox::critical(this, "Database Error", "Database connection lost. Please reconnect.");
+        return;
+    }
+
+    QSqlQuery query;
+
+    // Check if meeting with ID = 1 exists
+    query.prepare("SELECT COUNT(*) FROM AHMED.MEETING WHERE ID = 1");
+    if (!query.exec() || !query.next()) {
+        qDebug() << "Failed to check existence of meeting ID 1:" << query.lastError().text();
+        QMessageBox::critical(this, "Database Error", "Failed to verify meeting existence: " + query.lastError().text());
+        return;
+    }
+
+    int meetingCount = query.value(0).toInt();
+    if (meetingCount == 0) {
+        qDebug() << "Meeting with ID 1 does not exist";
+        // Create a default record
+        query.prepare("INSERT INTO AHMED.MEETING (ID, TITLE, ORGANISER, PARTICIPANT, AGENDA, DURATION, WR) "
+                      "VALUES (1, 'Default Meeting', 'System', 'None', 'Auto-generated', 60, 0)");
+        if (!query.exec()) {
+            qDebug() << "Failed to create default meeting ID 1:" << query.lastError().text();
+            QMessageBox::critical(this, "Database Error", "Failed to create default meeting: " + query.lastError().text());
+            return;
+        }
+        qDebug() << "Created default meeting with ID 1";
+        updateNotificationCount(1, "Created default meeting ID 1");
+    }
+
+    // Update WR for meeting with ID = 1
+    query.prepare("UPDATE AHMED.MEETING SET WR = :count WHERE ID = 1");
+    query.bindValue(":count", count);
+
+    if (!query.exec()) {
+        qDebug() << "Failed to update WR in MEETING table for ID 1:" << query.lastError().text();
+        QMessageBox::critical(this, "Database Error", "Failed to update waiting room count: " + query.lastError().text());
+        return;
+    }
+
+    qDebug() << "Updated WR in MEETING table for ID 1 to:" << count;
+    updateNotificationCount(1, QString("Updated waiting room count to %1 for meeting ID 1").arg(count));
+}
+
+void FormationWindow::updateWaitingRoomCount()
+{
+    int waitingCount = 0;
+    bool useArduinoData = (arduino && arduino->getSerial()->isOpen());
+
+    QSqlQuery query;
+    query.prepare("SELECT WR FROM AHMED.MEETING WHERE ID = 1");
+    if (query.exec() && query.next()) {
+        waitingCount = query.value("WR").toInt();
+        qDebug() << "Retrieved WR count for ID 1:" << waitingCount;
+    } else {
+        qDebug() << "Failed to retrieve WR count for ID 1:" << query.lastError().text();
+        waitingCount = 0;
+        ui->setText->setPlainText("Waiting Room: Error");
+        ui->setText->setStyleSheet("font-weight: bold; color: white; background-color: #D93025; border: 1px solid #D93025; border-radius: 4px; padding: 4px;");
+        QMessageBox::critical(this, "Error", "Failed to retrieve waiting room count: " + query.lastError().text());
+        return;
+    }
+
+    // Update UI
+    ui->setText->setPlainText(QString("Waiting Room: %1").arg(waitingCount));
+    if (waitingCount > 0) {
+        ui->setText->setStyleSheet("font-weight: bold; color: white; background-color: #D93025; border: 1px solid #D93025; border-radius: 4px; padding: 4px;");
+    } else {
+        ui->setText->setStyleSheet(isDarkTheme ?
+                                       "font-weight: bold; color: #F0F0F0; background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; padding: 4px;" :
+                                       "font-weight: bold; color: #3A5DAE; background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; padding: 4px;");
+    }
+}
 
 void FormationWindow::on_refreshStatsButton_clicked()
 {
@@ -132,10 +295,8 @@ void FormationWindow::updateStatistics()
         return;
     }
 
-    // Calculate percentage for Average Cost relative to Total Cost
     double percentage = totalCost > 0 ? (avgCost / totalCost * 100.0) : 0.0;
 
-    // Create bar sets with updated labels including percentages
     qDebug() << "Creating bar sets";
     QBarSet *countSet = new QBarSet(QString("[%1] Total Formations").arg(totalFormations));
     QBarSet *costSet = new QBarSet(QString("[100.00%] Total Cost"));
@@ -145,7 +306,6 @@ void FormationWindow::updateStatistics()
     *costSet << totalCost;
     *avgCostSet << avgCost;
 
-    // Adjust bar appearance to create spacing effect
     QPen pen(Qt::black, 1);
     countSet->setPen(pen);
     costSet->setPen(pen);
@@ -153,21 +313,18 @@ void FormationWindow::updateStatistics()
 
     qDebug() << "Bar sets created";
 
-    // Create series
     QBarSeries *mainSeries = new QBarSeries();
     mainSeries->append(countSet);
     mainSeries->append(costSet);
     mainSeries->append(avgCostSet);
     qDebug() << "Series created";
 
-    // Create chart
     QChart *chart = new QChart();
     chart->addSeries(mainSeries);
     chart->setTitle("Training Statistics");
     chart->setAnimationOptions(QChart::SeriesAnimations);
     qDebug() << "Chart created";
 
-    // Set up X-axis
     QStringList categories;
     categories << "Metrics";
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
@@ -176,7 +333,6 @@ void FormationWindow::updateStatistics()
     mainSeries->attachAxis(axisX);
     qDebug() << "X-axis set";
 
-    // Primary Y-axis for count, cost, and avg cost
     QValueAxis *axisY = new QValueAxis();
     double maxValue = qMax(totalCost, qMax(static_cast<double>(totalFormations), avgCost));
     axisY->setRange(0, maxValue * 1.2);
@@ -185,20 +341,18 @@ void FormationWindow::updateStatistics()
     mainSeries->attachAxis(axisY);
     qDebug() << "Y-axis set";
 
-    // Ensure legend is visible
     chart->legend()->setVisible(true);
     chart->legend()->setAlignment(Qt::AlignBottom);
     qDebug() << "Legend set";
 
-    // Increase chart margins to create visual spacing around bars
-    chart->setMargins(QMargins(50, 20, 50, 50)); // Left, Top, Right, Bottom
+    chart->setMargins(QMargins(50, 20, 50, 50));
     qDebug() << "Margins set";
 
-    // Set chart to view
     ui->statsChartView->setChart(chart);
     ui->statsChartView->setRenderHint(QPainter::Antialiasing);
     qDebug() << "Chart displayed";
 }
+
 void FormationWindow::onNotificationLabelClicked()
 {
     if (notificationCount == 0) {
@@ -243,7 +397,6 @@ void FormationWindow::exportToPdf()
 {
     refreshTableView();
 
-    // Generate timestamp for filename
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss");
     QString defaultFileName = QString("Formations_%1.pdf").arg(timestamp);
 
@@ -256,7 +409,6 @@ void FormationWindow::exportToPdf()
         filePath += ".pdf";
     }
 
-    // Set up PDF writer
     QPdfWriter pdfWriter(filePath);
     pdfWriter.setPageSize(QPageSize(QPageSize::A4));
     pdfWriter.setResolution(300);
@@ -267,35 +419,30 @@ void FormationWindow::exportToPdf()
     QPainter painter(&pdfWriter);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Define constants
     const qreal scaleFactor = 300.0 / 72.0;
     painter.scale(scaleFactor, scaleFactor);
-    const int pageWidth = 595;  // A4 width in points at 72 DPI
-    const int pageHeight = 842; // A4 height in points at 72 DPI
+    const int pageWidth = 595;
+    const int pageHeight = 842;
     const int margin = 30;
     const int lineHeight = 20;
     const int headerHeight = 60;
     const int footerHeight = 30;
-    int pageCount = 1; // Manual page counter
+    int pageCount = 1;
 
-    // Adjusted column widths for better balance
     QVector<int> columnWidths = {50, 100, 200, 80, 80, 50, 60};
     int totalWidth = 0;
     for (int w : columnWidths) totalWidth += w;
 
-    // Fonts
     QFont titleFont("Helvetica", 12, QFont::Bold);
     QFont headerFont("Helvetica", 8, QFont::Bold);
     QFont bodyFont("Helvetica", 8);
     QFont footerFont("Helvetica", 6);
 
-    // Colors
-    QColor headerBg(60, 93, 174); // #3A5DAE
-    QColor alternateRowBg(240, 240, 240); // Light gray
+    QColor headerBg(60, 93, 174);
+    QColor alternateRowBg(240, 240, 240);
     QColor textColor(50, 50, 50);
     QColor borderColor(150, 150, 150);
 
-    // Cover page
     painter.setFont(titleFont);
     painter.setPen(textColor);
     painter.drawText(QRect(margin, margin, pageWidth - 2 * margin, 100), Qt::AlignCenter,
@@ -313,13 +460,11 @@ void FormationWindow::exportToPdf()
                      "Training Management System");
 
     pdfWriter.newPage();
-    pageCount++; // Increment page count for cover page
+    pageCount++;
 
-    // Data page
     int yPos = margin + headerHeight;
     int tableTop = yPos;
 
-    // Header section
     painter.setFont(titleFont);
     painter.drawText(QRect(margin, margin, pageWidth - 2 * margin, 30), Qt::AlignLeft,
                      "Formations List");
@@ -335,7 +480,6 @@ void FormationWindow::exportToPdf()
         return;
     }
 
-    // Table header
     painter.setFont(headerFont);
     painter.setPen(Qt::white);
     painter.setBrush(headerBg);
@@ -349,12 +493,10 @@ void FormationWindow::exportToPdf()
     }
     yPos += lineHeight;
 
-    // Table data
     painter.setFont(bodyFont);
     painter.setPen(borderColor);
     for (int row = 0; row < tableModel->rowCount(); ++row) {
         xPos = margin;
-        // Alternate row background
         if (row % 2 == 0) {
             painter.setBrush(alternateRowBg);
         } else {
@@ -372,9 +514,7 @@ void FormationWindow::exportToPdf()
         }
         yPos += lineHeight;
 
-        // Page break if necessary
         if (yPos > (pageHeight - margin - footerHeight) && row < tableModel->rowCount() - 1) {
-            // Draw table borders
             xPos = margin;
             for (int i = 0; i <= 7; ++i) {
                 painter.drawLine(xPos, tableTop, xPos, yPos);
@@ -382,7 +522,6 @@ void FormationWindow::exportToPdf()
             }
             painter.drawLine(margin, yPos, margin + totalWidth, yPos);
 
-            // Footer
             painter.setFont(footerFont);
             painter.setPen(textColor);
             painter.drawText(QRect(margin, pageHeight - margin, pageWidth - 2 * margin, 20),
@@ -390,12 +529,11 @@ void FormationWindow::exportToPdf()
             painter.drawLine(margin, pageHeight - margin - 10, pageWidth - margin, pageHeight - margin - 10);
 
             pdfWriter.newPage();
-            pageCount++; // Increment page count for new page
+            pageCount++;
 
             yPos = margin + headerHeight;
             tableTop = yPos;
 
-            // Redraw table header
             painter.setFont(headerFont);
             painter.setPen(Qt::white);
             painter.setBrush(headerBg);
@@ -412,7 +550,6 @@ void FormationWindow::exportToPdf()
         }
     }
 
-    // Final table borders
     xPos = margin;
     for (int i = 0; i <= 7; ++i) {
         painter.drawLine(xPos, tableTop, xPos, yPos);
@@ -420,7 +557,6 @@ void FormationWindow::exportToPdf()
     }
     painter.drawLine(margin, yPos, margin + totalWidth, yPos);
 
-    // Footer
     painter.setFont(footerFont);
     painter.setPen(textColor);
     painter.drawText(QRect(margin, pageHeight - margin, pageWidth - 2 * margin, 20),
@@ -432,37 +568,35 @@ void FormationWindow::exportToPdf()
     painter.end();
     QMessageBox::information(this, "Export", "Formations data exported to PDF successfully at: " + filePath);
 }
+
 void FormationWindow::on_addButtonclicked()
 {
     QString formation = ui->format->text().trimmed();
     QString description = ui->des->text().trimmed();
     QString trainer = ui->tr->text().trimmed();
-    QDate date = ui->date->date(); // Keep as QDate
+    QDate date = ui->date->date();
     int timeValue = ui->timeb->value();
     double price = ui->prixb->value();
     QString phoneNumber = ui->phoneNumberInput->text().trimmed();
 
-    // Validate inputs
     if (formation.isEmpty() || description.isEmpty() || trainer.isEmpty()) {
         QMessageBox::warning(this, "Input Error", "Please fill in all fields.");
         return;
     }
 
-    // Validate phone number
     QRegularExpression phoneRegex("^\\+?[1-9]\\d{1,14}$");
     if (!phoneRegex.match(phoneNumber).hasMatch()) {
         QMessageBox::warning(this, "Input Error", "Phone number must be in international format (e.g., +1234567890).");
         return;
     }
 
-    // Insert formation into database
     QSqlQuery query;
     query.prepare("INSERT INTO AHMED.FORMATIONS (FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX) "
                   "VALUES (:formation, :description, :trainer, :datef, :time, :prix)");
     query.bindValue(":formation", formation);
     query.bindValue(":description", description);
     query.bindValue(":trainer", trainer);
-    query.bindValue(":datef", date); // Bind QDate directly
+    query.bindValue(":datef", date);
     query.bindValue(":time", timeValue);
     query.bindValue(":prix", price);
 
@@ -472,12 +606,11 @@ void FormationWindow::on_addButtonclicked()
         return;
     }
 
-    // Retrieve formation ID
     query.prepare("SELECT IDFORM FROM AHMED.FORMATIONS WHERE FORMATION = :formation AND DESCRIPTION = :description AND TRAINER = :trainer AND DATEF = :datef AND TIME = :time AND PRIX = :prix");
     query.bindValue(":formation", formation);
     query.bindValue(":description", description);
     query.bindValue(":trainer", trainer);
-    query.bindValue(":datef", date); // Bind QDate directly
+    query.bindValue(":datef", date);
     query.bindValue(":time", timeValue);
     query.bindValue(":prix", price);
 
@@ -490,14 +623,13 @@ void FormationWindow::on_addButtonclicked()
         return;
     }
 
-    // Format SMS message
     QString timeDisplay = QString("%1 hours").arg(timeValue);
     QString message = QString("New Formation Added: ID=%1, Formation=%2, Desc=%3, Trainer=%4, Date=%5, Time=%6, Price=%7 DT")
                           .arg(formationId)
                           .arg(formation)
                           .arg(description)
                           .arg(trainer)
-                          .arg(date.toString("yyyy-MM-dd")) // Format for SMS display
+                          .arg(date.toString("yyyy-MM-dd"))
                           .arg(timeDisplay)
                           .arg(price);
 
@@ -506,7 +638,6 @@ void FormationWindow::on_addButtonclicked()
         message = message.left(maxSmsLength - 3) + "...";
     }
 
-    // Send SMS via Infobip
     QSettings settings("config.ini", QSettings::IniFormat);
     QString apiKey = settings.value("Infobip/ApiKey", "08a7928d0d8d19a1ebbaa2f3c09a96a6-dab070dd-8d76-4da4-9148-1e6ac4c84434").toString();
     QString baseUrl = "ype9p9.api.infobip.com";
@@ -541,6 +672,7 @@ void FormationWindow::on_addButtonclicked()
     refreshTableView();
     QMessageBox::information(this, "Success", "Formation added successfully! SMS notification queued.");
 }
+
 void FormationWindow::onSmsRequestFinished(QNetworkReply *reply)
 {
     if (reply->error() != QNetworkReply::NoError) {
@@ -945,7 +1077,7 @@ void FormationWindow::applyDarkTheme()
         QFrame#header {
             border: 2px solid #F28C6F;
             border-radius: 5px;
-            box影子: 2px 2px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
         }
         QFrame#sideMenu {
             border: 2px solid #F28C6F;

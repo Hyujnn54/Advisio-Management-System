@@ -1,0 +1,11 @@
+debug/arduino.o
+debug/connection.o
+debug/customsqlquerymodel.o
+debug/formations.o
+debug/main.o
+debug/formationwindow.o
+debug/updatetrainingdialog.o
+debug/qrc_img.o
+debug/moc_arduino.o
+debug/moc_formationwindow.o
+debug/moc_updatetrainingdialog.o

@@ -1,0 +1,11 @@
+release/arduino.o
+release/connection.o
+release/customsqlquerymodel.o
+release/formations.o
+release/main.o
+release/formationwindow.o
+release/updatetrainingdialog.o
+release/qrc_img.o
+release/moc_arduino.o
+release/moc_formationwindow.o
+release/moc_updatetrainingdialog.o

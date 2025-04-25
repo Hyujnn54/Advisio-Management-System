@@ -6,8 +6,10 @@ TEMPLATE = app
 
 DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11 console
+QT += serialport
 
 SOURCES += \
+    arduino.cpp \
     connection.cpp \
     customsqlquerymodel.cpp \
     formations.cpp \
@@ -16,6 +18,7 @@ SOURCES += \
     updatetrainingdialog.cpp
 
 HEADERS += \
+    arduino.h \
     connection.h \
     customsqlquerymodel.h \
     formations.h \
