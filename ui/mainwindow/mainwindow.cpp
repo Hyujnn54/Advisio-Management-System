@@ -27,7 +27,7 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
 
     // Connect notification signal
     connect(notificationManager, &NotificationManager::notificationAdded, this, &MainWindow::updateNotificationLabel);
-    connect(ui->trainingNotificationLabel, &QPushButton::clicked, this, &MainWindow::on_notificationLabel_clicked);
+    connect(ui->trainingNotificationLabel, &QPushButton::clicked, this, &::MainWindow::handleNotificationLabelClicked);
 
     if (!m_dbConnected) {
         ui->clientSectionButton->setEnabled(false);
@@ -156,7 +156,7 @@ void MainWindow::updateNotificationLabel(int count)
     ui->trainingNotificationLabel->setText(QString("%1 modifications").arg(count));
 }
 
-void MainWindow::on_notificationLabel_clicked()
+void MainWindow::handleNotificationLabelClicked()
 {
     QDialog *dialog = new QDialog(this);
     dialog->setWindowTitle("Notification History");

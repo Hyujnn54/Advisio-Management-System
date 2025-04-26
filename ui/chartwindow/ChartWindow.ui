@@ -14,9 +14,6 @@
    <string>Statistics Chart</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <property name="styleSheet">
-    <string>background-image: url(:/imgs/background.jpg);</string>
-   </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <widget class="QGroupBox" name="chartGroupBox">

@@ -140,7 +140,6 @@ public:
     void retranslateUi(QMainWindow *ChartWindow)
     {
         ChartWindow->setWindowTitle(QCoreApplication::translate("ChartWindow", "Statistics Chart", nullptr));
-        centralwidget->setStyleSheet(QCoreApplication::translate("ChartWindow", "background-image: url(:/imgs/background.jpg);", nullptr));
         chartGroupBox->setTitle(QCoreApplication::translate("ChartWindow", "Statistics", nullptr));
         statsTypeLabel->setText(QCoreApplication::translate("ChartWindow", "Statistics Type:", nullptr));
         statsTypeComboBox->setItemText(0, QCoreApplication::translate("ChartWindow", "Client Statistics", nullptr));

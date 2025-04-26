@@ -25,7 +25,7 @@ private slots:
     void on_statisticsButton_clicked();
     void toggleSidebar();
     void toggleTheme();
-    void on_notificationLabel_clicked();
+    void handleNotificationLabelClicked();
     void updateNotificationLabel(int count);
 
 private:

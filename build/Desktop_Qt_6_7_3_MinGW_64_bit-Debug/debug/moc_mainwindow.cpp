@@ -67,7 +67,7 @@ constexpr auto qt_meta_stringdata_CLASSMainWindowENDCLASS = QtMocHelpers::string
     "on_statisticsButton_clicked",
     "toggleSidebar",
     "toggleTheme",
-    "on_notificationLabel_clicked",
+    "handleNotificationLabelClicked",
     "updateNotificationLabel",
     "count"
 );
@@ -129,7 +129,7 @@ Q_CONSTINIT const QMetaObject MainWindow::staticMetaObject = { {
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'toggleTheme'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
-        // method 'on_notificationLabel_clicked'
+        // method 'handleNotificationLabelClicked'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'updateNotificationLabel'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
@@ -149,7 +149,7 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 2: _t->on_statisticsButton_clicked(); break;
         case 3: _t->toggleSidebar(); break;
         case 4: _t->toggleTheme(); break;
-        case 5: _t->on_notificationLabel_clicked(); break;
+        case 5: _t->handleNotificationLabelClicked(); break;
         case 6: _t->updateNotificationLabel((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
         default: ;
         }
