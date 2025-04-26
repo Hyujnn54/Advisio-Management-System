@@ -32,7 +32,6 @@
 #include <QtCore/qabstractitemmodel.h>
 #include <QtCharts/qxyseries.h>
 #include <QtCore/qabstractitemmodel.h>
-#include <QtNetwork/QSslError>
 #include <QtCore/qmetatype.h>
 
 #include <QtCore/qtmochelpers.h>

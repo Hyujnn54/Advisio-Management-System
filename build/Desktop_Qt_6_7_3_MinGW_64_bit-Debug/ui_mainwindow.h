@@ -57,7 +57,7 @@ public:
     QVBoxLayout *verticalLayout_2;
     QFrame *frame_6;
     QVBoxLayout *verticalLayout_3;
-    QLabel *trainingNotificationLabel;
+    QPushButton *trainingNotificationLabel;
     QPushButton *clientSectionButton;
     QPushButton *trainingSectionButton;
     QPushButton *meetingSectionButton;
@@ -281,11 +281,10 @@ public:
         verticalLayout_3->setSpacing(0);
         verticalLayout_3->setObjectName("verticalLayout_3");
         verticalLayout_3->setContentsMargins(0, 0, 0, 0);
-        trainingNotificationLabel = new QLabel(frame_6);
+        trainingNotificationLabel = new QPushButton(frame_6);
         trainingNotificationLabel->setObjectName("trainingNotificationLabel");
-        trainingNotificationLabel->setMaximumSize(QSize(1000, 60));
-        trainingNotificationLabel->setStyleSheet(QString::fromUtf8("font-weight: bold; color: #3A5DAE;"));
-        trainingNotificationLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+        trainingNotificationLabel->setStyleSheet(QString::fromUtf8("QPushButton { color: blue; text-decoration: underline; border: none; background: transparent; }\n"
+"QPushButton:hover { color: darkblue; }"));
 
         verticalLayout_3->addWidget(trainingNotificationLabel);
 
@@ -912,9 +911,9 @@ public:
 
         retranslateUi(MainWindow);
 
-        mainStackedWidget->setCurrentIndex(0);
+        mainStackedWidget->setCurrentIndex(1);
         clientTabWidget->setCurrentIndex(1);
-        trainingTabWidget->setCurrentIndex(0);
+        trainingTabWidget->setCurrentIndex(1);
         meetingTabWidget->setCurrentIndex(2);
 
 
@@ -926,7 +925,7 @@ public:
         MainWindow->setWindowTitle(QCoreApplication::translate("MainWindow", "Client, Training, and Meeting Management System", nullptr));
         menuButton->setText(QCoreApplication::translate("MainWindow", "Menu", nullptr));
         headerLabel->setText(QCoreApplication::translate("MainWindow", "Client, Training, and Meeting Management System", nullptr));
-        trainingNotificationLabel->setText(QCoreApplication::translate("MainWindow", "Notifications: 0", nullptr));
+        trainingNotificationLabel->setText(QCoreApplication::translate("MainWindow", "notifications", nullptr));
         clientSectionButton->setText(QCoreApplication::translate("MainWindow", "Clients", nullptr));
         trainingSectionButton->setText(QCoreApplication::translate("MainWindow", "Training", nullptr));
         meetingSectionButton->setText(QCoreApplication::translate("MainWindow", "Meetings", nullptr));

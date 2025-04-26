@@ -1,6 +1,6 @@
 #include <QSqlQuery>
 #include <QSqlQueryModel>
-#include "meeting.h"
+#include "../../managers/meeting/meeting.h"
 #include "qrcodegen.hpp"
 #include <QPainter>
 // Parameterized constructor
@@ -45,9 +45,6 @@ bool meeting::add()
     }
     return true;
 }
-#include "meeting.h"
-#include "qrcodegen.hpp" // Include the QR code library
-#include <QPainter>
 
 QPixmap meeting::generateQRCode() const {
     using namespace qrcodegen;

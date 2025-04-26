@@ -2,7 +2,7 @@
 #define UPDATEMEETING_H
 
 #include <QDialog>
-#include "meeting.h"
+#include "../../managers/meeting/meeting.h"
 
 namespace Ui {
 class UpdateMeetingDialog;

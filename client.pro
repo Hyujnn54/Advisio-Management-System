@@ -11,47 +11,52 @@ CONFIG += c++17
 # Debug output to verify flags
 message("C++ flags: $$QMAKE_CXXFLAGS")
 
-SOURCES += \
-    chartwindow.cpp \
-    client.cpp \
-    clientmanager.cpp \
-    connection.cpp \
-    customsqlquerymodel.cpp \
-    emailsender.cpp \
-    formations.cpp \
-    main.cpp \
-    mainwindow.cpp \
-    trainingmanager.cpp \
-    updateclientdialog.cpp \
-    updatetrainingdialog.cpp
+# Add managers/ to the include path (keeping this for now)
+INCLUDEPATH += $$PWD/managers
 
 HEADERS += \
-    ClickableLabel.h \
-    chartwindow.h \
-    client.h \
-    clientmanager.h \
-    connection.h \
-    customsqlquerymodel.h \
-    emailsender.h \
-    formations.h \
-    mainwindow.h \
-    trainingmanager.h \
-    updateclientdialog.h \
-    updatetrainingdialog.h
+    core/connection.h \
+    core/customsqlquerymodel.h \
+    core/emailsender.h \
+    ui/chartwindow/chartwindow.h \
+    ui/mainwindow/mainwindow.h \
+    dialog/updateclientdialog/updateclientdialog.h \
+    dialog/updatetrainingdialog/updatetrainingdialog.h \
+    managers/client/client.h \
+    managers/client/clientmanager.h \
+    managers/training/formations.h \
+    managers/training/trainingmanager.h
+
+SOURCES += \
+    core/connection.cpp \
+    core/customsqlquerymodel.cpp \
+    core/emailsender.cpp \
+    core/main.cpp \
+    ui/chartwindow/chartwindow.cpp \
+    ui/mainwindow/mainwindow.cpp \
+    dialog/updateclientdialog/updateclientdialog.cpp \
+    dialog/updatetrainingdialog/updatetrainingdialog.cpp \
+    managers/client/client.cpp \
+    managers/client/clientmanager.cpp \
+    managers/training/formations.cpp \
+    managers/training/trainingmanager.cpp
 
 FORMS += \
-    ChartWindow.ui \
-    mainwindow.ui \
-    updateclientdialog.ui \
-    updatetrainingdialog.ui
+    ui/chartwindow/ChartWindow.ui \
+    ui/mainwindow/mainwindow.ui \
+    dialog/updateclientdialog/updateclientdialog.ui \
+    dialog/updatetrainingdialog/updatetrainingdialog.ui
 
 RESOURCES += \
-    img.qrc
+    resources/img.qrc
+
+DISTFILES += \
+    assets/background.jpg
 
 # Default rules for deployment
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-DISTFILES += \
-    background.jpg
+# Include the custom project tree structure
+include(client.files)
