@@ -47,7 +47,12 @@ void ClientManager::setNotificationManager(NotificationManager *manager)
 
 void ClientManager::initialize(Ui::MainWindow *ui)
 {
+    qDebug() << "Entering ClientManager::initialize";
     this->ui = ui;
+    if (!ui || !ui->clientTableView || !ui->clientAddTab) {
+        qDebug() << "Error: ui or required widgets are null";
+        return;
+    }
 
     // Initialize client input form
     QDateTimeEdit *dateTimeEdit = new QDateTimeEdit;
@@ -73,7 +78,13 @@ void ClientManager::initialize(Ui::MainWindow *ui)
         gridLayout->removeWidget(ui->clientConsultationDateEdit);
         ui->clientConsultationDateEdit->deleteLater();
         gridLayout->addWidget(dateTimeEdit, row, column);
+    } else {
+        qDebug() << "Error: clientAddTab layout is not a QGridLayout";
     }
+
+    // Block signals during table setup
+    ui->clientTableView->blockSignals(true);
+    ui->clientDateConsultationsView->blockSignals(true);
 
     // Initialize client table view
     clientProxyModel->setSourceModel(clientTableModel);
@@ -108,12 +119,18 @@ void ClientManager::initialize(Ui::MainWindow *ui)
     connect(ui->clientExportPdfButton, &QPushButton::clicked, this, &ClientManager::on_clientExportPdfButton_clicked);
     connect(ui->reportsButton, &QPushButton::clicked, this, &ClientManager::sendConsultationReminders);
 
+    // Re-enable signals
+    ui->clientTableView->blockSignals(false);
+    ui->clientDateConsultationsView->blockSignals(false);
+
     if (m_dbConnected) {
         loadEmployees();
         refreshClientTable();
         setupCalendarView();
         checkAndSendReminders();
     }
+
+    qDebug() << "Exiting ClientManager::initialize";
 }
 
 void ClientManager::refresh()
@@ -293,11 +310,14 @@ void ClientManager::on_clientResetSearchButton_clicked()
 
 void ClientManager::on_clientTableViewHeader_clicked(int logicalIndex)
 {
-    if (!m_dbConnected) {
+    qDebug() << "Entering on_clientTableViewHeader_clicked, logicalIndex:" << logicalIndex;
+    if (!m_dbConnected || !clientProxyModel) {
+        qDebug() << "Error: Database not connected or proxy model is null";
         return;
     }
     Qt::SortOrder order = ui->clientTableView->horizontalHeader()->sortIndicatorOrder();
     clientProxyModel->sort(logicalIndex, order);
+    qDebug() << "Exiting on_clientTableViewHeader_clicked";
 }
 
 void ClientManager::on_clientConsultationCalendar_selectionChanged()
@@ -463,7 +483,9 @@ void ClientManager::performClientSearch()
 
 void ClientManager::checkAndSendReminders()
 {
+    qDebug() << "Entering checkAndSendReminders";
     if (!m_dbConnected) {
+        qDebug() << "Error: Database not connected";
         return;
     }
     QSqlQuery query;
@@ -478,7 +500,7 @@ void ClientManager::checkAndSendReminders()
         QString name = query.value("NAME").toString();
         QString email = query.value("EMAIL").toString();
         QDateTime consultationDate = query.value("CONSULTATION_DATE").toDateTime();
-
+        qDebug() << "Sending reminder to" << email << "for consultation on" << consultationDate;
         QString subject = "Consultation Reminder";
         QString body = QString("Dear %1,\n\nThis is a reminder for your consultation scheduled on %2.\n\nBest regards,\nTraining Management")
                            .arg(name, consultationDate.toString("yyyy-MM-dd HH:mm"));
@@ -490,6 +512,7 @@ void ClientManager::checkAndSendReminders()
             qDebug() << "Failed to send email to" << email;
         }
     }
+    qDebug() << "Exiting checkAndSendReminders, attempts:" << emailAttempts << ", successes:" << emailSuccesses;
 }
 
 bool ClientManager::eventFilter(QObject *watched, QEvent *event)
@@ -505,31 +528,40 @@ bool ClientManager::eventFilter(QObject *watched, QEvent *event)
 
 void ClientManager::loadEmployees()
 {
+    qDebug() << "Entering loadEmployees";
     QSqlQuery query("SELECT ID, (FIRST_NAME || ' ' || LAST_NAME) AS FULL_NAME FROM AHMED.EMPLOYEE");
     ui->clientConsultantComboBox->clear();
     employeeMap.clear();
+    if (!query.exec()) {
+        qDebug() << "Error in loadEmployees:" << query.lastError().text();
+        return;
+    }
     while (query.next()) {
         QString id = query.value("ID").toString();
         QString name = query.value("FULL_NAME").toString();
         employeeMap.insert(name, id);
         ui->clientConsultantComboBox->addItem(name);
     }
+    qDebug() << "Exiting loadEmployees, employee count:" << employeeMap.size();
 }
 
 void ClientManager::refreshClientTable()
 {
+    qDebug() << "Entering refreshClientTable";
     clientTableModel->setQuery(
-        "SELECT c.NAME, c.SECTOR, c.CONTACT_INFO, c.EMAIL, c.CONSULTATION_DATE, (e.FIRST_NAME || ' ' || e.LAST_NAME) AS CONSULTANT_NAME "
+        "SELECT c.NAME, c.SECTOR, c.CONTACT_INFO, c.EMAIL, c.CONSULTATION_DATE, "
+        "(e.FIRST_NAME || ' ' || e.LAST_NAME) AS CONSULTANT_NAME "
         "FROM AHMED.CLIENTS c "
-        "JOIN AHMED.EMPLOYEE e ON c.CONSULTANT_ID = e.ID"
+        "LEFT JOIN AHMED.EMPLOYEE e ON c.CONSULTANT_ID = e.ID"
         );
 
     if (clientTableModel->lastError().isValid()) {
         qDebug() << "Client query failed:" << clientTableModel->lastError().text();
-        QMessageBox::warning(nullptr, "Query Error",
-                             "Failed to load clients: " + clientTableModel->lastError().text());
+        // Avoid QMessageBox during initialization
         return;
     }
+
+    qDebug() << "Client count:" << clientTableModel->rowCount();
 
     ui->clientTableView->setModel(clientProxyModel);
     ui->clientTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -539,6 +571,8 @@ void ClientManager::refreshClientTable()
     clientTableModel->setHeaderData(3, Qt::Horizontal, "Email");
     clientTableModel->setHeaderData(4, Qt::Horizontal, "Consultation Date");
     clientTableModel->setHeaderData(5, Qt::Horizontal, "Consultant");
+
+    qDebug() << "Exiting refreshClientTable";
 }
 
 bool ClientManager::updateClient(const QString &originalName, const QString &newName, const QString &sector,

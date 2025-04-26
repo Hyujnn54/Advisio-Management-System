@@ -23,6 +23,7 @@ public:
     void initialize(Ui::MainWindow *ui);
     void refreshTableWidget(); // Move to public for MainWindow access
 
+
 public slots:
     void handleAddButtonClick();
     void handleDeleteButtonClick();

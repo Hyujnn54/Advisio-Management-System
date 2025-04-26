@@ -17,6 +17,7 @@ UpdateMeeting::UpdateMeeting(QWidget *parent, meeting *m) :
         ui->participantLineEdit->setText(currentMeeting->getParticipant());
         ui->agendaComboBox->setCurrentText(currentMeeting->getAgenda());
         ui->durationLineEdit->setText(QString::number(currentMeeting->getDuration()));
+        ui->dateTimeEdit->setDateTime(currentMeeting->getDatem()); // Add this
     }
 }
 
@@ -32,6 +33,7 @@ void UpdateMeeting::on_confirmButton_clicked()
     QString organiser = ui->organiserLineEdit->text();
     QString participant = ui->participantLineEdit->text();
     QString agenda = ui->agendaComboBox->currentText();
+    QDateTime datem = ui->dateTimeEdit->dateTime(); // Add this
     bool conversionOk = false;
     int duration = ui->durationLineEdit->text().toInt(&conversionOk);
 
@@ -46,6 +48,9 @@ void UpdateMeeting::on_confirmButton_clicked()
     if (!conversionOk || duration <= 0) {
         validationErrors << "Duration must be a valid positive number";
     }
+    if (!datem.isValid()) {
+        validationErrors << "Date and time must be valid";
+    }
 
     if (!validationErrors.isEmpty()) {
         QMessageBox::warning(this, "Validation Error",
@@ -59,6 +64,7 @@ void UpdateMeeting::on_confirmButton_clicked()
     currentMeeting->setParticipant(participant);
     currentMeeting->setAgenda(agenda);
     currentMeeting->setDuration(duration);
+    currentMeeting->setDatem(datem); // Add this
 
     // Attempt to save changes to the database
     if (currentMeeting->update()) {

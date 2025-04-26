@@ -914,7 +914,7 @@ public:
         mainStackedWidget->setCurrentIndex(2);
         clientTabWidget->setCurrentIndex(1);
         trainingTabWidget->setCurrentIndex(1);
-        meetingTabWidget->setCurrentIndex(1);
+        meetingTabWidget->setCurrentIndex(0);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
