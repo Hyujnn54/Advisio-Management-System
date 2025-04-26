@@ -2,12 +2,13 @@
 #include "ui_mainwindow.h"
 #include <QMessageBox>
 
-MainWindow::MainWindow(bool dbConnected, QWidget *parent)
+MainWindow::MainWindow(bool dbConnected, NotificationManager *notificationManager, QWidget *parent)
     : QMainWindow(parent),
     ui(new Ui::MainWindow),
     m_dbConnected(dbConnected),
-    clientManager(new ClientManager(dbConnected, this)),
-    trainingManager(new TrainingManager(dbConnected, this))
+    notificationManager(notificationManager),  // Store the NotificationManager
+    clientManager(new ClientManager(dbConnected, notificationManager, this)),
+    trainingManager(new TrainingManager(dbConnected, notificationManager, this))
 {
     ui->setupUi(this);
     applyLightTheme();

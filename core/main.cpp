@@ -1,5 +1,6 @@
-#include "mainwindow.h"
+#include "../ui/mainwindow/mainwindow.h"
 #include "connection.h"
+#include "notificationmanager.h"
 #include <QApplication>
 #include <QMessageBox>
 #include <QSqlDatabase>
@@ -18,10 +19,14 @@ int main(int argc, char *argv[])
     if (!dbConnected) {
         QMessageBox::warning(nullptr, "Database Warning",
                              "Failed to connect to the database. Some features may be unavailable.");
-        // Continue running the application instead of exiting
     }
 
-    MainWindow w(dbConnected); // Pass the connection status to MainWindow
+    // Create a shared NotificationManager instance
+    NotificationManager notificationManager;
+
+    // Create MainWindow, passing the NotificationManager, and show it
+    MainWindow w(dbConnected, &notificationManager);
     w.show();
+
     return a.exec();
 }
