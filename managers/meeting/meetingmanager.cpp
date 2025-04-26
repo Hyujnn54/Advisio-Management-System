@@ -81,7 +81,8 @@ void MeetingManager::handleAddButtonClick()
         return;
     }
 
-    meeting m(title, organiser, participant, agenda, duration, dateTime);
+    // Use -1 as a placeholder ID for new meetings
+    meeting m(-1, title, organiser, participant, agenda, duration, dateTime);
     if (m.add()) {
         QMessageBox::information(nullptr, "Success", "Meeting added successfully!");
         refreshTableWidget();
@@ -231,6 +232,7 @@ void MeetingManager::handleGenerateQRCodeButtonClick()
 
     int id = ui->meetingTableWidget->item(row, 0)->text().toInt();
     meeting m(
+        id,
         ui->meetingTableWidget->item(row, 1)->text(),
         ui->meetingTableWidget->item(row, 2)->text(),
         ui->meetingTableWidget->item(row, 3)->text(),
@@ -238,7 +240,6 @@ void MeetingManager::handleGenerateQRCodeButtonClick()
         ui->meetingTableWidget->item(row, 5)->text().replace(" min", "").toInt(),
         QDateTime::fromString(ui->meetingTableWidget->item(row, 6)->text(), "yyyy-MM-dd hh:mm")
         );
-    m.setId(id);
 
     QPixmap qrCode = m.generateQRCode();
     if (qrCode.isNull()) {
@@ -277,6 +278,7 @@ void MeetingManager::handleExportPdfButtonClick()
 
     int id = ui->meetingTableWidget->item(row, 0)->text().toInt();
     meeting m(
+        id,
         ui->meetingTableWidget->item(row, 1)->text(),
         ui->meetingTableWidget->item(row, 2)->text(),
         ui->meetingTableWidget->item(row, 3)->text(),
@@ -284,7 +286,6 @@ void MeetingManager::handleExportPdfButtonClick()
         ui->meetingTableWidget->item(row, 5)->text().replace(" min", "").toInt(),
         QDateTime::fromString(ui->meetingTableWidget->item(row, 6)->text(), "yyyy-MM-dd hh:mm")
         );
-    m.setId(id);
 
     QPixmap qrCode = m.generateQRCode();
     if (qrCode.isNull()) {

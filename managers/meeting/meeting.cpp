@@ -18,18 +18,12 @@ meeting::meeting()
 {
 }
 
-meeting::meeting(QString title, QString organiser, QString participant, QString agenda, int duration, QDateTime dateTime,
-                 QVariant employeeId, QVariant clientId, QVariant resourceId)
-    : id(-1),
-    title(title),
-    organiser(organiser),
-    participant(participant),
-    agenda(agenda),
-    duration(duration),
-    m_dateTime(dateTime),
-    employeeId(employeeId),
-    clientId(clientId),
-    resourceId(resourceId)
+meeting::meeting(int id, const QString &title, const QString &organiser, const QString &participant,
+                 const QString &agenda, int duration, const QVariant &employeeId, const QVariant &clientId,
+                 const QVariant &resourceId, const QDateTime &dateTime)
+    : id(id), title(title), organiser(organiser), participant(participant),
+    agenda(agenda), duration(duration), m_dateTime(dateTime),
+    employeeId(employeeId), clientId(clientId), resourceId(resourceId)
 {
 }
 
@@ -62,21 +56,26 @@ bool meeting::add()
 {
     QSqlQuery query;
     query.prepare("INSERT INTO AHMED.MEETING (TITLE, ORGANISER, PARTICIPANT, AGENDA, DURATION, EMPLOYEE_ID, CLIENT_ID, RESSOURCE_ID, DATEM) "
-                  "VALUES (:title, :organiser, :participant, :agenda, :duration, :employee_id, :client_id, :ressource_id, :datem)");
+                  "VALUES (:title, :organiser, :participant, :agenda, :duration, :employee_id, :client_id, :ressource_id, :datem) "
+                  "RETURNING ID INTO :id");
     query.bindValue(":title", title);
     query.bindValue(":organiser", organiser);
     query.bindValue(":participant", participant);
     query.bindValue(":agenda", agenda);
     query.bindValue(":duration", duration);
-    query.bindValue(":employee_id", employeeId.isNull() ? QVariant() : employeeId);
-    query.bindValue(":client_id", clientId.isNull() ? QVariant() : clientId);
-    query.bindValue(":ressource_id", resourceId.isNull() ? QVariant() : resourceId);
+    query.bindValue(":employee_id", employeeId.isNull() ? QVariant() : employeeId.toInt());
+    query.bindValue(":client_id", clientId.isNull() ? QVariant() : clientId.toInt());
+    query.bindValue(":ressource_id", resourceId.isNull() ? QVariant() : resourceId.toInt());
     query.bindValue(":datem", m_dateTime);
+    query.bindValue(":id", 0, QSql::Out); // Bind output parameter for ID
 
     if (!query.exec()) {
         qDebug() << "Error executing query in meeting::add:" << query.lastError().text();
         return false;
     }
+
+    // Retrieve the assigned ID
+    id = query.boundValue(":id").toInt();
     return true;
 }
 
@@ -162,22 +161,22 @@ bool meeting::update()
 {
     QSqlQuery query;
     query.prepare("UPDATE AHMED.MEETING SET TITLE = :title, ORGANISER = :organiser, PARTICIPANT = :participant, "
-                  "AGENDA = :agenda, DURATION = :duration, DATEM = :datem, EMPLOYEE_ID = :employeeId, "
-                  "CLIENT_ID = :clientId, RESSOURCE_ID = :resourceId WHERE ID = :id");
+                  "AGENDA = :agenda, DURATION = :duration, EMPLOYEE_ID = :employeeId, CLIENT_ID = :clientId, "
+                  "RESSOURCE_ID = :resourceId, DATEM = :datem WHERE ID = :id");
+    query.bindValue(":id", id);
     query.bindValue(":title", title);
     query.bindValue(":organiser", organiser);
     query.bindValue(":participant", participant);
     query.bindValue(":agenda", agenda);
     query.bindValue(":duration", duration);
+    // Use QVariant() for NULL values, otherwise bind the integer value
+    query.bindValue(":employeeId", employeeId.isNull() ? QVariant() : employeeId.toInt());
+    query.bindValue(":clientId", clientId.isNull() ? QVariant() : clientId.toInt());
+    query.bindValue(":resourceId", resourceId.isNull() ? QVariant() : resourceId.toInt());
     query.bindValue(":datem", m_dateTime);
-    // Explicitly convert to int or NULL
-    query.bindValue(":employeeId", employeeId.isNull() ? QVariant(QVariant::Int) : employeeId.toInt());
-    query.bindValue(":clientId", clientId.isNull() ? QVariant(QVariant::Int) : clientId.toInt());
-    query.bindValue(":resourceId", resourceId.isNull() ? QVariant(QVariant::Int) : resourceId.toInt());
-    query.bindValue(":id", id);
 
     if (!query.exec()) {
-        qDebug() << "Failed to update meeting: " << query.lastError().text();
+        qDebug() << "Error executing query in meeting::update:" << query.lastError().text();
         return false;
     }
     return true;

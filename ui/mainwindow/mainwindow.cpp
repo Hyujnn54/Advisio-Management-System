@@ -191,15 +191,68 @@ void MainWindow::applyDarkTheme()
     )");
 }
 
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QScrollArea>
+#include <QLabel>
+#include <QPushButton>
+#include <QMessageBox>
+
 void MainWindow::handleNotificationLabelClicked()
 {
-    // For now, show a simple message with the notification count
-    int count = notificationManager->getNotificationCount();
-    if (count == 0) {
+    const QVector<NotificationManager::Notification>& notifications = notificationManager->getNotifications();
+    if (notifications.isEmpty()) {
         QMessageBox::information(this, "Notifications", "No new notifications.");
-    } else {
-        QMessageBox::information(this, "Notifications", QString("You have %1 new notification(s).").arg(count));
+        return;
     }
+
+    // Create a dialog to display notifications
+    QDialog dialog(this);
+    dialog.setWindowTitle("Notifications");
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+
+    // Add a scrollable area for notifications
+    QScrollArea *scrollArea = new QScrollArea(&dialog);
+    QWidget *scrollWidget = new QWidget();
+    QVBoxLayout *scrollLayout = new QVBoxLayout(scrollWidget);
+
+    for (const NotificationManager::Notification &notif : notifications) {
+        QString notificationText = QString("%1\n%2\n%3")
+        .arg(notif.title)
+            .arg(notif.description)
+            .arg(notif.details);
+        QLabel *label = new QLabel(notificationText, scrollWidget);
+        label->setWordWrap(true);
+        label->setStyleSheet("QLabel { border-bottom: 1px solid #d3d3d3; padding: 5px; }");
+        scrollLayout->addWidget(label);
+    }
+
+    scrollWidget->setLayout(scrollLayout);
+    scrollArea->setWidget(scrollWidget);
+    scrollArea->setWidgetResizable(true);
+    layout->addWidget(scrollArea);
+
+    // Add a "Clear Notifications" button
+    QPushButton *clearButton = new QPushButton("Clear Notifications", &dialog);
+    connect(clearButton, &QPushButton::clicked, this, [this, &dialog]() {
+        notificationManager->clearNotifications();
+        dialog.accept();
+    });
+    layout->addWidget(clearButton);
+
+    // Add a "Close" button
+    QPushButton *closeButton = new QPushButton("Close", &dialog);
+    connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    layout->addWidget(closeButton);
+
+    dialog.setLayout(layout);
+    dialog.resize(400, 300);
+    dialog.exec();
+
+    // Update the notification label after the dialog is closed
+    updateNotificationLabel(notificationManager->getNotificationCount());
 }
 
 void MainWindow::updateNotificationLabel(int count)

@@ -4,7 +4,7 @@
 
 #include <QObject>
 #include <QDateTime>
-#include <QList>
+#include <QVector>
 
 class NotificationManager : public QObject
 {
@@ -12,24 +12,25 @@ class NotificationManager : public QObject
 
 public:
     struct Notification {
-        QString action;
-        QDateTime timestamp;
-        QString location;
+        QString title;
+        QString description;
         QString details;
-        int lineNumber;
+        int row;
     };
 
     explicit NotificationManager(QObject *parent = nullptr);
 
-    void addNotification(const QString &action, const QString &location, const QString &details, int lineNumber = -1);
-    const QList<Notification> &getNotifications() const;
+    void addNotification(const QString &title, const QString &description, const QString &details, int row);
+    void clearNotifications();
     int getNotificationCount() const;
+    const QVector<Notification>& getNotifications() const;
 
 signals:
-    void notificationAdded(int count);
+    void notificationCountChanged(int count);
 
 private:
-    QList<Notification> notifications;
+    QVector<Notification> notifications;
+    int notificationCount;
 };
 
 #endif // NOTIFICATIONMANAGER_H

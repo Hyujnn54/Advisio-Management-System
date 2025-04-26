@@ -24,8 +24,10 @@ private:
 
 public:
     meeting();
-    meeting(QString title, QString organiser, QString participant, QString agenda, int duration, QDateTime dateTime,
-            QVariant employeeId = QVariant(), QVariant clientId = QVariant(), QVariant resourceId = QVariant());
+    meeting(int id, const QString &title, const QString &organiser, const QString &participant,
+            const QString &agenda, int duration, const QDateTime &dateTime,
+            const QVariant &employeeId = QVariant(), const QVariant &clientId = QVariant(),
+            const QVariant &resourceId = QVariant());
 
     // Getters
     int getId() const;

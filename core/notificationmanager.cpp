@@ -2,28 +2,30 @@
 #include "notificationmanager.h"
 
 NotificationManager::NotificationManager(QObject *parent)
-    : QObject(parent)
+    : QObject(parent), notificationCount(0)
 {
 }
 
-void NotificationManager::addNotification(const QString &action, const QString &location, const QString &details, int lineNumber)
+void NotificationManager::addNotification(const QString &title, const QString &description, const QString &details, int row)
 {
-    Notification notification;
-    notification.action = action;
-    notification.timestamp = QDateTime::currentDateTime();
-    notification.location = location;
-    notification.details = details;
-    notification.lineNumber = lineNumber;
-    notifications.append(notification);
-    emit notificationAdded(notifications.size());
+    notifications.append({title, description, details, row});
+    notificationCount++;
+    emit notificationCountChanged(notificationCount);
 }
 
-const QList<NotificationManager::Notification> &NotificationManager::getNotifications() const
+void NotificationManager::clearNotifications()
 {
-    return notifications;
+    notifications.clear();
+    notificationCount = 0;
+    emit notificationCountChanged(notificationCount);
 }
 
 int NotificationManager::getNotificationCount() const
 {
-    return notifications.size();
+    return notificationCount;
+}
+
+const QVector<NotificationManager::Notification>& NotificationManager::getNotifications() const
+{
+    return notifications;
 }

@@ -41,7 +41,6 @@ ChartWindow::ChartWindow(QWidget *parent)
 
 ChartWindow::~ChartWindow()
 {
-    // No need to delete currentChart manually; QChartView will handle it
     if (tooltipLabel) {
         delete tooltipLabel;
         tooltipLabel = nullptr;
@@ -75,8 +74,9 @@ void ChartWindow::updateChart()
 {
     QString statsType = ui->statsTypeComboBox->currentText();
     QString filter = ui->filterComboBox->currentText();
+    QString chartType = ui->chartTypeComboBox->currentText();
 
-    qDebug() << "Starting updateChart() with statsType:" << statsType << "and filter:" << filter;
+    qDebug() << "Starting updateChart() with statsType:" << statsType << "and filter:" << filter << "and chartType:" << chartType;
 
     // Handle empty statsType
     if (statsType.isEmpty()) {
@@ -89,10 +89,17 @@ void ChartWindow::updateChart()
     if (!currentChart) {
         currentChart = new QChart();
     } else {
-        // Clear the existing chart instead of deleting it
+        // Clear the existing chart completely
         currentChart->removeAllSeries();
         while (!currentChart->axes().isEmpty()) {
             currentChart->removeAxis(currentChart->axes().first());
+        }
+        // Remove all items (like "No data available" text)
+        if (currentChart->scene()) {
+            for (QGraphicsItem *item : currentChart->scene()->items()) {
+                currentChart->scene()->removeItem(item);
+                delete item;
+            }
         }
     }
     qDebug() << "Prepared QChart";
@@ -121,30 +128,37 @@ void ChartWindow::updateChart()
             if (query.next()) {
                 int count = query.value(0).toInt();
                 qDebug() << "Client count:" << count;
-                QBarSeries *series = new QBarSeries();
-                qDebug() << "Created QBarSeries";
-                QBarSet *set = new QBarSet("Clients");
-                qDebug() << "Created QBarSet";
-                *set << count;
-                qDebug() << "Added count to QBarSet:" << count;
-                series->append(set);
-                qDebug() << "Appended QBarSet to QBarSeries";
-                currentChart->addSeries(series);
-                qDebug() << "Added QBarSeries to QChart";
-                QStringList categories = {"Total"};
-                QBarCategoryAxis *axisX = new QBarCategoryAxis();
-                qDebug() << "Created QBarCategoryAxis";
-                axisX->append(categories);
-                currentChart->addAxis(axisX, Qt::AlignBottom);
-                series->attachAxis(axisX);
-                qDebug() << "Attached axisX to series";
-                QValueAxis *axisY = new QValueAxis();
-                qDebug() << "Created QValueAxis";
-                axisY->setRange(0, count > 0 ? count + 1 : 1);
-                currentChart->addAxis(axisY, Qt::AlignLeft);
-                series->attachAxis(axisY);
-                qDebug() << "Attached axisY to series";
-                dataAvailable = (count > 0);
+                if (chartType == "Bar Chart") {
+                    QBarSeries *series = new QBarSeries();
+                    qDebug() << "Created QBarSeries";
+                    QBarSet *set = new QBarSet("Clients");
+                    qDebug() << "Created QBarSet";
+                    *set << count;
+                    qDebug() << "Added count to QBarSet:" << count;
+                    series->append(set);
+                    qDebug() << "Appended QBarSet to QBarSeries";
+                    currentChart->addSeries(series);
+                    qDebug() << "Added QBarSeries to QChart";
+                    QStringList categories = {"Total"};
+                    QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                    qDebug() << "Created QBarCategoryAxis";
+                    axisX->append(categories);
+                    currentChart->addAxis(axisX, Qt::AlignBottom);
+                    series->attachAxis(axisX);
+                    qDebug() << "Attached axisX to series";
+                    QValueAxis *axisY = new QValueAxis();
+                    qDebug() << "Created QValueAxis";
+                    axisY->setRange(0, count > 0 ? count + 1 : 1);
+                    currentChart->addAxis(axisY, Qt::AlignLeft);
+                    series->attachAxis(axisY);
+                    qDebug() << "Attached axisY to series";
+                    dataAvailable = (count > 0);
+                } else { // Pie Chart
+                    QPieSeries *series = new QPieSeries();
+                    series->append("Clients", count);
+                    currentChart->addSeries(series);
+                    dataAvailable = (count > 0);
+                }
             }
         } else if (filter == "By Sector") {
             qDebug() << "Processing By Sector filter";
@@ -161,18 +175,45 @@ void ChartWindow::updateChart()
                 }
                 goto finalizeChart;
             }
-            QPieSeries *series = new QPieSeries();
-            int total = 0;
-            while (query.next()) {
-                QString sector = query.value(0).toString();
-                int count = query.value(1).toInt();
-                qDebug() << "Sector:" << sector << "Count:" << count;
-                series->append(sector, count);
-                total += count;
-            }
-            if (total > 0) {
+            if (chartType == "Bar Chart") {
+                QBarSeries *series = new QBarSeries();
+                QBarSet *set = new QBarSet("Clients");
+                QStringList categories;
+                int maxValue = 0;
+                while (query.next()) {
+                    QString sector = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Sector:" << sector << "Count:" << count;
+                    *set << count;
+                    categories << sector;
+                    maxValue = qMax(maxValue, count);
+                    dataAvailable = true;
+                }
+                series->append(set);
                 currentChart->addSeries(series);
-                dataAvailable = true;
+                QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                axisX->append(categories);
+                currentChart->addAxis(axisX, Qt::AlignBottom);
+                series->attachAxis(axisX);
+                QValueAxis *axisY = new QValueAxis();
+                axisY->setRange(0, maxValue > 0 ? maxValue + 1 : 1);
+                currentChart->addAxis(axisY, Qt::AlignLeft);
+                series->attachAxis(axisY);
+            } else { // Pie Chart
+                QPieSeries *series = new QPieSeries();
+                int total = 0;
+                query.seek(-1); // Reset query cursor
+                while (query.next()) {
+                    QString sector = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Sector:" << sector << "Count:" << count;
+                    series->append(sector, count);
+                    total += count;
+                }
+                if (total > 0) {
+                    currentChart->addSeries(series);
+                    dataAvailable = true;
+                }
             }
         } else if (filter == "By Consultation Year") {
             qDebug() << "Processing By Consultation Year filter";
@@ -189,29 +230,46 @@ void ChartWindow::updateChart()
                 }
                 goto finalizeChart;
             }
-            QBarSeries *series = new QBarSeries();
-            QBarSet *set = new QBarSet("Clients");
-            QStringList categories;
-            int maxValue = 0;
-            while (query.next()) {
-                QString year = query.value(0).toString();
-                int count = query.value(1).toInt();
-                qDebug() << "Year:" << year << "Count:" << count;
-                *set << count;
-                categories << year;
-                maxValue = qMax(maxValue, count);
-                dataAvailable = true;
+            if (chartType == "Bar Chart") {
+                QBarSeries *series = new QBarSeries();
+                QBarSet *set = new QBarSet("Clients");
+                QStringList categories;
+                int maxValue = 0;
+                while (query.next()) {
+                    QString year = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Year:" << year << "Count:" << count;
+                    *set << count;
+                    categories << year;
+                    maxValue = qMax(maxValue, count);
+                    dataAvailable = true;
+                }
+                series->append(set);
+                currentChart->addSeries(series);
+                QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                axisX->append(categories);
+                currentChart->addAxis(axisX, Qt::AlignBottom);
+                series->attachAxis(axisX);
+                QValueAxis *axisY = new QValueAxis();
+                axisY->setRange(0, maxValue > 0 ? maxValue + 1 : 1);
+                currentChart->addAxis(axisY, Qt::AlignLeft);
+                series->attachAxis(axisY);
+            } else { // Pie Chart
+                QPieSeries *series = new QPieSeries();
+                int total = 0;
+                query.seek(-1); // Reset query cursor
+                while (query.next()) {
+                    QString year = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Year:" << year << "Count:" << count;
+                    series->append(year, count);
+                    total += count;
+                }
+                if (total > 0) {
+                    currentChart->addSeries(series);
+                    dataAvailable = true;
+                }
             }
-            series->append(set);
-            currentChart->addSeries(series);
-            QBarCategoryAxis *axisX = new QBarCategoryAxis();
-            axisX->append(categories);
-            currentChart->addAxis(axisX, Qt::AlignBottom);
-            series->attachAxis(axisX);
-            QValueAxis *axisY = new QValueAxis();
-            axisY->setRange(0, maxValue > 0 ? maxValue + 1 : 1);
-            currentChart->addAxis(axisY, Qt::AlignLeft);
-            series->attachAxis(axisY);
         }
     } else if (statsType == "Training Statistics") {
         if (filter == "All Trainings") {
@@ -232,21 +290,28 @@ void ChartWindow::updateChart()
             if (query.next()) {
                 int count = query.value(0).toInt();
                 qDebug() << "Training count:" << count;
-                QBarSeries *series = new QBarSeries();
-                QBarSet *set = new QBarSet("Trainings");
-                *set << count;
-                series->append(set);
-                currentChart->addSeries(series);
-                QStringList categories = {"Total"};
-                QBarCategoryAxis *axisX = new QBarCategoryAxis();
-                axisX->append(categories);
-                currentChart->addAxis(axisX, Qt::AlignBottom);
-                series->attachAxis(axisX);
-                QValueAxis *axisY = new QValueAxis();
-                axisY->setRange(0, count > 0 ? count + 1 : 1);
-                currentChart->addAxis(axisY, Qt::AlignLeft);
-                series->attachAxis(axisY);
-                dataAvailable = (count > 0);
+                if (chartType == "Bar Chart") {
+                    QBarSeries *series = new QBarSeries();
+                    QBarSet *set = new QBarSet("Trainings");
+                    *set << count;
+                    series->append(set);
+                    currentChart->addSeries(series);
+                    QStringList categories = {"Total"};
+                    QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                    axisX->append(categories);
+                    currentChart->addAxis(axisX, Qt::AlignBottom);
+                    series->attachAxis(axisX);
+                    QValueAxis *axisY = new QValueAxis();
+                    axisY->setRange(0, count > 0 ? count + 1 : 1);
+                    currentChart->addAxis(axisY, Qt::AlignLeft);
+                    series->attachAxis(axisY);
+                    dataAvailable = (count > 0);
+                } else { // Pie Chart
+                    QPieSeries *series = new QPieSeries();
+                    series->append("Trainings", count);
+                    currentChart->addSeries(series);
+                    dataAvailable = (count > 0);
+                }
             }
         } else if (filter == "By Formation") {
             qDebug() << "Processing By Formation filter";
@@ -263,18 +328,45 @@ void ChartWindow::updateChart()
                 }
                 goto finalizeChart;
             }
-            QPieSeries *series = new QPieSeries();
-            int total = 0;
-            while (query.next()) {
-                QString formation = query.value(0).toString();
-                int count = query.value(1).toInt();
-                qDebug() << "Formation:" << formation << "Count:" << count;
-                series->append(formation, count);
-                total += count;
-            }
-            if (total > 0) {
+            if (chartType == "Bar Chart") {
+                QBarSeries *series = new QBarSeries();
+                QBarSet *set = new QBarSet("Trainings");
+                QStringList categories;
+                int maxValue = 0;
+                while (query.next()) {
+                    QString formation = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Formation:" << formation << "Count:" << count;
+                    *set << count;
+                    categories << formation;
+                    maxValue = qMax(maxValue, count);
+                    dataAvailable = true;
+                }
+                series->append(set);
                 currentChart->addSeries(series);
-                dataAvailable = true;
+                QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                axisX->append(categories);
+                currentChart->addAxis(axisX, Qt::AlignBottom);
+                series->attachAxis(axisX);
+                QValueAxis *axisY = new QValueAxis();
+                axisY->setRange(0, maxValue > 0 ? maxValue + 1 : 1);
+                currentChart->addAxis(axisY, Qt::AlignLeft);
+                series->attachAxis(axisY);
+            } else { // Pie Chart
+                QPieSeries *series = new QPieSeries();
+                int total = 0;
+                query.seek(-1); // Reset query cursor
+                while (query.next()) {
+                    QString formation = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Formation:" << formation << "Count:" << count;
+                    series->append(formation, count);
+                    total += count;
+                }
+                if (total > 0) {
+                    currentChart->addSeries(series);
+                    dataAvailable = true;
+                }
             }
         } else if (filter == "By Year") {
             qDebug() << "Processing By Year filter for Training Statistics";
@@ -291,29 +383,46 @@ void ChartWindow::updateChart()
                 }
                 goto finalizeChart;
             }
-            QBarSeries *series = new QBarSeries();
-            QBarSet *set = new QBarSet("Trainings");
-            QStringList categories;
-            int maxValue = 0;
-            while (query.next()) {
-                QString year = query.value(0).toString();
-                int count = query.value(1).toInt();
-                qDebug() << "Year:" << year << "Count:" << count;
-                *set << count;
-                categories << year;
-                maxValue = qMax(maxValue, count);
-                dataAvailable = true;
+            if (chartType == "Bar Chart") {
+                QBarSeries *series = new QBarSeries();
+                QBarSet *set = new QBarSet("Trainings");
+                QStringList categories;
+                int maxValue = 0;
+                while (query.next()) {
+                    QString year = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Year:" << year << "Count:" << count;
+                    *set << count;
+                    categories << year;
+                    maxValue = qMax(maxValue, count);
+                    dataAvailable = true;
+                }
+                series->append(set);
+                currentChart->addSeries(series);
+                QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                axisX->append(categories);
+                currentChart->addAxis(axisX, Qt::AlignBottom);
+                series->attachAxis(axisX);
+                QValueAxis *axisY = new QValueAxis();
+                axisY->setRange(0, maxValue > 0 ? maxValue + 1 : 1);
+                currentChart->addAxis(axisY, Qt::AlignLeft);
+                series->attachAxis(axisY);
+            } else { // Pie Chart
+                QPieSeries *series = new QPieSeries();
+                int total = 0;
+                query.seek(-1); // Reset query cursor
+                while (query.next()) {
+                    QString year = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Year:" << year << "Count:" << count;
+                    series->append(year, count);
+                    total += count;
+                }
+                if (total > 0) {
+                    currentChart->addSeries(series);
+                    dataAvailable = true;
+                }
             }
-            series->append(set);
-            currentChart->addSeries(series);
-            QBarCategoryAxis *axisX = new QBarCategoryAxis();
-            axisX->append(categories);
-            currentChart->addAxis(axisX, Qt::AlignBottom);
-            series->attachAxis(axisX);
-            QValueAxis *axisY = new QValueAxis();
-            axisY->setRange(0, maxValue > 0 ? maxValue + 1 : 1);
-            currentChart->addAxis(axisY, Qt::AlignLeft);
-            series->attachAxis(axisY);
         }
     } else if (statsType == "Meeting Statistics") {
         if (filter == "All Meetings") {
@@ -334,21 +443,28 @@ void ChartWindow::updateChart()
             if (query.next()) {
                 int count = query.value(0).toInt();
                 qDebug() << "Meeting count:" << count;
-                QBarSeries *series = new QBarSeries();
-                QBarSet *set = new QBarSet("Meetings");
-                *set << count;
-                series->append(set);
-                currentChart->addSeries(series);
-                QStringList categories = {"Total"};
-                QBarCategoryAxis *axisX = new QBarCategoryAxis();
-                axisX->append(categories);
-                currentChart->addAxis(axisX, Qt::AlignBottom);
-                series->attachAxis(axisX);
-                QValueAxis *axisY = new QValueAxis();
-                axisY->setRange(0, count > 0 ? count + 1 : 1);
-                currentChart->addAxis(axisY, Qt::AlignLeft);
-                series->attachAxis(axisY);
-                dataAvailable = (count > 0);
+                if (chartType == "Bar Chart") {
+                    QBarSeries *series = new QBarSeries();
+                    QBarSet *set = new QBarSet("Meetings");
+                    *set << count;
+                    series->append(set);
+                    currentChart->addSeries(series);
+                    QStringList categories = {"Total"};
+                    QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                    axisX->append(categories);
+                    currentChart->addAxis(axisX, Qt::AlignBottom);
+                    series->attachAxis(axisX);
+                    QValueAxis *axisY = new QValueAxis();
+                    axisY->setRange(0, count > 0 ? count + 1 : 1);
+                    currentChart->addAxis(axisY, Qt::AlignLeft);
+                    series->attachAxis(axisY);
+                    dataAvailable = (count > 0);
+                } else { // Pie Chart
+                    QPieSeries *series = new QPieSeries();
+                    series->append("Meetings", count);
+                    currentChart->addSeries(series);
+                    dataAvailable = (count > 0);
+                }
             }
         } else if (filter == "By Agenda") {
             qDebug() << "Processing By Agenda filter";
@@ -365,18 +481,45 @@ void ChartWindow::updateChart()
                 }
                 goto finalizeChart;
             }
-            QPieSeries *series = new QPieSeries();
-            int total = 0;
-            while (query.next()) {
-                QString agenda = query.value(0).toString();
-                int count = query.value(1).toInt();
-                qDebug() << "Agenda:" << agenda << "Count:" << count;
-                series->append(agenda, count);
-                total += count;
-            }
-            if (total > 0) {
+            if (chartType == "Bar Chart") {
+                QBarSeries *series = new QBarSeries();
+                QBarSet *set = new QBarSet("Meetings");
+                QStringList categories;
+                int maxValue = 0;
+                while (query.next()) {
+                    QString agenda = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Agenda:" << agenda << "Count:" << count;
+                    *set << count;
+                    categories << agenda;
+                    maxValue = qMax(maxValue, count);
+                    dataAvailable = true;
+                }
+                series->append(set);
                 currentChart->addSeries(series);
-                dataAvailable = true;
+                QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                axisX->append(categories);
+                currentChart->addAxis(axisX, Qt::AlignBottom);
+                series->attachAxis(axisX);
+                QValueAxis *axisY = new QValueAxis();
+                axisY->setRange(0, maxValue > 0 ? maxValue + 1 : 1);
+                currentChart->addAxis(axisY, Qt::AlignLeft);
+                series->attachAxis(axisY);
+            } else { // Pie Chart
+                QPieSeries *series = new QPieSeries();
+                int total = 0;
+                query.seek(-1); // Reset query cursor
+                while (query.next()) {
+                    QString agenda = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Agenda:" << agenda << "Count:" << count;
+                    series->append(agenda, count);
+                    total += count;
+                }
+                if (total > 0) {
+                    currentChart->addSeries(series);
+                    dataAvailable = true;
+                }
             }
         } else if (filter == "By Duration") {
             qDebug() << "Processing By Duration filter";
@@ -400,18 +543,45 @@ void ChartWindow::updateChart()
                 }
                 goto finalizeChart;
             }
-            QPieSeries *series = new QPieSeries();
-            int total = 0;
-            while (query.next()) {
-                QString range = query.value(0).toString();
-                int count = query.value(1).toInt();
-                qDebug() << "Duration Range:" << range << "Count:" << count;
-                series->append(range, count);
-                total += count;
-            }
-            if (total > 0) {
+            if (chartType == "Bar Chart") {
+                QBarSeries *series = new QBarSeries();
+                QBarSet *set = new QBarSet("Meetings");
+                QStringList categories;
+                int maxValue = 0;
+                while (query.next()) {
+                    QString range = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Duration Range:" << range << "Count:" << count;
+                    *set << count;
+                    categories << range;
+                    maxValue = qMax(maxValue, count);
+                    dataAvailable = true;
+                }
+                series->append(set);
                 currentChart->addSeries(series);
-                dataAvailable = true;
+                QBarCategoryAxis *axisX = new QBarCategoryAxis();
+                axisX->append(categories);
+                currentChart->addAxis(axisX, Qt::AlignBottom);
+                series->attachAxis(axisX);
+                QValueAxis *axisY = new QValueAxis();
+                axisY->setRange(0, maxValue > 0 ? maxValue + 1 : 1);
+                currentChart->addAxis(axisY, Qt::AlignLeft);
+                series->attachAxis(axisY);
+            } else { // Pie Chart
+                QPieSeries *series = new QPieSeries();
+                int total = 0;
+                query.seek(-1); // Reset query cursor
+                while (query.next()) {
+                    QString range = query.value(0).toString();
+                    int count = query.value(1).toInt();
+                    qDebug() << "Duration Range:" << range << "Count:" << count;
+                    series->append(range, count);
+                    total += count;
+                }
+                if (total > 0) {
+                    currentChart->addSeries(series);
+                    dataAvailable = true;
+                }
             }
         }
     }
