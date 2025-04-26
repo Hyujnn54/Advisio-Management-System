@@ -7,8 +7,10 @@
 #include <QChartView>
 #include <QtCharts>
 #include <QLabel>
+#include <QSqlQuery>
+#include <QResizeEvent>
 #include <QPropertyAnimation>
-#include <QSequentialAnimationGroup>
+#include <QGraphicsOpacityEffect>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ChartWindow; }
@@ -22,40 +24,59 @@ public:
     explicit ChartWindow(QWidget *parent = nullptr);
     ~ChartWindow();
 
+    // New method to apply theme
+    void applyTheme(bool isDarkTheme);
+
 private slots:
     void updateChart();
     void handlePieSliceHovered(QPieSlice *slice, bool state);
     void handleBarHovered(bool status, int index);
-    void populateStatsViews();
-    void on_refreshButton_clicked();
     void on_resetButton_clicked();
-    
-    // New slots for enhanced functionality
-    void onAnimationFinished();
-    void animatePieChart(QPieSeries *series);
-    void animateBarChart(QBarSeries *series);
-    void updatePercentageLabels();
     void on_chartDetailComboBox_currentIndexChanged(int index);
+    void on_filterComboBox_currentIndexChanged(int index);
+    void updateFilterOptions();
+
+protected:
+    // Override resize event for better responsiveness
+    void resizeEvent(QResizeEvent *event) override;
+    // Override show event to apply theme when shown
+    void showEvent(QShowEvent *event) override;
 
 private:
     Ui::ChartWindow *ui;
     QChart *currentChart;
     QLabel *tooltipLabel;
     QBarSet *currentBarSet;
-    QSequentialAnimationGroup *animationGroup;
+    QString currentDetailType;
+    QString currentFilter;
+    bool isDarkTheme;
+    QPropertyAnimation *hoverAnimation;
+    QGraphicsOpacityEffect *hoverEffect;
     
-    // Helper methods for specific chart types
+    // Functions for different statistics types
     void createClientStatistics(QString chartType);
     void createTrainingStatistics(QString chartType);
     void createMeetingStatistics(QString chartType);
     
-    // Detail selectors for each chart type
+    // Detail options for each stats type
     QStringList getClientDetailOptions();
     QStringList getTrainingDetailOptions();
     QStringList getMeetingDetailOptions();
     
-    // Additional data for statistics
-    QString currentDetailType;
+    // Filter options based on type and detail
+    QStringList getFilterOptions(QString statsType, QString detailType);
+    
+    // Apply filter to query
+    QString applyFilterToQuery(QString baseQuery, QString statsType, QString detailType, QString filter);
+    
+    // Detect if parent is using dark theme
+    bool detectDarkTheme();
+    // Update tooltip style based on theme
+    void updateTooltipStyle();
+    // Setup animations for hover effects
+    void setupHoverAnimations();
+    // Apply hover animation to chart element
+    void animateChartElement(QGraphicsItem *item, bool hovered);
 };
 
 #endif // CHARTWINDOW_H

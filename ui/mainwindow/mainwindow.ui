@@ -11,14 +11,14 @@
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
   <property name="minimumSize">
    <size>
-    <width>0</width>
+    <width>900</width>
     <height>600</height>
    </size>
   </property>
@@ -350,7 +350,7 @@ QPushButton:hover { color: darkblue; }</string>
           <item>
            <widget class="QStackedWidget" name="mainStackedWidget">
             <property name="currentIndex">
-             <number>2</number>
+             <number>0</number>
             </property>
             <widget class="QWidget" name="clientPage">
              <layout class="QVBoxLayout" name="clientPageLayout">
@@ -572,62 +572,153 @@ QPushButton:hover { color: darkblue; }</string>
                   </item>
                  </layout>
                 </widget>
-                <widget class="QWidget" name="clientCalendarTab">
+                <widget class="QWidget" name="clientStatsTab">
                  <attribute name="title">
-                  <string>Consultation Calendar</string>
+                  <string>Client Statistics</string>
                  </attribute>
-                 <layout class="QVBoxLayout" name="clientCalendarLayout">
+                 <layout class="QVBoxLayout" name="clientStatsTabLayout">
                   <item>
-                   <widget class="QCalendarWidget" name="clientConsultationCalendar">
-                    <property name="minimumSize">
-                     <size>
-                      <width>0</width>
-                      <height>400</height>
-                     </size>
+                   <widget class="QLabel" name="clientStatsHeaderLabel">
+                    <property name="font">
+                     <font>
+                      <pointsize>12</pointsize>
+                      <bold>true</bold>
+                     </font>
                     </property>
-                    <property name="gridVisible">
-                     <bool>true</bool>
+                    <property name="text">
+                     <string>Client Statistics and Analytics</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignmentFlag::AlignCenter</set>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QGroupBox" name="clientCalendarDetailsBox">
-                    <property name="title">
-                     <string>Consultation Details</string>
+                   <widget class="QLabel" name="clientStatsSectorLabel">
+                    <property name="text">
+                     <string>Client Distribution by Sector</string>
                     </property>
-                    <layout class="QVBoxLayout" name="clientCalendarDetailsLayout">
-                     <item>
-                      <widget class="QLabel" name="clientSelectedDateLabel">
-                       <property name="text">
-                        <string>Selected date: </string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignmentFlag::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="clientConsultationCountLabel">
-                       <property name="text">
-                        <string>Consultations: 0</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignmentFlag::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QTableView" name="clientDateConsultationsView">
-                       <property name="selectionMode">
-                        <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
-                       </property>
-                       <property name="selectionBehavior">
-                        <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
                    </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="clientSectorChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="clientStatsTimeLabel">
+                    <property name="text">
+                     <string>Client Acquisition Timeline</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="clientTimeChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="clientStatsConsultantLabel">
+                    <property name="text">
+                     <string>Clients by Consultant</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="clientConsultantChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="clientStatsButtonLayout">
+                    <item>
+                     <spacer name="horizontalSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Orientation::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>40</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="clientStatsRefreshButton">
+                      <property name="text">
+                       <string>Refresh</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="clientStatsExportButton">
+                      <property name="text">
+                       <string>Export Stats</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="clientCalendarTab">
+                 <attribute name="title">
+                  <string>Consultations Calendar</string>
+                 </attribute>
+                 <layout class="QVBoxLayout" name="clientCalendarLayout">
+                  <item>
+                   <widget class="QLabel" name="clientSelectedDateLabel">
+                    <property name="text">
+                     <string>Selected date: </string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="clientConsultationCountLabel">
+                    <property name="text">
+                     <string>Consultations: 0</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="clientCalendarViewLayout">
+                    <item>
+                     <widget class="QCalendarWidget" name="clientConsultationCalendar">
+                      <property name="minimumSize">
+                       <size>
+                        <width>400</width>
+                        <height>300</height>
+                       </size>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QTableView" name="clientDateConsultationsView">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
                   </item>
                  </layout>
                 </widget>
@@ -837,6 +928,111 @@ QPushButton:hover { color: darkblue; }</string>
                      <widget class="QPushButton" name="trainingExportButton">
                       <property name="text">
                        <string>PDF</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="trainingStatsTab">
+                 <attribute name="title">
+                  <string>Training Statistics</string>
+                 </attribute>
+                 <layout class="QVBoxLayout" name="trainingStatsTabLayout">
+                  <item>
+                   <widget class="QLabel" name="trainingStatsHeaderLabel">
+                    <property name="font">
+                     <font>
+                      <pointsize>12</pointsize>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Training Statistics and Analytics</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignmentFlag::AlignCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="trainingStatsByTypeLabel">
+                    <property name="text">
+                     <string>Training Distribution by Type</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="trainingTypeChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="trainingStatsPriceLabel">
+                    <property name="text">
+                     <string>Price Distribution</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="trainingPriceChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="trainingStatsTrainerLabel">
+                    <property name="text">
+                     <string>Trainings by Trainer</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="trainingTrainerChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="trainingStatsButtonLayout">
+                    <item>
+                     <spacer name="trainingStatsSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Orientation::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>40</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="trainingStatsRefreshButton">
+                      <property name="text">
+                       <string>Refresh</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="trainingStatsExportButton">
+                      <property name="text">
+                       <string>Export Stats</string>
                       </property>
                      </widget>
                     </item>
@@ -1145,6 +1341,111 @@ QPushButton:hover { color: darkblue; }</string>
                      <widget class="QPushButton" name="meetingChatClearButton">
                       <property name="text">
                        <string>Clear Chat</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="meetingStatsTab">
+                 <attribute name="title">
+                  <string>Meeting Statistics</string>
+                 </attribute>
+                 <layout class="QVBoxLayout" name="meetingStatsTabLayout">
+                  <item>
+                   <widget class="QLabel" name="meetingStatsHeaderLabel">
+                    <property name="font">
+                     <font>
+                      <pointsize>12</pointsize>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Meeting Statistics and Analytics</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignmentFlag::AlignCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="meetingStatsByAgendaLabel">
+                    <property name="text">
+                     <string>Meeting Distribution by Agenda Type</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="meetingAgendaChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="meetingStatsByMonthLabel">
+                    <property name="text">
+                     <string>Meeting Distribution by Month</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="meetingMonthChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="meetingStatsByOrganizerLabel">
+                    <property name="text">
+                     <string>Meetings by Organizer</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="meetingOrganizerChartWidget" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>180</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="meetingStatsButtonLayout">
+                    <item>
+                     <spacer name="meetingStatsSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Orientation::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>40</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="meetingStatsRefreshButton">
+                      <property name="text">
+                       <string>Refresh</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="meetingStatsExportButton">
+                      <property name="text">
+                       <string>Export Stats</string>
                       </property>
                      </widget>
                     </item>

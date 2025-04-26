@@ -100,13 +100,25 @@ public:
     QPushButton *clientDeleteButton;
     QPushButton *clientUpdateButton;
     QPushButton *clientExportPdfButton;
+    QWidget *clientStatsTab;
+    QVBoxLayout *clientStatsTabLayout;
+    QLabel *clientStatsHeaderLabel;
+    QLabel *clientStatsSectorLabel;
+    QWidget *clientSectorChartWidget;
+    QLabel *clientStatsTimeLabel;
+    QWidget *clientTimeChartWidget;
+    QLabel *clientStatsConsultantLabel;
+    QWidget *clientConsultantChartWidget;
+    QHBoxLayout *clientStatsButtonLayout;
+    QSpacerItem *horizontalSpacer;
+    QPushButton *clientStatsRefreshButton;
+    QPushButton *clientStatsExportButton;
     QWidget *clientCalendarTab;
     QVBoxLayout *clientCalendarLayout;
-    QCalendarWidget *clientConsultationCalendar;
-    QGroupBox *clientCalendarDetailsBox;
-    QVBoxLayout *clientCalendarDetailsLayout;
     QLabel *clientSelectedDateLabel;
     QLabel *clientConsultationCountLabel;
+    QHBoxLayout *clientCalendarViewLayout;
+    QCalendarWidget *clientConsultationCalendar;
     QTableView *clientDateConsultationsView;
     QWidget *trainingPage;
     QVBoxLayout *trainingPageLayout;
@@ -142,6 +154,19 @@ public:
     QPushButton *trainingDeleteButton;
     QPushButton *trainingUpdateButton;
     QPushButton *trainingExportButton;
+    QWidget *trainingStatsTab;
+    QVBoxLayout *trainingStatsTabLayout;
+    QLabel *trainingStatsHeaderLabel;
+    QLabel *trainingStatsByTypeLabel;
+    QWidget *trainingTypeChartWidget;
+    QLabel *trainingStatsPriceLabel;
+    QWidget *trainingPriceChartWidget;
+    QLabel *trainingStatsTrainerLabel;
+    QWidget *trainingTrainerChartWidget;
+    QHBoxLayout *trainingStatsButtonLayout;
+    QSpacerItem *trainingStatsSpacer;
+    QPushButton *trainingStatsRefreshButton;
+    QPushButton *trainingStatsExportButton;
     QWidget *meetingPage;
     QVBoxLayout *meetingPageLayout;
     QTabWidget *meetingTabWidget;
@@ -182,6 +207,19 @@ public:
     QLineEdit *meetingChatInputLineEdit;
     QPushButton *meetingChatSendButton;
     QPushButton *meetingChatClearButton;
+    QWidget *meetingStatsTab;
+    QVBoxLayout *meetingStatsTabLayout;
+    QLabel *meetingStatsHeaderLabel;
+    QLabel *meetingStatsByAgendaLabel;
+    QWidget *meetingAgendaChartWidget;
+    QLabel *meetingStatsByMonthLabel;
+    QWidget *meetingMonthChartWidget;
+    QLabel *meetingStatsByOrganizerLabel;
+    QWidget *meetingOrganizerChartWidget;
+    QHBoxLayout *meetingStatsButtonLayout;
+    QSpacerItem *meetingStatsSpacer;
+    QPushButton *meetingStatsRefreshButton;
+    QPushButton *meetingStatsExportButton;
     QStatusBar *statusBar;
 
     void setupUi(QMainWindow *MainWindow)
@@ -189,12 +227,12 @@ public:
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName("MainWindow");
         MainWindow->resize(1387, 758);
-        QSizePolicy sizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
+        QSizePolicy sizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(MainWindow->sizePolicy().hasHeightForWidth());
         MainWindow->setSizePolicy(sizePolicy);
-        MainWindow->setMinimumSize(QSize(0, 600));
+        MainWindow->setMinimumSize(QSize(900, 600));
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
         verticalLayout = new QVBoxLayout(centralwidget);
@@ -489,42 +527,104 @@ public:
         clientManageLayout->addLayout(clientManageButtonLayout);
 
         clientTabWidget->addTab(clientManageTab, QString());
+        clientStatsTab = new QWidget();
+        clientStatsTab->setObjectName("clientStatsTab");
+        clientStatsTabLayout = new QVBoxLayout(clientStatsTab);
+        clientStatsTabLayout->setObjectName("clientStatsTabLayout");
+        clientStatsHeaderLabel = new QLabel(clientStatsTab);
+        clientStatsHeaderLabel->setObjectName("clientStatsHeaderLabel");
+        QFont font1;
+        font1.setPointSize(12);
+        font1.setBold(true);
+        clientStatsHeaderLabel->setFont(font1);
+        clientStatsHeaderLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        clientStatsTabLayout->addWidget(clientStatsHeaderLabel);
+
+        clientStatsSectorLabel = new QLabel(clientStatsTab);
+        clientStatsSectorLabel->setObjectName("clientStatsSectorLabel");
+
+        clientStatsTabLayout->addWidget(clientStatsSectorLabel);
+
+        clientSectorChartWidget = new QWidget(clientStatsTab);
+        clientSectorChartWidget->setObjectName("clientSectorChartWidget");
+        clientSectorChartWidget->setMinimumSize(QSize(0, 180));
+
+        clientStatsTabLayout->addWidget(clientSectorChartWidget);
+
+        clientStatsTimeLabel = new QLabel(clientStatsTab);
+        clientStatsTimeLabel->setObjectName("clientStatsTimeLabel");
+
+        clientStatsTabLayout->addWidget(clientStatsTimeLabel);
+
+        clientTimeChartWidget = new QWidget(clientStatsTab);
+        clientTimeChartWidget->setObjectName("clientTimeChartWidget");
+        clientTimeChartWidget->setMinimumSize(QSize(0, 180));
+
+        clientStatsTabLayout->addWidget(clientTimeChartWidget);
+
+        clientStatsConsultantLabel = new QLabel(clientStatsTab);
+        clientStatsConsultantLabel->setObjectName("clientStatsConsultantLabel");
+
+        clientStatsTabLayout->addWidget(clientStatsConsultantLabel);
+
+        clientConsultantChartWidget = new QWidget(clientStatsTab);
+        clientConsultantChartWidget->setObjectName("clientConsultantChartWidget");
+        clientConsultantChartWidget->setMinimumSize(QSize(0, 180));
+
+        clientStatsTabLayout->addWidget(clientConsultantChartWidget);
+
+        clientStatsButtonLayout = new QHBoxLayout();
+        clientStatsButtonLayout->setObjectName("clientStatsButtonLayout");
+        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        clientStatsButtonLayout->addItem(horizontalSpacer);
+
+        clientStatsRefreshButton = new QPushButton(clientStatsTab);
+        clientStatsRefreshButton->setObjectName("clientStatsRefreshButton");
+
+        clientStatsButtonLayout->addWidget(clientStatsRefreshButton);
+
+        clientStatsExportButton = new QPushButton(clientStatsTab);
+        clientStatsExportButton->setObjectName("clientStatsExportButton");
+
+        clientStatsButtonLayout->addWidget(clientStatsExportButton);
+
+
+        clientStatsTabLayout->addLayout(clientStatsButtonLayout);
+
+        clientTabWidget->addTab(clientStatsTab, QString());
         clientCalendarTab = new QWidget();
         clientCalendarTab->setObjectName("clientCalendarTab");
         clientCalendarLayout = new QVBoxLayout(clientCalendarTab);
         clientCalendarLayout->setObjectName("clientCalendarLayout");
+        clientSelectedDateLabel = new QLabel(clientCalendarTab);
+        clientSelectedDateLabel->setObjectName("clientSelectedDateLabel");
+
+        clientCalendarLayout->addWidget(clientSelectedDateLabel);
+
+        clientConsultationCountLabel = new QLabel(clientCalendarTab);
+        clientConsultationCountLabel->setObjectName("clientConsultationCountLabel");
+
+        clientCalendarLayout->addWidget(clientConsultationCountLabel);
+
+        clientCalendarViewLayout = new QHBoxLayout();
+        clientCalendarViewLayout->setObjectName("clientCalendarViewLayout");
         clientConsultationCalendar = new QCalendarWidget(clientCalendarTab);
         clientConsultationCalendar->setObjectName("clientConsultationCalendar");
-        clientConsultationCalendar->setMinimumSize(QSize(0, 400));
-        clientConsultationCalendar->setGridVisible(true);
+        clientConsultationCalendar->setMinimumSize(QSize(400, 300));
 
-        clientCalendarLayout->addWidget(clientConsultationCalendar);
+        clientCalendarViewLayout->addWidget(clientConsultationCalendar);
 
-        clientCalendarDetailsBox = new QGroupBox(clientCalendarTab);
-        clientCalendarDetailsBox->setObjectName("clientCalendarDetailsBox");
-        clientCalendarDetailsLayout = new QVBoxLayout(clientCalendarDetailsBox);
-        clientCalendarDetailsLayout->setObjectName("clientCalendarDetailsLayout");
-        clientSelectedDateLabel = new QLabel(clientCalendarDetailsBox);
-        clientSelectedDateLabel->setObjectName("clientSelectedDateLabel");
-        clientSelectedDateLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
-
-        clientCalendarDetailsLayout->addWidget(clientSelectedDateLabel);
-
-        clientConsultationCountLabel = new QLabel(clientCalendarDetailsBox);
-        clientConsultationCountLabel->setObjectName("clientConsultationCountLabel");
-        clientConsultationCountLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
-
-        clientCalendarDetailsLayout->addWidget(clientConsultationCountLabel);
-
-        clientDateConsultationsView = new QTableView(clientCalendarDetailsBox);
+        clientDateConsultationsView = new QTableView(clientCalendarTab);
         clientDateConsultationsView->setObjectName("clientDateConsultationsView");
-        clientDateConsultationsView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
-        clientDateConsultationsView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
+        sizePolicy.setHeightForWidth(clientDateConsultationsView->sizePolicy().hasHeightForWidth());
+        clientDateConsultationsView->setSizePolicy(sizePolicy);
 
-        clientCalendarDetailsLayout->addWidget(clientDateConsultationsView);
+        clientCalendarViewLayout->addWidget(clientDateConsultationsView);
 
 
-        clientCalendarLayout->addWidget(clientCalendarDetailsBox);
+        clientCalendarLayout->addLayout(clientCalendarViewLayout);
 
         clientTabWidget->addTab(clientCalendarTab, QString());
 
@@ -684,6 +784,70 @@ public:
         trainingManageLayout->addLayout(trainingManageButtonLayout);
 
         trainingTabWidget->addTab(trainingManageTab, QString());
+        trainingStatsTab = new QWidget();
+        trainingStatsTab->setObjectName("trainingStatsTab");
+        trainingStatsTabLayout = new QVBoxLayout(trainingStatsTab);
+        trainingStatsTabLayout->setObjectName("trainingStatsTabLayout");
+        trainingStatsHeaderLabel = new QLabel(trainingStatsTab);
+        trainingStatsHeaderLabel->setObjectName("trainingStatsHeaderLabel");
+        trainingStatsHeaderLabel->setFont(font1);
+        trainingStatsHeaderLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        trainingStatsTabLayout->addWidget(trainingStatsHeaderLabel);
+
+        trainingStatsByTypeLabel = new QLabel(trainingStatsTab);
+        trainingStatsByTypeLabel->setObjectName("trainingStatsByTypeLabel");
+
+        trainingStatsTabLayout->addWidget(trainingStatsByTypeLabel);
+
+        trainingTypeChartWidget = new QWidget(trainingStatsTab);
+        trainingTypeChartWidget->setObjectName("trainingTypeChartWidget");
+        trainingTypeChartWidget->setMinimumSize(QSize(0, 180));
+
+        trainingStatsTabLayout->addWidget(trainingTypeChartWidget);
+
+        trainingStatsPriceLabel = new QLabel(trainingStatsTab);
+        trainingStatsPriceLabel->setObjectName("trainingStatsPriceLabel");
+
+        trainingStatsTabLayout->addWidget(trainingStatsPriceLabel);
+
+        trainingPriceChartWidget = new QWidget(trainingStatsTab);
+        trainingPriceChartWidget->setObjectName("trainingPriceChartWidget");
+        trainingPriceChartWidget->setMinimumSize(QSize(0, 180));
+
+        trainingStatsTabLayout->addWidget(trainingPriceChartWidget);
+
+        trainingStatsTrainerLabel = new QLabel(trainingStatsTab);
+        trainingStatsTrainerLabel->setObjectName("trainingStatsTrainerLabel");
+
+        trainingStatsTabLayout->addWidget(trainingStatsTrainerLabel);
+
+        trainingTrainerChartWidget = new QWidget(trainingStatsTab);
+        trainingTrainerChartWidget->setObjectName("trainingTrainerChartWidget");
+        trainingTrainerChartWidget->setMinimumSize(QSize(0, 180));
+
+        trainingStatsTabLayout->addWidget(trainingTrainerChartWidget);
+
+        trainingStatsButtonLayout = new QHBoxLayout();
+        trainingStatsButtonLayout->setObjectName("trainingStatsButtonLayout");
+        trainingStatsSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        trainingStatsButtonLayout->addItem(trainingStatsSpacer);
+
+        trainingStatsRefreshButton = new QPushButton(trainingStatsTab);
+        trainingStatsRefreshButton->setObjectName("trainingStatsRefreshButton");
+
+        trainingStatsButtonLayout->addWidget(trainingStatsRefreshButton);
+
+        trainingStatsExportButton = new QPushButton(trainingStatsTab);
+        trainingStatsExportButton->setObjectName("trainingStatsExportButton");
+
+        trainingStatsButtonLayout->addWidget(trainingStatsExportButton);
+
+
+        trainingStatsTabLayout->addLayout(trainingStatsButtonLayout);
+
+        trainingTabWidget->addTab(trainingStatsTab, QString());
 
         trainingPageLayout->addWidget(trainingTabWidget);
 
@@ -891,6 +1055,70 @@ public:
         meetingChatLayout->addLayout(meetingChatInputLayout);
 
         meetingTabWidget->addTab(meetingChatTab, QString());
+        meetingStatsTab = new QWidget();
+        meetingStatsTab->setObjectName("meetingStatsTab");
+        meetingStatsTabLayout = new QVBoxLayout(meetingStatsTab);
+        meetingStatsTabLayout->setObjectName("meetingStatsTabLayout");
+        meetingStatsHeaderLabel = new QLabel(meetingStatsTab);
+        meetingStatsHeaderLabel->setObjectName("meetingStatsHeaderLabel");
+        meetingStatsHeaderLabel->setFont(font1);
+        meetingStatsHeaderLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        meetingStatsTabLayout->addWidget(meetingStatsHeaderLabel);
+
+        meetingStatsByAgendaLabel = new QLabel(meetingStatsTab);
+        meetingStatsByAgendaLabel->setObjectName("meetingStatsByAgendaLabel");
+
+        meetingStatsTabLayout->addWidget(meetingStatsByAgendaLabel);
+
+        meetingAgendaChartWidget = new QWidget(meetingStatsTab);
+        meetingAgendaChartWidget->setObjectName("meetingAgendaChartWidget");
+        meetingAgendaChartWidget->setMinimumSize(QSize(0, 180));
+
+        meetingStatsTabLayout->addWidget(meetingAgendaChartWidget);
+
+        meetingStatsByMonthLabel = new QLabel(meetingStatsTab);
+        meetingStatsByMonthLabel->setObjectName("meetingStatsByMonthLabel");
+
+        meetingStatsTabLayout->addWidget(meetingStatsByMonthLabel);
+
+        meetingMonthChartWidget = new QWidget(meetingStatsTab);
+        meetingMonthChartWidget->setObjectName("meetingMonthChartWidget");
+        meetingMonthChartWidget->setMinimumSize(QSize(0, 180));
+
+        meetingStatsTabLayout->addWidget(meetingMonthChartWidget);
+
+        meetingStatsByOrganizerLabel = new QLabel(meetingStatsTab);
+        meetingStatsByOrganizerLabel->setObjectName("meetingStatsByOrganizerLabel");
+
+        meetingStatsTabLayout->addWidget(meetingStatsByOrganizerLabel);
+
+        meetingOrganizerChartWidget = new QWidget(meetingStatsTab);
+        meetingOrganizerChartWidget->setObjectName("meetingOrganizerChartWidget");
+        meetingOrganizerChartWidget->setMinimumSize(QSize(0, 180));
+
+        meetingStatsTabLayout->addWidget(meetingOrganizerChartWidget);
+
+        meetingStatsButtonLayout = new QHBoxLayout();
+        meetingStatsButtonLayout->setObjectName("meetingStatsButtonLayout");
+        meetingStatsSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        meetingStatsButtonLayout->addItem(meetingStatsSpacer);
+
+        meetingStatsRefreshButton = new QPushButton(meetingStatsTab);
+        meetingStatsRefreshButton->setObjectName("meetingStatsRefreshButton");
+
+        meetingStatsButtonLayout->addWidget(meetingStatsRefreshButton);
+
+        meetingStatsExportButton = new QPushButton(meetingStatsTab);
+        meetingStatsExportButton->setObjectName("meetingStatsExportButton");
+
+        meetingStatsButtonLayout->addWidget(meetingStatsExportButton);
+
+
+        meetingStatsTabLayout->addLayout(meetingStatsButtonLayout);
+
+        meetingTabWidget->addTab(meetingStatsTab, QString());
 
         meetingPageLayout->addWidget(meetingTabWidget);
 
@@ -911,7 +1139,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        mainStackedWidget->setCurrentIndex(2);
+        mainStackedWidget->setCurrentIndex(0);
         clientTabWidget->setCurrentIndex(1);
         trainingTabWidget->setCurrentIndex(1);
         meetingTabWidget->setCurrentIndex(0);
@@ -956,10 +1184,16 @@ public:
         clientUpdateButton->setText(QCoreApplication::translate("MainWindow", "Update", nullptr));
         clientExportPdfButton->setText(QCoreApplication::translate("MainWindow", "PDF", nullptr));
         clientTabWidget->setTabText(clientTabWidget->indexOf(clientManageTab), QCoreApplication::translate("MainWindow", "Manage Clients", nullptr));
-        clientCalendarDetailsBox->setTitle(QCoreApplication::translate("MainWindow", "Consultation Details", nullptr));
+        clientStatsHeaderLabel->setText(QCoreApplication::translate("MainWindow", "Client Statistics and Analytics", nullptr));
+        clientStatsSectorLabel->setText(QCoreApplication::translate("MainWindow", "Client Distribution by Sector", nullptr));
+        clientStatsTimeLabel->setText(QCoreApplication::translate("MainWindow", "Client Acquisition Timeline", nullptr));
+        clientStatsConsultantLabel->setText(QCoreApplication::translate("MainWindow", "Clients by Consultant", nullptr));
+        clientStatsRefreshButton->setText(QCoreApplication::translate("MainWindow", "Refresh", nullptr));
+        clientStatsExportButton->setText(QCoreApplication::translate("MainWindow", "Export Stats", nullptr));
+        clientTabWidget->setTabText(clientTabWidget->indexOf(clientStatsTab), QCoreApplication::translate("MainWindow", "Client Statistics", nullptr));
         clientSelectedDateLabel->setText(QCoreApplication::translate("MainWindow", "Selected date: ", nullptr));
         clientConsultationCountLabel->setText(QCoreApplication::translate("MainWindow", "Consultations: 0", nullptr));
-        clientTabWidget->setTabText(clientTabWidget->indexOf(clientCalendarTab), QCoreApplication::translate("MainWindow", "Consultation Calendar", nullptr));
+        clientTabWidget->setTabText(clientTabWidget->indexOf(clientCalendarTab), QCoreApplication::translate("MainWindow", "Consultations Calendar", nullptr));
         trainingPriceLabel->setText(QCoreApplication::translate("MainWindow", "Price", nullptr));
         trainingDescriptionLabel->setText(QCoreApplication::translate("MainWindow", "Description", nullptr));
         trainingTimeLabel->setText(QCoreApplication::translate("MainWindow", "Time", nullptr));
@@ -981,6 +1215,13 @@ public:
         trainingUpdateButton->setText(QCoreApplication::translate("MainWindow", "Update", nullptr));
         trainingExportButton->setText(QCoreApplication::translate("MainWindow", "PDF", nullptr));
         trainingTabWidget->setTabText(trainingTabWidget->indexOf(trainingManageTab), QCoreApplication::translate("MainWindow", "Manage Training", nullptr));
+        trainingStatsHeaderLabel->setText(QCoreApplication::translate("MainWindow", "Training Statistics and Analytics", nullptr));
+        trainingStatsByTypeLabel->setText(QCoreApplication::translate("MainWindow", "Training Distribution by Type", nullptr));
+        trainingStatsPriceLabel->setText(QCoreApplication::translate("MainWindow", "Price Distribution", nullptr));
+        trainingStatsTrainerLabel->setText(QCoreApplication::translate("MainWindow", "Trainings by Trainer", nullptr));
+        trainingStatsRefreshButton->setText(QCoreApplication::translate("MainWindow", "Refresh", nullptr));
+        trainingStatsExportButton->setText(QCoreApplication::translate("MainWindow", "Export Stats", nullptr));
+        trainingTabWidget->setTabText(trainingTabWidget->indexOf(trainingStatsTab), QCoreApplication::translate("MainWindow", "Training Statistics", nullptr));
         meetingTitleLabel->setText(QCoreApplication::translate("MainWindow", "Title", nullptr));
         meetingOrganiserLabel->setText(QCoreApplication::translate("MainWindow", "Organiser", nullptr));
         meetingParticipantLabel->setText(QCoreApplication::translate("MainWindow", "Participant", nullptr));
@@ -1025,6 +1266,13 @@ public:
         meetingChatSendButton->setText(QCoreApplication::translate("MainWindow", "Send", nullptr));
         meetingChatClearButton->setText(QCoreApplication::translate("MainWindow", "Clear Chat", nullptr));
         meetingTabWidget->setTabText(meetingTabWidget->indexOf(meetingChatTab), QCoreApplication::translate("MainWindow", "Chat Assistant", nullptr));
+        meetingStatsHeaderLabel->setText(QCoreApplication::translate("MainWindow", "Meeting Statistics and Analytics", nullptr));
+        meetingStatsByAgendaLabel->setText(QCoreApplication::translate("MainWindow", "Meeting Distribution by Agenda Type", nullptr));
+        meetingStatsByMonthLabel->setText(QCoreApplication::translate("MainWindow", "Meeting Distribution by Month", nullptr));
+        meetingStatsByOrganizerLabel->setText(QCoreApplication::translate("MainWindow", "Meetings by Organizer", nullptr));
+        meetingStatsRefreshButton->setText(QCoreApplication::translate("MainWindow", "Refresh", nullptr));
+        meetingStatsExportButton->setText(QCoreApplication::translate("MainWindow", "Export Stats", nullptr));
+        meetingTabWidget->setTabText(meetingTabWidget->indexOf(meetingStatsTab), QCoreApplication::translate("MainWindow", "Meeting Statistics", nullptr));
     } // retranslateUi
 
 };
