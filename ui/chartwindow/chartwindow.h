@@ -1,10 +1,10 @@
+// ui/chartwindow/chartwindow.h
 #ifndef CHARTWINDOW_H
 #define CHARTWINDOW_H
 
 #include <QMainWindow>
 #include <QChart>
 #include <QChartView>
-#include <QSqlQueryModel>
 #include <QtCharts>
 #include <QLabel>
 
@@ -32,10 +32,8 @@ private slots:
 private:
     Ui::ChartWindow *ui;
     QChart *currentChart;
-    QSqlQueryModel *chartModel;
     QLabel *tooltipLabel;
     QBarSet *currentBarSet;
-    QList<QGraphicsTextItem*> percentageLabels; // Track percentage labels
 };
 
 #endif // CHARTWINDOW_H

@@ -1,11 +1,13 @@
 // ui/mainwindow/mainwindow.cpp
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "managers/meeting/meeting.h"
 #include <QMessageBox>
-#include <QDialog>
-#include <QVBoxLayout>
-#include <QTextEdit>
-#include <QPushButton>
+#include <QRegularExpression>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     : QMainWindow(parent),
@@ -13,31 +15,38 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     m_dbConnected(dbConnected),
     clientManager(new ClientManager(dbConnected, this)),
     trainingManager(new TrainingManager(dbConnected, this)),
-    notificationManager(new NotificationManager(this))
+    meetingManager(new MeetingManager(dbConnected, this)),
+    notificationManager(new NotificationManager(this)),
+    networkManager(new QNetworkAccessManager(this)),
+    chartWindow(new ChartWindow(this))
 {
     ui->setupUi(this);
     applyLightTheme();
     setAttribute(Qt::WA_DeleteOnClose);
 
-    // Pass notificationManager to managers
     clientManager->setNotificationManager(notificationManager);
     trainingManager->setNotificationManager(notificationManager);
+    meetingManager->setNotificationManager(notificationManager);
 
     setupUiConnections();
 
-    // Connect notification signal
     connect(notificationManager, &NotificationManager::notificationAdded, this, &MainWindow::updateNotificationLabel);
-    connect(ui->trainingNotificationLabel, &QPushButton::clicked, this, &::MainWindow::handleNotificationLabelClicked);
+    connect(ui->trainingNotificationLabel, &QPushButton::clicked, this, &MainWindow::handleNotificationLabelClicked);
+
+    connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onAIResponseReceived);
+    appendChatMessage("Hello! I'm your Meeting Assistant. How can I help you today?", true);
 
     if (!m_dbConnected) {
         ui->clientSectionButton->setEnabled(false);
         ui->trainingSectionButton->setEnabled(false);
+        ui->meetingSectionButton->setEnabled(false);
         ui->statisticsButton->setEnabled(false);
         statusBar()->showMessage("Database not connected. Some features are disabled.");
     } else {
         clientManager->initialize(ui);
         trainingManager->initialize(ui);
-        on_clientSectionButton_clicked(); // Default to client section
+        meetingManager->initialize(ui);
+        on_meetingSectionButton_clicked();
     }
 }
 
@@ -45,7 +54,10 @@ MainWindow::~MainWindow()
 {
     delete clientManager;
     delete trainingManager;
+    delete meetingManager;
     delete notificationManager;
+    delete networkManager;
+    delete chartWindow;
     delete ui;
 }
 
@@ -53,29 +65,30 @@ void MainWindow::setupUiConnections()
 {
     connect(ui->clientSectionButton, &QPushButton::clicked, this, &MainWindow::on_clientSectionButton_clicked);
     connect(ui->trainingSectionButton, &QPushButton::clicked, this, &MainWindow::on_trainingSectionButton_clicked);
+    connect(ui->meetingSectionButton, &QPushButton::clicked, this, &MainWindow::on_meetingSectionButton_clicked);
     connect(ui->statisticsButton, &QPushButton::clicked, this, &MainWindow::on_statisticsButton_clicked);
     connect(ui->menuButton, &QPushButton::clicked, this, &MainWindow::toggleSidebar);
     connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
+    connect(ui->meetingChatSendButton, &QPushButton::clicked, this, &MainWindow::on_chatSendButton_clicked);
+    connect(ui->meetingChatClearButton, &QPushButton::clicked, this, &MainWindow::on_chatClearButton_clicked);
 }
 
 void MainWindow::on_clientSectionButton_clicked()
 {
-    if (!m_dbConnected) {
-        QMessageBox::warning(this, "Database Error", "Cannot open client section: Database is not connected.");
-        return;
-    }
     ui->mainStackedWidget->setCurrentWidget(ui->clientPage);
     clientManager->refresh();
 }
 
 void MainWindow::on_trainingSectionButton_clicked()
 {
-    if (!m_dbConnected) {
-        QMessageBox::warning(this, "Database Error", "Cannot open training section: Database is not connected.");
-        return;
-    }
     ui->mainStackedWidget->setCurrentWidget(ui->trainingPage);
     trainingManager->refresh();
+}
+
+void MainWindow::on_meetingSectionButton_clicked()
+{
+    ui->mainStackedWidget->setCurrentWidget(ui->meetingPage);
+    meetingManager->refreshTableWidget();
 }
 
 void MainWindow::on_statisticsButton_clicked()
@@ -84,19 +97,25 @@ void MainWindow::on_statisticsButton_clicked()
         QMessageBox::warning(this, "Database Error", "Cannot open statistics: Database is not connected.");
         return;
     }
-    clientManager->showStatistics();
+    chartWindow->show();
+    chartWindow->findChild<QComboBox*>("statsTypeComboBox")->setCurrentText("Meeting Statistics");
 }
 
 void MainWindow::toggleSidebar()
 {
-    ui->sideMenu->setVisible(!ui->sideMenu->isVisible());
+    bool isVisible = ui->sideMenu->isVisible();
+    ui->sideMenu->setVisible(!isVisible);
 }
 
 void MainWindow::toggleTheme()
 {
-    static bool isDarkTheme = false;
-    isDarkTheme = !isDarkTheme;
-    isDarkTheme ? applyDarkTheme() : applyLightTheme();
+    if (ui->themeButton->text() == "Dark Theme") {
+        applyDarkTheme();
+        ui->themeButton->setText("Light Theme");
+    } else {
+        applyLightTheme();
+        ui->themeButton->setText("Dark Theme");
+    }
 }
 
 void MainWindow::applyLightTheme()
@@ -106,22 +125,26 @@ void MainWindow::applyLightTheme()
         QPushButton { background-color: #3A5DAE; color: white; border: 1px solid #2A4682; border-radius: 5px; padding: 6px; font-weight: bold; }
         QPushButton:hover { background-color: #4A70C2; }
         QPushButton:pressed { background-color: #2A4682; }
-        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox { background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; padding: 4px; color: #333333; }
-        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus { border: 2px solid #3A5DAE; }
-        QTableView { background-color: #FFFFFF; border: 1px solid #D3DCE6; border-radius: 4px; selection-background-color: #A1B8E6; selection-color: #333333; }
+        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; padding: 4px; color: #333333; }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border: 2px solid #3A5DAE; }
+        QTableView, QTableWidget { background-color: #FFFFFF; border: 1px solid #D3DCE6; border-radius: 4px; selection-background-color: #A1B8E6; selection-color: #333333; }
         QHeaderView::section { background-color: #3A5DAE; color: white; padding: 5px; border: none; }
         QCalendarWidget { background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; }
         QCalendarWidget QToolButton { background-color: #3A5DAE; color: white; border-radius: 3px; }
         QTabWidget::pane { border: 1px solid #3A5DAE; border-radius: 4px; }
         QTabBar::tab { background-color: #D3DCE6; color: #333333; padding: 6px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
         QTabBar::tab:selected { background-color: #3A5DAE; color: white; }
+        QTextEdit { background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; color: #333333; }
+        QChartView { background-color: #FFFFFF; border: 1px solid #D3DCE6; border-radius: 4px; }
         QLabel { font-size: 10pt; padding: 2px; }
         QLabel[formLabel="true"], #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
-        #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel {
+        #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel,
+        #meetingTitleLabel, #meetingOrganiserLabel, #meetingParticipantLabel, #meetingAgendaLabel, #meetingDurationLabel, #meetingDateLabel {
             font-size: 12pt; font-weight: bold; color: #3A5DAE; text-decoration: underline; padding: 2px; qproperty-alignment: AlignRight; }
         #headerLabel { font-size: 18pt; font-weight: bold; color: #3A5DAE; qproperty-alignment: AlignCenter; }
         #trainingNotificationLabel { font-size: 10pt; font-weight: bold; color: #3A5DAE; }
         QFrame#header, QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { border: 2px solid #3A5DAE; border-radius: 5px; }
+        QFrame#sideMenu { background-color: #E6ECF5; }
     )");
 }
 
@@ -132,56 +155,177 @@ void MainWindow::applyDarkTheme()
         QPushButton { background-color: #F28C6F; color: white; border: 1px solid #D96C53; border-radius: 5px; padding: 6px; font-weight: bold; }
         QPushButton:hover { background-color: #F5A38A; }
         QPushButton:pressed { background-color: #D96C53; }
-        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; padding: 4px; color: #F0F0F0; }
-        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus { border: 2px solid #F28C6F; }
-        QTableView { background-color: #6A6A6A; border: 1px solid #4A4A4A; border-radius: 4px; selection-background-color: #F28C6F; selection-color: #F0F0F0; }
+        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; padding: 4px; color: #F0F0F0; }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border: 2px solid #F28C6F; }
+        QTableView, QTableWidget { background-color: #6A6A6A; border: 1px solid #4A4A4A; border-radius: 4px; selection-background-color: #F28C6F; selection-color: #F0F0F0; }
         QHeaderView::section { background-color: #F28C6F; color: white; padding: 5px; border: none; }
         QCalendarWidget { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; }
         QCalendarWidget QToolButton { background-color: #F28C6F; color: white; border-radius: 3px; }
         QTabWidget::pane { border: 1px solid #F28C6F; border-radius: 4px; }
         QTabBar::tab { background-color: #7A7A7A; color: #F0F0F0; padding: 6px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
         QTabBar::tab:selected { background-color: #F28C6F; color: white; }
+        QTextEdit { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; color: #F0F0F0; }
+        QChartView { background-color: #6A6A6A; border: 1px solid #4A4A4A; border-radius: 4px; }
         QLabel { font-size: 10pt; padding: 2px; }
         QLabel[formLabel="true"], #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
-        #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel {
+        #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel,
+        #meetingTitleLabel, #meetingOrganiserLabel, #meetingParticipantLabel, #meetingAgendaLabel, #meetingDurationLabel, #meetingDateLabel {
             font-size: 12pt; font-weight: bold; color: #F28C6F; text-decoration: underline; padding: 2px; qproperty-alignment: AlignRight; }
         #headerLabel { font-size: 18pt; font-weight: bold; color: #F28C6F; qproperty-alignment: AlignCenter; }
         #trainingNotificationLabel { font-size: 10pt; font-weight: bold; color: #F28C6F; }
         QFrame#header, QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { border: 2px solid #F28C6F; border-radius: 5px; }
+        QFrame#sideMenu { background-color: #7A7A7A; }
     )");
-}
-
-void MainWindow::updateNotificationLabel(int count)
-{
-    ui->trainingNotificationLabel->setText(QString("%1 modifications").arg(count));
 }
 
 void MainWindow::handleNotificationLabelClicked()
 {
-    QDialog *dialog = new QDialog(this);
-    dialog->setWindowTitle("Notification History");
-    dialog->resize(600, 400);
-
-    QVBoxLayout *layout = new QVBoxLayout(dialog);
-    QTextEdit *textEdit = new QTextEdit(dialog);
-    textEdit->setReadOnly(true);
-    QPushButton *closeButton = new QPushButton("Close", dialog);
-
-    layout->addWidget(textEdit);
-    layout->addWidget(closeButton);
-
-    QString notificationText;
-    for (const auto &notification : notificationManager->getNotifications()) {
-        notificationText += QString("[%1] %2\nLocation: %3\nLine: %4\nDetails: %5\n\n")
-        .arg(notification.timestamp.toString("yyyy-MM-dd hh:mm:ss"))
-            .arg(notification.action)
-            .arg(notification.location)
-            .arg(notification.lineNumber)
-            .arg(notification.details);
+    auto notifications = notificationManager->getNotifications();
+    QStringList notificationStrings;
+    for (const auto& notification : notifications) {
+        QString line = QString("Action: %1\nLocation: %2\nDetails: %3\nTime: %4")
+        .arg(notification.action,
+             notification.location,
+             notification.details,
+             notification.timestamp.toString("yyyy-MM-dd hh:mm:ss"));
+        if (notification.lineNumber >= 0) {
+            line += QString("\nLine: %1").arg(notification.lineNumber);
+        }
+        notificationStrings << line;
     }
-    textEdit->setText(notificationText.isEmpty() ? "No notifications available." : notificationText);
+    QString notificationText = notificationStrings.join("\n\n");
+    QMessageBox::information(this, "Notification History", notificationText.isEmpty() ? "No notifications." : notificationText);
+}
 
-    connect(closeButton, &QPushButton::clicked, dialog, &QDialog::accept);
-    dialog->exec();
-    delete dialog;
+void MainWindow::updateNotificationLabel(int count)
+{
+    ui->trainingNotificationLabel->setText(QString("Notifications: %1").arg(count));
+}
+
+void MainWindow::on_chatSendButton_clicked()
+{
+    QString input = ui->meetingChatInputLineEdit->text().trimmed();
+    if (input.isEmpty()) {
+        return;
+    }
+    appendChatMessage(input);
+    processUserInput(input);
+    ui->meetingChatInputLineEdit->clear();
+}
+
+void MainWindow::on_chatClearButton_clicked()
+{
+    ui->meetingChatInputLineEdit->clear();
+    ui->meetingChatTextEdit->clear();
+}
+
+void MainWindow::appendChatMessage(const QString &message, bool isBot)
+{
+    QString prefix = isBot ? "<b>Bot:</b> " : "<b>You:</b> ";
+    ui->meetingChatTextEdit->append(prefix + message);
+}
+
+void MainWindow::processUserInput(const QString &input)
+{
+    static const QRegularExpression addMeetingRegex(R"(add meeting\s+(.+?)\s+by\s+(.+?)\s+with\s+(.+?)\s+about\s+(.+?)\s+for\s+(\d+)\s+min\s+on\s+(.+))", QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression deleteMeetingRegex(R"(delete meeting\s+(\d+))", QRegularExpression::CaseInsensitiveOption);
+
+    QRegularExpressionMatch addMatch = addMeetingRegex.match(input);
+    QRegularExpressionMatch deleteMatch = deleteMeetingRegex.match(input);
+
+    if (addMatch.hasMatch()) {
+        QStringList parts = addMatch.capturedTexts();
+        QString errorMessage;
+        if (!validateMeetingInput(parts, errorMessage)) {
+            appendChatMessage("Error: " + errorMessage, true);
+            return;
+        }
+
+        meeting m = createMeetingFromInput(input);
+        if (m.add()) {
+            meetingManager->refreshTableWidget();
+            appendChatMessage("Meeting added successfully!", true);
+            if (notificationManager) {
+                notificationManager->addNotification("Meeting Added", "Meeting: " + m.getTitle(), "Added meeting via chat", -1);
+            }
+        } else {
+            appendChatMessage("Failed to add meeting. Check database connection.", true);
+        }
+    } else if (deleteMatch.hasMatch()) {
+        int id = deleteMatch.captured(1).toInt();
+        meeting m;
+        if (m.deleteMeeting(id)) {
+            meetingManager->refreshTableWidget();
+            appendChatMessage("Meeting deleted successfully!", true);
+            if (notificationManager) {
+                notificationManager->addNotification("Meeting Deleted", "Meeting ID: " + QString::number(id), "Deleted meeting via chat", -1);
+            }
+        } else {
+            appendChatMessage("Failed to delete meeting. Check database connection.", true);
+        }
+    } else {
+        QNetworkRequest request(QUrl("http://api.example.com/chatbot"));
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+        QJsonObject json;
+        json["message"] = input;
+        QJsonDocument doc(json);
+        networkManager->post(request, doc.toJson());
+    }
+}
+
+meeting MainWindow::createMeetingFromInput(const QString &input)
+{
+    static const QRegularExpression addMeetingRegex(R"(add meeting\s+(.+?)\s+by\s+(.+?)\s+with\s+(.+?)\s+about\s+(.+?)\s+for\s+(\d+)\s+min\s+on\s+(.+))", QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch match = addMeetingRegex.match(input);
+
+    QString title = match.captured(1);
+    QString organiser = match.captured(2);
+    QString participant = match.captured(3);
+    QString agenda = match.captured(4);
+    int duration = match.captured(5).toInt();
+    QDateTime dateTime = QDateTime::fromString(match.captured(6), "yyyy-MM-dd hh:mm");
+
+    return meeting(title, organiser, participant, agenda, duration, dateTime);
+}
+
+bool MainWindow::validateMeetingInput(const QStringList &parts, QString &errorMessage)
+{
+    if (parts.size() != 7) {
+        errorMessage = "Invalid input format. Use: add meeting <title> by <organiser> with <participant> about <agenda> for <duration> min on <date>";
+        return false;
+    }
+
+    bool ok;
+    int duration = parts[5].toInt(&ok);
+    if (!ok || duration <= 0) {
+        errorMessage = "Duration must be a positive number.";
+        return false;
+    }
+
+    QDateTime dateTime = QDateTime::fromString(parts[6], "yyyy-MM-dd hh:mm");
+    if (!dateTime.isValid() || dateTime < QDateTime::currentDateTime()) {
+        errorMessage = "Date and time must be valid and in the future.";
+        return false;
+    }
+
+    return true;
+}
+
+void MainWindow::onAIResponseReceived(QNetworkReply *reply)
+{
+    if (reply->error() == QNetworkReply::NoError) {
+        QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+        QJsonObject obj = doc.object();
+        QString response = obj["response"].toString();
+        appendChatMessage(response, true);
+    } else {
+        appendChatMessage("Error communicating with the chatbot API.", true);
+    }
+    reply->deleteLater();
+}
+
+ChartWindow* MainWindow::getChartWindow() const
+{
+    return chartWindow;
 }

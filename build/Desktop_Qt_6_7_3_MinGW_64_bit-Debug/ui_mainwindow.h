@@ -911,10 +911,10 @@ public:
 
         retranslateUi(MainWindow);
 
-        mainStackedWidget->setCurrentIndex(1);
+        mainStackedWidget->setCurrentIndex(2);
         clientTabWidget->setCurrentIndex(1);
         trainingTabWidget->setCurrentIndex(1);
-        meetingTabWidget->setCurrentIndex(2);
+        meetingTabWidget->setCurrentIndex(1);
 
 
         QMetaObject::connectSlotsByName(MainWindow);

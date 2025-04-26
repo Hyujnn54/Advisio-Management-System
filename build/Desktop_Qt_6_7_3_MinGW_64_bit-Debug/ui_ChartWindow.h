@@ -12,6 +12,7 @@
 #include <QtCharts/QChartView>
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
@@ -39,6 +40,7 @@ public:
     QComboBox *filterComboBox;
     QLabel *chartTypeLabel;
     QComboBox *chartTypeComboBox;
+    QCheckBox *toggleLegendCheckBox;
     QPushButton *refreshChartButton;
     QPushButton *resetChartButton;
     QSpacerItem *controlSpacer;
@@ -50,16 +52,57 @@ public:
     {
         if (ChartWindow->objectName().isEmpty())
             ChartWindow->setObjectName("ChartWindow");
-        ChartWindow->resize(800, 600);
+        ChartWindow->resize(900, 700);
+        ChartWindow->setStyleSheet(QString::fromUtf8("\n"
+"    QMainWindow { background-color: #f5f5f5; }\n"
+"    QGroupBox { \n"
+"        font-weight: bold; \n"
+"        border: 1px solid #d3d3d3; \n"
+"        border-radius: 5px; \n"
+"        margin-top: 10px; \n"
+"    }\n"
+"    QGroupBox::title { \n"
+"        subcontrol-origin: margin; \n"
+"        subcontrol-position: top left; \n"
+"        padding: 0 5px; \n"
+"        color: #333; \n"
+"    }\n"
+"    QComboBox { \n"
+"        padding: 5px; \n"
+"        border: 1px solid #d3d3d3; \n"
+"        border-radius: 3px; \n"
+"        background: white; \n"
+"    }\n"
+"    QComboBox:hover { border: 1px solid #a0a0a0; }\n"
+"    QPushButton { \n"
+"        padding: 5px 10px; \n"
+"        border: 1px solid #d3d3d3; \n"
+"        border-radius: 3px; \n"
+"        background: #e0e0e0; \n"
+"    }\n"
+"    QPushButton:hover { background: #d0d0d0; }\n"
+"    QCheckBox { padding: 5px; }\n"
+"    QLabel#hoverDescriptionLabel { \n"
+"        background-color: #e8e8e8; \n"
+"        border-radius: 3px; \n"
+"        padding: 5px; \n"
+"        "
+                        "font-style: italic; \n"
+"    }\n"
+"   "));
         centralwidget = new QWidget(ChartWindow);
         centralwidget->setObjectName("centralwidget");
         verticalLayout = new QVBoxLayout(centralwidget);
+        verticalLayout->setSpacing(10);
         verticalLayout->setObjectName("verticalLayout");
+        verticalLayout->setContentsMargins(10, 10, 10, 10);
         chartGroupBox = new QGroupBox(centralwidget);
         chartGroupBox->setObjectName("chartGroupBox");
         chartLayout = new QVBoxLayout(chartGroupBox);
+        chartLayout->setSpacing(10);
         chartLayout->setObjectName("chartLayout");
         controlLayout = new QHBoxLayout();
+        controlLayout->setSpacing(10);
         controlLayout->setObjectName("controlLayout");
         statsTypeLabel = new QLabel(chartGroupBox);
         statsTypeLabel->setObjectName("statsTypeLabel");
@@ -95,6 +138,12 @@ public:
 
         controlLayout->addWidget(chartTypeComboBox);
 
+        toggleLegendCheckBox = new QCheckBox(chartGroupBox);
+        toggleLegendCheckBox->setObjectName("toggleLegendCheckBox");
+        toggleLegendCheckBox->setChecked(true);
+
+        controlLayout->addWidget(toggleLegendCheckBox);
+
         refreshChartButton = new QPushButton(chartGroupBox);
         refreshChartButton->setObjectName("refreshChartButton");
 
@@ -114,13 +163,19 @@ public:
 
         statsChartView = new QChartView(chartGroupBox);
         statsChartView->setObjectName("statsChartView");
-        statsChartView->setMinimumSize(QSize(0, 400));
+        statsChartView->setMinimumSize(QSize(0, 450));
+        QSizePolicy sizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(statsChartView->sizePolicy().hasHeightForWidth());
+        statsChartView->setSizePolicy(sizePolicy);
 
         chartLayout->addWidget(statsChartView);
 
         hoverDescriptionLabel = new QLabel(chartGroupBox);
         hoverDescriptionLabel->setObjectName("hoverDescriptionLabel");
         hoverDescriptionLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+        hoverDescriptionLabel->setMinimumHeight(40);
 
         chartLayout->addWidget(hoverDescriptionLabel);
 
@@ -150,6 +205,7 @@ public:
         chartTypeComboBox->setItemText(0, QCoreApplication::translate("ChartWindow", "Bar Chart", nullptr));
         chartTypeComboBox->setItemText(1, QCoreApplication::translate("ChartWindow", "Pie Chart", nullptr));
 
+        toggleLegendCheckBox->setText(QCoreApplication::translate("ChartWindow", "Show Legend", nullptr));
         refreshChartButton->setText(QCoreApplication::translate("ChartWindow", "Refresh", nullptr));
         resetChartButton->setText(QCoreApplication::translate("ChartWindow", "Reset", nullptr));
         hoverDescriptionLabel->setText(QCoreApplication::translate("ChartWindow", "Hover over a chart element to see details", nullptr));
