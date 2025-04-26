@@ -980,12 +980,20 @@ public:
         meetingTableWidget->setHorizontalHeaderItem(6, __qtablewidgetitem6);
         meetingTableWidget->setObjectName("meetingTableWidget");
         QSizePolicy sizePolicy3(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
-        sizePolicy3.setHorizontalStretch(1);
-        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHorizontalStretch(0);
+        sizePolicy3.setVerticalStretch(1);
         sizePolicy3.setHeightForWidth(meetingTableWidget->sizePolicy().hasHeightForWidth());
         meetingTableWidget->setSizePolicy(sizePolicy3);
+        meetingTableWidget->setMinimumSize(QSize(0, 300));
+        meetingTableWidget->setAlternatingRowColors(true);
         meetingTableWidget->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
         meetingTableWidget->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
+        meetingTableWidget->setShowGrid(true);
+        meetingTableWidget->setGridStyle(Qt::PenStyle::SolidLine);
+        meetingTableWidget->setSortingEnabled(true);
+        meetingTableWidget->horizontalHeader()->setDefaultSectionSize(120);
+        meetingTableWidget->horizontalHeader()->setStretchLastSection(true);
+        meetingTableWidget->verticalHeader()->setVisible(false);
 
         meetingManageLayout->addWidget(meetingTableWidget);
 
@@ -1135,7 +1143,7 @@ public:
         mainStackedWidget->setCurrentIndex(2);
         clientTabWidget->setCurrentIndex(2);
         trainingTabWidget->setCurrentIndex(2);
-        meetingTabWidget->setCurrentIndex(3);
+        meetingTabWidget->setCurrentIndex(1);
 
 
         QMetaObject::connectSlotsByName(MainWindow);

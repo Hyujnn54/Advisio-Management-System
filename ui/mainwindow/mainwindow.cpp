@@ -17,6 +17,7 @@
 #include <QtCharts/QBarCategoryAxis>
 #include <QtCharts/QValueAxis>
 #include <QtCharts/QChartView>
+#include <QHeaderView>
 
 MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     : QMainWindow(parent),
@@ -48,6 +49,10 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onAIResponseReceived);
     connect(ui->trainingNotificationLabel, &QPushButton::clicked, this, &MainWindow::handleNotificationLabelClicked);
     
+    // Important: Connect notification count changes to update the label
+    connect(notificationManager, &NotificationManager::notificationCountChanged, 
+            this, &MainWindow::updateNotificationLabel);
+    
     // Initialize notification label with 0 count
     updateNotificationLabel(0);
 
@@ -63,6 +68,12 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
         clientManager->initialize(ui);
         trainingManager->initialize(ui);
         meetingManager->initialize(ui);
+        
+        // Apply improved table styling to all tables right after initialization
+        if (ui->clientTableView) improveTableDisplay(ui->clientTableView);
+        if (ui->clientDateConsultationsView) improveTableDisplay(ui->clientDateConsultationsView);
+        if (ui->trainingTableView) improveTableDisplay(ui->trainingTableView);
+        if (ui->meetingTableWidget) improveTableWidgetDisplay(ui->meetingTableWidget);
         
         // Initialize charts for each section
         setupClientChart();
@@ -104,18 +115,35 @@ void MainWindow::on_clientSectionButton_clicked()
 {
     ui->mainStackedWidget->setCurrentWidget(ui->clientPage);
     clientManager->refresh();
+    
+    // Apply improved table styling for better readability
+    improveTableDisplay(ui->clientTableView);
+    improveTableDisplay(ui->clientDateConsultationsView);
 }
 
 void MainWindow::on_trainingSectionButton_clicked()
 {
     ui->mainStackedWidget->setCurrentWidget(ui->trainingPage);
     trainingManager->refresh();
+    
+    // Apply improved table styling for better readability
+    improveTableDisplay(ui->trainingTableView);
 }
 
 void MainWindow::on_meetingSectionButton_clicked()
 {
     ui->mainStackedWidget->setCurrentWidget(ui->meetingPage);
     meetingManager->refreshTableWidget();
+    
+    // Apply specific styling to the meeting table widget
+    ui->meetingTableWidget->setStyleSheet("QTableWidget { gridline-color: #E5E5E5; }");
+    
+    // Configure column widths and resizing
+    ui->meetingTableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    ui->meetingTableWidget->horizontalHeader()->setStretchLastSection(true);
+    
+    // Improve meeting table display
+    improveTableWidgetDisplay(ui->meetingTableWidget);
 }
 
 void MainWindow::on_statisticsButton_clicked()
@@ -216,60 +244,501 @@ void MainWindow::toggleTheme()
 void MainWindow::applyLightTheme()
 {
     qApp->setStyleSheet(R"(
-        QWidget { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FFFFFF, stop:1 #A1B8E6); color: #333333; font-family: 'Segoe UI', Arial, sans-serif; }
-        QPushButton { background-color: #3A5DAE; color: white; border: 1px solid #2A4682; border-radius: 5px; padding: 6px; font-weight: bold; }
-        QPushButton:hover { background-color: #4A70C2; }
-        QPushButton:pressed { background-color: #2A4682; }
-        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; padding: 4px; color: #333333; }
-        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border: 2px solid #3A5DAE; }
-        QTableView, QTableWidget { background-color: #FFFFFF; border: 1px solid #D3DCE6; border-radius: 4px; selection-background-color: #A1B8E6; selection-color: #333333; }
-        QHeaderView::section { background-color: #3A5DAE; color: white; padding: 5px; border: none; }
-        QCalendarWidget { background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; }
-        QCalendarWidget QToolButton { background-color: #3A5DAE; color: white; border-radius: 3px; }
-        QTabWidget::pane { border: 1px solid #3A5DAE; border-radius: 4px; }
-        QTabBar::tab { background-color: #D3DCE6; color: #333333; padding: 6px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
-        QTabBar::tab:selected { background-color: #3A5DAE; color: white; }
-        QTextEdit { background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; color: #333333; }
-        QChartView { background-color: #FFFFFF; border: 1px solid #D3DCE6; border-radius: 4px; }
-        QLabel { font-size: 10pt; padding: 2px; }
-        QLabel[formLabel="true"], #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
+        QWidget { 
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F8FF, stop:1 #C4D7ED); 
+            color: #333333; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+        }
+        QPushButton { 
+            background-color: #3A5DAE; 
+            color: white; 
+            border: 1px solid #2A4682; 
+            border-radius: 5px; 
+            padding: 6px; 
+            font-weight: bold; 
+        }
+        QPushButton:hover { 
+            background-color: #4A70C2; 
+        }
+        QPushButton:pressed { 
+            background-color: #2A4682; 
+        }
+        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { 
+            background-color: #F5F7FA; 
+            border: 1px solid #3A5DAE; 
+            border-radius: 4px; 
+            padding: 4px; 
+            color: #333333; 
+        }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { 
+            border: 2px solid #3A5DAE; 
+        }
+        /* Consistent table styles for all table views and widgets */
+        QTableView, QTableWidget { 
+            background-color: #FFFFFF; 
+            border: 1px solid #D3DCE6; 
+            border-radius: 4px; 
+            selection-background-color: #A1B8E6; 
+            selection-color: #333333;
+            gridline-color: #E5E5E5;
+            alternate-background-color: #F5F7FA;
+        }
+        QTableView::item, QTableWidget::item {
+            padding: 4px;
+            border: none;
+        }
+        QTableView::item:selected, QTableWidget::item:selected {
+            background-color: #A1B8E6;
+            color: #333333;
+        }
+        QHeaderView::section { 
+            background-color: #3A5DAE; 
+            color: white; 
+            padding: 6px; 
+            border: none; 
+            font-weight: bold;
+        }
+        QHeaderView::section:horizontal {
+            border-right: 1px solid #FFFFFF;
+        }
+        QHeaderView::section:vertical {
+            border-bottom: 1px solid #FFFFFF;
+        }
+        QCalendarWidget { 
+            background-color: #F5F7FA; 
+            border: 1px solid #3A5DAE; 
+            border-radius: 4px; 
+        }
+        QCalendarWidget QToolButton { 
+            background-color: #3A5DAE; 
+            color: white; 
+            border-radius: 3px; 
+        }
+        QCalendarWidget QAbstractItemView {
+            background-color: #FFFFFF;
+            selection-background-color: #3A5DAE;
+            selection-color: white;
+        }
+        QCalendarWidget QAbstractItemView:enabled {
+            color: #333333;
+        }
+        QCalendarWidget QAbstractItemView:disabled {
+            color: #A0A0A0;
+        }
+        QCalendarWidget QAbstractItemView:item {
+            color: #333333;
+        }
+        QCalendarWidget QWidget {
+            alternate-background-color: #F0F8FF;
+        }
+        QCalendarWidget QMenu {
+            background-color: #FFFFFF;
+        }
+        QCalendarWidget QSpinBox {
+            background-color: #FFFFFF;
+        }
+        QCalendarWidget QTableView {
+            border: none;
+            gridline-color: #FFFFFF;
+        }
+        QTabWidget::pane { 
+            border: 1px solid #3A5DAE; 
+            border-radius: 4px; 
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F8FF, stop:1 #C4D7ED);
+        }
+        QTabBar::tab { 
+            background-color: #D3DCE6; 
+            color: #333333; 
+            padding: 8px 12px; 
+            border-top-left-radius: 4px; 
+            border-top-right-radius: 4px;
+            margin-right: 2px;
+        }
+        QTabBar::tab:selected { 
+            background-color: #3A5DAE; 
+            color: white; 
+        }
+        QTextEdit { 
+            background-color: #F5F7FA; 
+            border: 1px solid #3A5DAE; 
+            border-radius: 4px; 
+            color: #333333; 
+        }
+        QChartView { 
+            background-color: #FFFFFF; 
+            border: 1px solid #D3DCE6; 
+            border-radius: 4px; 
+        }
+        QLabel { 
+            font-size: 10pt; 
+            padding: 2px;
+            background: transparent;
+        }
+        QGroupBox {
+            border: 1px solid #B0C4DE;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-weight: bold;
+            background-color: rgba(240, 248, 255, 150);
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 5px;
+            color: #3A5DAE;
+        }
+        QStatusBar {
+            background-color: #E6EEF8;
+            color: #333333;
+            border-top: 1px solid #B0C4DE;
+        }
+        #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
         #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel,
         #meetingTitleLabel, #meetingOrganiserLabel, #meetingParticipantLabel, #meetingAgendaLabel, #meetingDurationLabel, #meetingDateLabel {
-            font-size: 12pt; font-weight: bold; color: #3A5DAE; text-decoration: underline; padding: 2px; qproperty-alignment: AlignRight; }
-        #headerLabel { font-size: 18pt; font-weight: bold; color: #3A5DAE; qproperty-alignment: AlignCenter; }
-        #trainingNotificationLabel { font-size: 10pt; font-weight: bold; color: #3A5DAE; }
-        QFrame#header, QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { border: 2px solid #3A5DAE; border-radius: 5px; }
-        QFrame#sideMenu { background-color: #E6ECF5; }
+            font-size: 11pt; 
+            font-weight: bold; 
+            color: #3A5DAE; 
+            background: transparent;
+            padding: 2px; 
+            qproperty-alignment: AlignRight; 
+        }
+        #headerLabel { 
+            font-size: 18pt; 
+            font-weight: bold; 
+            color: #3A5DAE; 
+            qproperty-alignment: AlignCenter;
+            background: transparent;
+        }
+        #trainingNotificationLabel { 
+            font-size: 10pt; 
+            font-weight: bold; 
+            color: #3A5DAE;
+            background: transparent;
+        }
+        QFrame { 
+            background: transparent;
+        }
+        QFrame#header { 
+            border: 1px solid #B0C4DE; 
+            border-radius: 5px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E6F0FF, stop:1 #D3E5FA);
+        }
+        QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { 
+            border: 1px solid #B0C4DE; 
+            border-radius: 5px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E1EBFA, stop:1 #C4D7ED);
+        }
+        QScrollBar:vertical {
+            border: none;
+            background: #E6EEF8;
+            width: 12px;
+            margin: 12px 0 12px 0;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:vertical {
+            background: #3A5DAE;
+            min-height: 20px;
+            border-radius: 6px;
+        }
+        QScrollBar::add-line:vertical {
+            border: none;
+            background: #E6EEF8;
+            height: 12px;
+            subcontrol-position: bottom;
+            subcontrol-origin: margin;
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        QScrollBar::sub-line:vertical {
+            border: none;
+            background: #E6EEF8;
+            height: 12px;
+            subcontrol-position: top;
+            subcontrol-origin: margin;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        QScrollBar:horizontal {
+            border: none;
+            background: #E6EEF8;
+            height: 12px;
+            margin: 0 12px 0 12px;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:horizontal {
+            background: #3A5DAE;
+            min-width: 20px;
+            border-radius: 6px;
+        }
+        QScrollBar::add-line:horizontal {
+            border: none;
+            background: #E6EEF8;
+            width: 12px;
+            subcontrol-position: right;
+            subcontrol-origin: margin;
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        QScrollBar::sub-line:horizontal {
+            border: none;
+            background: #E6EEF8;
+            width: 12px;
+            subcontrol-position: left;
+            subcontrol-origin: margin;
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
     )");
 }
 
 void MainWindow::applyDarkTheme()
 {
     qApp->setStyleSheet(R"(
-        QWidget { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F28C6F, stop:1 #5C5C5C); color: #F0F0F0; font-family: 'Segoe UI', Arial, sans-serif; }
-        QPushButton { background-color: #F28C6F; color: white; border: 1px solid #D96C53; border-radius: 5px; padding: 6px; font-weight: bold; }
-        QPushButton:hover { background-color: #F5A38A; }
-        QPushButton:pressed { background-color: #D96C53; }
-        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; padding: 4px; color: #F0F0F0; }
-        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border: 2px solid #F28C6F; }
-        QTableView, QTableWidget { background-color: #6A6A6A; border: 1px solid #4A4A4A; border-radius: 4px; selection-background-color: #F28C6F; selection-color: #F0F0F0; }
-        QHeaderView::section { background-color: #F28C6F; color: white; padding: 5px; border: none; }
-        QCalendarWidget { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; }
-        QCalendarWidget QToolButton { background-color: #F28C6F; color: white; border-radius: 3px; }
-        QTabWidget::pane { border: 1px solid #F28C6F; border-radius: 4px; }
-        QTabBar::tab { background-color: #7A7A7A; color: #F0F0F0; padding: 6px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
-        QTabBar::tab:selected { background-color: #F28C6F; color: white; }
-        QTextEdit { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; color: #F0F0F0; }
-        QChartView { background-color: #6A6A6A; border: 1px solid #4A4A4A; border-radius: 4px; }
-        QLabel { font-size: 10pt; padding: 2px; }
-        QLabel[formLabel="true"], #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
+        QWidget { 
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3A3A3A, stop:1 #2A2A2A); 
+            color: #E0E0E0; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+        }
+        QPushButton { 
+            background-color: #666666; 
+            color: white; 
+            border: 1px solid #555555; 
+            border-radius: 5px; 
+            padding: 6px; 
+            font-weight: bold; 
+        }
+        QPushButton:hover { 
+            background-color: #777777; 
+        }
+        QPushButton:pressed { 
+            background-color: #555555; 
+        }
+        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { 
+            background-color: #454545; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+            padding: 4px; 
+            color: #E0E0E0; 
+        }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { 
+            border: 2px solid #777777; 
+        }
+        /* Consistent table styles for all table views and widgets */
+        QTableView, QTableWidget { 
+            background-color: #3A3A3A; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+            selection-background-color: #666666; 
+            selection-color: #FFFFFF;
+            gridline-color: #4A4A4A;
+            alternate-background-color: #333333;
+        }
+        QTableView::item, QTableWidget::item {
+            padding: 4px;
+            border: none;
+        }
+        QTableView::item:selected, QTableWidget::item:selected {
+            background-color: #666666;
+            color: #FFFFFF;
+        }
+        QHeaderView::section { 
+            background-color: #555555; 
+            color: white; 
+            padding: 6px; 
+            border: none; 
+            font-weight: bold;
+        }
+        QHeaderView::section:horizontal {
+            border-right: 1px solid #666666;
+        }
+        QHeaderView::section:vertical {
+            border-bottom: 1px solid #666666;
+        }
+        QCalendarWidget { 
+            background-color: #3A3A3A; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+        }
+        QCalendarWidget QToolButton { 
+            background-color: #555555; 
+            color: white; 
+            border-radius: 3px; 
+        }
+        QCalendarWidget QAbstractItemView {
+            background-color: #3A3A3A;
+            selection-background-color: #666666;
+            selection-color: white;
+        }
+        QCalendarWidget QAbstractItemView:enabled {
+            color: #E0E0E0;
+        }
+        QCalendarWidget QAbstractItemView:disabled {
+            color: #707070;
+        }
+        QCalendarWidget QAbstractItemView:item {
+            color: #E0E0E0;
+        }
+        QCalendarWidget QWidget {
+            alternate-background-color: #333333;
+        }
+        QCalendarWidget QMenu {
+            background-color: #3A3A3A;
+        }
+        QCalendarWidget QSpinBox {
+            background-color: #454545;
+        }
+        QCalendarWidget QTableView {
+            border: none;
+            gridline-color: #4A4A4A;
+        }
+        QTabWidget::pane { 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3A3A3A, stop:1 #2A2A2A);
+        }
+        QTabBar::tab { 
+            background-color: #454545; 
+            color: #E0E0E0; 
+            padding: 8px 12px; 
+            border-top-left-radius: 4px; 
+            border-top-right-radius: 4px;
+            margin-right: 2px;
+        }
+        QTabBar::tab:selected { 
+            background-color: #666666; 
+            color: white; 
+        }
+        QTextEdit { 
+            background-color: #454545; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+            color: #E0E0E0; 
+        }
+        QChartView { 
+            background-color: #3A3A3A; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+        }
+        QLabel { 
+            font-size: 10pt; 
+            padding: 2px;
+            background: transparent;
+            color: #E0E0E0;
+        }
+        QGroupBox {
+            border: 1px solid #555555;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-weight: bold;
+            background-color: rgba(65, 65, 65, 150);
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 5px;
+            color: #AAAAAA;
+        }
+        QStatusBar {
+            background-color: #333333;
+            color: #E0E0E0;
+            border-top: 1px solid #555555;
+        }
+        #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
         #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel,
         #meetingTitleLabel, #meetingOrganiserLabel, #meetingParticipantLabel, #meetingAgendaLabel, #meetingDurationLabel, #meetingDateLabel {
-            font-size: 12pt; font-weight: bold; color: #F28C6F; text-decoration: underline; padding: 2px; qproperty-alignment: AlignRight; }
-        #headerLabel { font-size: 18pt; font-weight: bold; color: #F28C6F; qproperty-alignment: AlignCenter; }
-        #trainingNotificationLabel { font-size: 10pt; font-weight: bold; color: #F28C6F; }
-        QFrame#header, QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { border: 2px solid #F28C6F; border-radius: 5px; }
-        QFrame#sideMenu { background-color: #7A7A7A; }
+            font-size: 11pt; 
+            font-weight: bold; 
+            color: #AAAAAA; 
+            background: transparent;
+            padding: 2px; 
+            qproperty-alignment: AlignRight; 
+        }
+        #headerLabel { 
+            font-size: 18pt; 
+            font-weight: bold; 
+            color: #AAAAAA; 
+            qproperty-alignment: AlignCenter;
+            background: transparent;
+        }
+        #trainingNotificationLabel { 
+            font-size: 10pt; 
+            font-weight: bold; 
+            color: #AAAAAA;
+            background: transparent;
+        }
+        QFrame { 
+            background: transparent;
+        }
+        QFrame#header { 
+            border: 1px solid #555555; 
+            border-radius: 5px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #404040, stop:1 #333333);
+        }
+        QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { 
+            border: 1px solid #555555; 
+            border-radius: 5px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3A3A3A, stop:1 #333333);
+        }
+        QScrollBar:vertical {
+            border: none;
+            background: #333333;
+            width: 12px;
+            margin: 12px 0 12px 0;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:vertical {
+            background: #666666;
+            min-height: 20px;
+            border-radius: 6px;
+        }
+        QScrollBar::add-line:vertical {
+            border: none;
+            background: #333333;
+            height: 12px;
+            subcontrol-position: bottom;
+            subcontrol-origin: margin;
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        QScrollBar::sub-line:vertical {
+            border: none;
+            background: #333333;
+            height: 12px;
+            subcontrol-position: top;
+            subcontrol-origin: margin;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        QScrollBar:horizontal {
+            border: none;
+            background: #333333;
+            height: 12px;
+            margin: 0 12px 0 12px;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:horizontal {
+            background: #666666;
+            min-width: 20px;
+            border-radius: 6px;
+        }
+        QScrollBar::add-line:horizontal {
+            border: none;
+            background: #333333;
+            width: 12px;
+            subcontrol-position: right;
+            subcontrol-origin: margin;
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        QScrollBar::sub-line:horizontal {
+            border: none;
+            background: #333333;
+            width: 12px;
+            subcontrol-position: left;
+            subcontrol-origin: margin;
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
     )");
 }
 
@@ -362,9 +831,8 @@ void MainWindow::updateNotificationLabel(int count)
             "}"
         );
         
-        // Use a badge-like counter for the notification count
-        ui->trainingNotificationLabel->setText(QString("Notifications: ") + 
-            QString("<span style='display: inline-block; background-color: #FF4500; color: white; border-radius: 8px; padding: 1px 5px;'>%1</span>").arg(count));
+        // Use plain text instead of HTML formatting to avoid display issues
+        ui->trainingNotificationLabel->setText(QString("Notifications (%1)").arg(count));
     } else {
         // Use more subtle styling when there are no notifications
         styleSheet = QString(
@@ -384,6 +852,9 @@ void MainWindow::updateNotificationLabel(int count)
     }
     
     ui->trainingNotificationLabel->setStyleSheet(styleSheet);
+    
+    // Force an update to ensure the button is redrawn immediately
+    ui->trainingNotificationLabel->update();
 }
 
 void MainWindow::on_chatSendButton_clicked()
@@ -1065,4 +1536,107 @@ void MainWindow::updateMeetingChart()
         qDebug() << "Unknown exception in updateMeetingChart";
         QMessageBox::warning(this, "Chart Error", "Unknown error updating meeting chart");
     }
+}
+
+// Add this new helper method to improve all table displays
+void MainWindow::improveTableDisplay(QTableView* tableView)
+{
+    if (!tableView) return;
+    
+    // Set row height to be more spacious
+    tableView->verticalHeader()->setDefaultSectionSize(40);
+    
+    // Set better font for readability
+    QFont tableFont = tableView->font();
+    tableFont.setPointSize(10);
+    tableView->setFont(tableFont);
+    
+    // Make sure headers are visible and readable
+    tableView->horizontalHeader()->setVisible(true);
+    tableView->horizontalHeader()->setFont(tableFont);
+    tableView->horizontalHeader()->setDefaultSectionSize(150);
+    tableView->horizontalHeader()->setMinimumSectionSize(100);
+    
+    // Set better cell padding
+    tableView->setStyleSheet(
+        "QTableView {"
+        "    gridline-color: #E5E5E5;"
+        "    selection-background-color: #A1B8E6;"
+        "    selection-color: #333333;"
+        "}"
+        "QTableView::item {"
+        "    padding: 5px 8px;"
+        "    border: none;"
+        "}"
+        "QTableView::item:selected {"
+        "    background-color: #A1B8E6;"
+        "    color: #333333;"
+        "}"
+        "QHeaderView::section {"
+        "    background-color: #3A5DAE;"
+        "    color: white;"
+        "    padding: 8px;"
+        "    font-weight: bold;"
+        "    border: none;"
+        "}"
+    );
+    
+    // Ensure reasonable column sizing
+    tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    tableView->horizontalHeader()->setStretchLastSection(true);
+    
+    // Give the table some minimum width to prevent it from being too cramped
+    int columnCount = tableView->model() ? tableView->model()->columnCount() : 6;
+    tableView->setMinimumWidth(columnCount * 150); // Minimum width based on columns
+}
+
+// Similar method for QTableWidget
+void MainWindow::improveTableWidgetDisplay(QTableWidget* tableWidget)
+{
+    if (!tableWidget) return;
+    
+    // Set row height to be more spacious
+    tableWidget->verticalHeader()->setDefaultSectionSize(40);
+    
+    // Set better font for readability
+    QFont tableFont = tableWidget->font();
+    tableFont.setPointSize(10);
+    tableWidget->setFont(tableFont);
+    
+    // Make sure headers are visible and readable
+    tableWidget->horizontalHeader()->setVisible(true);
+    tableWidget->horizontalHeader()->setFont(tableFont);
+    tableWidget->horizontalHeader()->setDefaultSectionSize(150);
+    tableWidget->horizontalHeader()->setMinimumSectionSize(100);
+    
+    // Set better cell padding
+    tableWidget->setStyleSheet(
+        "QTableWidget {"
+        "    gridline-color: #E5E5E5;"
+        "    selection-background-color: #A1B8E6;"
+        "    selection-color: #333333;"
+        "}"
+        "QTableWidget::item {"
+        "    padding: 5px 8px;"
+        "    border: none;"
+        "}"
+        "QTableWidget::item:selected {"
+        "    background-color: #A1B8E6;"
+        "    color: #333333;"
+        "}"
+        "QHeaderView::section {"
+        "    background-color: #3A5DAE;"
+        "    color: white;"
+        "    padding: 8px;"
+        "    font-weight: bold;"
+        "    border: none;"
+        "}"
+    );
+    
+    // Ensure reasonable column sizing
+    tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    tableWidget->horizontalHeader()->setStretchLastSection(true);
+    
+    // Give the table some minimum width to prevent it from being too cramped
+    tableWidget->setMinimumWidth(tableWidget->columnCount() * 150); // Minimum width based on columns
 }

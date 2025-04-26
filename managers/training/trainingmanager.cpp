@@ -331,7 +331,7 @@ void TrainingManager::on_trainingExportPdfButton_clicked()
 
 void TrainingManager::exportTrainingsToPdf()
 {
-    QString fileName = QFileDialog::getSaveFileName(nullptr, "Save PDF", "", "PDF Files (*.pdf)");
+    QString fileName = QFileDialog::getSaveFileName(nullptr, "Save PDF", "Trainings.pdf", "PDF Files (*.pdf)");
     if (fileName.isEmpty()) {
         return;
     }
@@ -340,57 +340,140 @@ void TrainingManager::exportTrainingsToPdf()
     pdfWriter.setPageMargins(QMarginsF(20, 20, 20, 20));
 
     QPainter painter(&pdfWriter);
-    QFont font("Arial", 10);
-    painter.setFont(font);
+    QFont regularFont("Arial", 9);
+    QFont headerFont("Arial", 10, QFont::Bold);
+    QFont titleFont("Arial", 16, QFont::Bold);
 
-    QStringList headers = {"Name", "Description", "Trainer", "Date", "Duration", "Price"};
-    int y = 50;
-    int tableWidth = pdfWriter.width() - 40;
-    QVector<qreal> columnWidths = {0.2, 0.2, 0.15, 0.15, 0.15, 0.15};
-
+    // Set up metrics
+    int pageWidth = pdfWriter.width();
+    int tableWidth = pageWidth - 40;
+    int rowHeight = 30;
+    
     // Draw title
+    painter.setFont(titleFont);
     painter.drawText(20, 30, "Training List");
-
-    // Draw headers
+    
+    // Define column headers and widths
+    QStringList headers = {"Name", "Description", "Trainer", "Date", "Duration", "Price"};
+    QVector<qreal> columnWidths = {0.2, 0.2, 0.15, 0.15, 0.15, 0.15}; // Proportional widths
+    
+    int y = 50;
+    painter.setFont(headerFont);
+    
+    // Draw table header
     int x = 20;
+    QRect headerRect(20, y, tableWidth, rowHeight);
+    painter.fillRect(headerRect, QColor(230, 230, 230));
+    painter.setPen(QPen(Qt::black));
+    painter.drawRect(headerRect);
+    
+    // Draw header cells with borders
     for (int i = 0; i < headers.size(); ++i) {
-        int columnWidth = tableWidth * columnWidths[i];
-        painter.drawText(x, y, columnWidth, 20, Qt::AlignLeft, headers[i]);
-        x += columnWidth;
+        int colWidth = tableWidth * columnWidths[i];
+        QRect cellRect(x, y, colWidth, rowHeight);
+        
+        // Draw cell border
+        painter.drawRect(cellRect);
+        
+        // Draw header text
+        painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+        x += colWidth;
     }
-    y += 20;
-    painter.drawLine(20, y, tableWidth + 20, y);
-    y += 10;
-
+    
+    y += rowHeight;
+    painter.setFont(regularFont);
+    
     // Draw rows using the proxy model to reflect filtering and sorting
     int rowCount = trainingProxyModel->rowCount();
     if (rowCount == 0) {
-        painter.drawText(20, y, "No trainings to display.");
+        QRect noDataRect(20, y, tableWidth, rowHeight);
+        painter.drawRect(noDataRect);
+        painter.drawText(noDataRect, Qt::AlignCenter, "No trainings to display.");
+        painter.end();
         return;
     }
 
+    // Alternate row colors
+    QColor altRowColor(245, 245, 245);
+    
     for (int row = 0; row < rowCount; ++row) {
+        // Set alternating row colors
+        if (row % 2 == 1) {
+            QRect rowRect(20, y, tableWidth, rowHeight);
+            painter.fillRect(rowRect, altRowColor);
+        }
+        
         x = 20;
         for (int col = 0; col < headers.size(); ++col) {
-            int columnWidth = tableWidth * columnWidths[col];
+            int colWidth = tableWidth * columnWidths[col];
+            QRect cellRect(x, y, colWidth, rowHeight);
+            
+            // Draw cell border
+            painter.drawRect(cellRect);
+            
+            // Get and format cell data
             QString text = trainingProxyModel->data(trainingProxyModel->index(row, col)).toString();
-            painter.drawText(x, y, columnWidth, 20, Qt::AlignLeft, text);
-            x += columnWidth;
+            
+            // Format date column
+            if (col == 3 && !text.isEmpty()) {
+                QDate date = trainingProxyModel->data(trainingProxyModel->index(row, col)).toDate();
+                if (date.isValid()) {
+                    text = date.toString("yyyy-MM-dd");
+                }
+            }
+            
+            // Format duration column
+            if (col == 4) {
+                text += " hours";
+            }
+            
+            // Format price column
+            if (col == 5) {
+                text = QString("$%1").arg(text);
+            }
+            
+            // Draw cell text with padding
+            painter.drawText(cellRect.adjusted(5, 5, -5, -5), Qt::AlignVCenter | Qt::AlignLeft, text);
+            x += colWidth;
         }
-        y += 20;
+        
+        y += rowHeight;
+        
+        // Check if we need a new page
         if (y > pdfWriter.height() - 40) {
             pdfWriter.newPage();
             y = 50;
+            
+            // Redraw header on new page
+            painter.setFont(headerFont);
+            
+            // Draw table header
             x = 20;
+            QRect headerRect(20, y, tableWidth, rowHeight);
+            painter.fillRect(headerRect, QColor(230, 230, 230));
+            painter.drawRect(headerRect);
+            
             for (int i = 0; i < headers.size(); ++i) {
-                int columnWidth = tableWidth * columnWidths[i];
-                painter.drawText(x, y, columnWidth, 20, Qt::AlignLeft, headers[i]);
-                x += columnWidth;
+                int colWidth = tableWidth * columnWidths[i];
+                QRect cellRect(x, y, colWidth, rowHeight);
+                painter.drawRect(cellRect);
+                painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+                x += colWidth;
             }
-            y += 20;
-            painter.drawLine(20, y, tableWidth + 20, y);
-            y += 10;
+            
+            y += rowHeight;
+            painter.setFont(regularFont);
         }
+    }
+
+    painter.end();
+    
+    // Show success message
+    QMessageBox::information(nullptr, "Success", "Training list exported to PDF successfully!");
+    
+    if (notificationManager) {
+        notificationManager->addNotification("PDF Exported", "Training Section", 
+                                         "Training list exported to " + fileName, -1);
     }
 }
 

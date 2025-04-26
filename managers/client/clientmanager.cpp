@@ -656,7 +656,7 @@ void ClientManager::updateCalendarConsultations()
 
 void ClientManager::exportClientsToPdf()
 {
-    QString fileName = QFileDialog::getSaveFileName(nullptr, "Save PDF", "", "PDF Files (*.pdf)");
+    QString fileName = QFileDialog::getSaveFileName(nullptr, "Save PDF", "Clients.pdf", "PDF Files (*.pdf)");
     if (fileName.isEmpty()) {
         return;
     }
@@ -665,120 +665,176 @@ void ClientManager::exportClientsToPdf()
     pdfWriter.setPageMargins(QMarginsF(20, 20, 20, 20));
 
     QPainter painter(&pdfWriter);
-    QFont font("Arial", 10);
-    painter.setFont(font);
+    QFont regularFont("Arial", 9);
+    QFont headerFont("Arial", 10, QFont::Bold);
+    QFont titleFont("Arial", 16, QFont::Bold);
 
-    QStringList headers = {"Name", "Sector", "Contact", "Email", "Consultation Date", "Consultant"};
-    int y = 50;
-    int tableWidth = pdfWriter.width() - 40;
-    QVector<qreal> columnWidths = {0.2, 0.15, 0.15, 0.15, 0.2, 0.15};
-
+    // Set up metrics
+    int pageWidth = pdfWriter.width();
+    int tableWidth = pageWidth - 40;
+    int rowHeight = 30;
+    
     // Draw title
+    painter.setFont(titleFont);
     painter.drawText(20, 30, "Client List");
-
-    // Draw headers
+    
+    // Define column headers and widths
+    QStringList headers = {"Name", "Sector", "Contact", "Email", "Consultation Date", "Consultant"};
+    QVector<qreal> columnWidths = {0.2, 0.15, 0.15, 0.15, 0.2, 0.15}; // Proportional widths
+    
+    int y = 50;
+    painter.setFont(headerFont);
+    
+    // Draw table header
     int x = 20;
+    QRect headerRect(20, y, tableWidth, rowHeight);
+    painter.fillRect(headerRect, QColor(230, 230, 230));
+    painter.setPen(QPen(Qt::black));
+    painter.drawRect(headerRect);
+    
+    // Draw header cells with borders
     for (int i = 0; i < headers.size(); ++i) {
-        int columnWidth = tableWidth * columnWidths[i];
-        painter.drawText(x, y, columnWidth, 20, Qt::AlignLeft, headers[i]);
-        x += columnWidth;
+        int colWidth = tableWidth * columnWidths[i];
+        QRect cellRect(x, y, colWidth, rowHeight);
+        
+        // Draw cell border
+        painter.drawRect(cellRect);
+        
+        // Draw header text
+        painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+        x += colWidth;
     }
-    y += 20;
-    painter.drawLine(20, y, tableWidth + 20, y);
-    y += 10;
-
+    
+    y += rowHeight;
+    painter.setFont(regularFont);
+    
     // Draw rows using the proxy model to reflect filtering and sorting
     int rowCount = clientProxyModel->rowCount();
     if (rowCount == 0) {
-        painter.drawText(20, y, "No clients to display.");
+        QRect noDataRect(20, y, tableWidth, rowHeight);
+        painter.drawRect(noDataRect);
+        painter.drawText(noDataRect, Qt::AlignCenter, "No clients to display.");
         painter.end();
         return;
     }
 
+    // Alternate row colors
+    QColor altRowColor(245, 245, 245);
+    
     for (int row = 0; row < rowCount; ++row) {
+        // Set alternating row colors
+        if (row % 2 == 1) {
+            QRect rowRect(20, y, tableWidth, rowHeight);
+            painter.fillRect(rowRect, altRowColor);
+        }
+        
         x = 20;
         for (int col = 0; col < headers.size(); ++col) {
-            int columnWidth = tableWidth * columnWidths[col];
+            int colWidth = tableWidth * columnWidths[col];
+            QRect cellRect(x, y, colWidth, rowHeight);
+            
+            // Draw cell border
+            painter.drawRect(cellRect);
+            
+            // Get and format cell data
             QString text = clientProxyModel->data(clientProxyModel->index(row, col)).toString();
-            painter.drawText(x, y, columnWidth, 20, Qt::AlignLeft, text);
-            x += columnWidth;
+            
+            // Format date column
+            if (col == 4 && !text.isEmpty()) {
+                QDateTime dateTime = clientProxyModel->data(clientProxyModel->index(row, col)).toDateTime();
+                if (dateTime.isValid()) {
+                    text = dateTime.toString("yyyy-MM-dd HH:mm");
+                }
+            }
+            
+            // Draw cell text with padding
+            painter.drawText(cellRect.adjusted(5, 5, -5, -5), Qt::AlignVCenter | Qt::AlignLeft, text);
+            x += colWidth;
         }
-        y += 20;
+        
+        y += rowHeight;
+        
+        // Check if we need a new page
         if (y > pdfWriter.height() - 40) {
             pdfWriter.newPage();
             y = 50;
+            
+            // Redraw header on new page
+            painter.setFont(headerFont);
+            
+            // Draw table header
             x = 20;
+            QRect headerRect(20, y, tableWidth, rowHeight);
+            painter.fillRect(headerRect, QColor(230, 230, 230));
+            painter.drawRect(headerRect);
+            
             for (int i = 0; i < headers.size(); ++i) {
-                int columnWidth = tableWidth * columnWidths[i];
-                painter.drawText(x, y, columnWidth, 20, Qt::AlignLeft, headers[i]);
-                x += columnWidth;
+                int colWidth = tableWidth * columnWidths[i];
+                QRect cellRect(x, y, colWidth, rowHeight);
+                painter.drawRect(cellRect);
+                painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+                x += colWidth;
             }
-            y += 20;
-            painter.drawLine(20, y, tableWidth + 20, y);
-            y += 10;
+            
+            y += rowHeight;
+            painter.setFont(regularFont);
         }
     }
+
     painter.end();
+    
+    // Show success message
+    QMessageBox::information(nullptr, "Success", "Clients exported to PDF successfully!");
+    
+    if (notificationManager) {
+        notificationManager->addNotification("PDF Exported", "Client Section", 
+                                           "Client list exported to " + fileName, -1);
+    }
 }
 
 QMap<QString, int> ClientManager::getStatisticsByCategory(const QString &category)
 {
-    QMap<QString, int> stats;
+    QMap<QString, int> statistics;
+    
     if (!m_dbConnected) {
-        qDebug() << "Database not connected in getStatisticsByCategory";
-        return stats;
+        return statistics;
     }
-
-    QString column;
-    if (category == "Sector") {
-        column = "SECTOR";
-    } else if (category == "Consultant") {
-        column = "(e.FIRST_NAME || ' ' || e.LAST_NAME)";
-    } else if (category == "Date") {
-        column = "TRUNC(c.CONSULTATION_DATE)";
-    } else {
-        qDebug() << "Unsupported filter category for clients:" << category;
-        return stats;
-    }
-
-    QString queryString;
-    if (category == "Consultant") {
-        queryString = QString(
-            "SELECT (e.FIRST_NAME || ' ' || e.LAST_NAME) AS CONSULTANT_NAME, COUNT(*) AS count "
-            "FROM AHMED.CLIENTS c "
-            "LEFT JOIN AHMED.EMPLOYEE e ON c.CONSULTANT_ID = e.ID "
-            "GROUP BY (e.FIRST_NAME || ' ' || e.LAST_NAME)"
-            );
-    } else {
-        queryString = QString(
-                          "SELECT %1, COUNT(*) AS count "
-                          "FROM AHMED.CLIENTS c "
-                          "GROUP BY %1"
-                          ).arg(column);
-    }
-
+    
     QSqlQuery query;
-    query.prepare(queryString);
-
-    if (!query.exec()) {
-        qDebug() << "Query failed in getStatisticsByCategory:" << query.lastError().text();
-        return stats;
+    
+    if (category == "sector") {
+        query.prepare("SELECT SECTOR, COUNT(*) as count FROM AHMED.CLIENTS GROUP BY SECTOR ORDER BY count DESC");
+    } 
+    else if (category == "consultant") {
+        query.prepare("SELECT (e.FIRST_NAME || ' ' || e.LAST_NAME) AS consultant, COUNT(*) as count "
+                     "FROM AHMED.CLIENTS c "
+                     "JOIN AHMED.EMPLOYEE e ON c.CONSULTANT_ID = e.ID "
+                     "GROUP BY e.FIRST_NAME, e.LAST_NAME "
+                     "ORDER BY count DESC");
     }
-
-    while (query.next()) {
-        QString key;
-        if (category == "Date") {
-            QDate date = query.value(0).toDate();
-            key = date.toString("yyyy-MM-dd");
-        } else {
-            key = query.value(0).toString();
-            if (key.isEmpty() && category == "Consultant") {
-                key = "Unknown Consultant";
-            }
+    else if (category == "month") {
+        query.prepare("SELECT TO_CHAR(CONSULTATION_DATE, 'MONTH') as month, COUNT(*) as count "
+                     "FROM AHMED.CLIENTS "
+                     "GROUP BY TO_CHAR(CONSULTATION_DATE, 'MONTH') "
+                     "ORDER BY count DESC");
+    }
+    else {
+        // Default case - by day
+        query.prepare("SELECT TO_CHAR(CONSULTATION_DATE, 'YYYY-MM-DD') as day, COUNT(*) as count "
+                     "FROM AHMED.CLIENTS "
+                     "GROUP BY TO_CHAR(CONSULTATION_DATE, 'YYYY-MM-DD') "
+                     "ORDER BY count DESC");
+    }
+    
+    if (query.exec()) {
+        while (query.next()) {
+            QString key = query.value(0).toString().trimmed();
+            int value = query.value(1).toInt();
+            statistics[key] = value;
         }
-        int count = query.value(1).toInt();
-        stats[key] = count;
+    } else {
+        qDebug() << "Error getting statistics by category:" << query.lastError().text();
     }
-
-    return stats;
+    
+    return statistics;
 }

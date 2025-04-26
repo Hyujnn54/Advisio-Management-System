@@ -24,6 +24,7 @@ public:
     void refreshTableWidget();
     // Add this declaration
     QMap<QString, int> getStatisticsByCategory(const QString &category);
+    void exportAllMeetingsToPdf();
 
 public slots:
     void handleAddButtonClick();

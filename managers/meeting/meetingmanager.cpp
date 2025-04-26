@@ -272,68 +272,163 @@ void MeetingManager::handleGenerateQRCodeButtonClick()
 
 void MeetingManager::handleExportPdfButtonClick()
 {
-    if (!ui || !ui->meetingTableWidget) {
-        qDebug() << "Error: UI components not initialized";
+    if (!m_dbConnected) {
+        QMessageBox::warning(nullptr, "Database Error", "Cannot export to PDF: Database is not connected.");
         return;
     }
-    int row = ui->meetingTableWidget->currentRow();
-    if (row < 0) {
-        QMessageBox::warning(nullptr, "Error", "Please select a meeting to export.");
-        return;
-    }
+    exportAllMeetingsToPdf();
+}
 
-    int id = ui->meetingTableWidget->item(row, 0)->text().toInt();
-    meeting m(
-        id,
-        ui->meetingTableWidget->item(row, 1)->text(),
-        ui->meetingTableWidget->item(row, 2)->text(),
-        ui->meetingTableWidget->item(row, 3)->text(),
-        ui->meetingTableWidget->item(row, 4)->text(),
-        ui->meetingTableWidget->item(row, 5)->text().replace(" min", "").toInt(),
-        QDateTime::fromString(ui->meetingTableWidget->item(row, 6)->text(), "yyyy-MM-dd hh:mm")
-        );
-
-    QPixmap qrCode = m.generateQRCode();
-    if (qrCode.isNull()) {
-        QMessageBox::critical(nullptr, "Error", "Failed to generate QR code for PDF.");
+void MeetingManager::exportAllMeetingsToPdf()
+{
+    QString fileName = QFileDialog::getSaveFileName(nullptr, "Save PDF", "Meetings.pdf", "PDF Files (*.pdf)");
+    if (fileName.isEmpty()) {
         return;
     }
 
-    QString filePath = QFileDialog::getSaveFileName(nullptr, "Export Meeting to PDF", "Meeting_" + QString::number(id) + ".pdf", "PDF Files (*.pdf)");
-    if (filePath.isEmpty()) {
+    QPdfWriter pdfWriter(fileName);
+    pdfWriter.setPageSize(QPageSize(QPageSize::A4));
+    pdfWriter.setPageMargins(QMarginsF(20, 20, 20, 20));
+
+    QPainter painter(&pdfWriter);
+    QFont regularFont("Arial", 9);
+    QFont headerFont("Arial", 10, QFont::Bold);
+    QFont titleFont("Arial", 16, QFont::Bold);
+
+    // Set up metrics
+    int pageWidth = pdfWriter.width();
+    int tableWidth = pageWidth - 40;
+    int rowHeight = 30;
+    
+    // Draw title
+    painter.setFont(titleFont);
+    painter.drawText(20, 30, "Meeting List");
+    
+    // Define column headers and widths
+    QStringList headers = {"ID", "Title", "Organiser", "Participant", "Agenda", "Duration", "Date & Time"};
+    QVector<qreal> columnWidths = {0.05, 0.2, 0.15, 0.15, 0.15, 0.1, 0.2}; // Proportional widths
+    
+    int y = 50;
+    painter.setFont(headerFont);
+    
+    // Draw table header
+    int x = 20;
+    QRect headerRect(20, y, tableWidth, rowHeight);
+    painter.fillRect(headerRect, QColor(230, 230, 230));
+    painter.setPen(QPen(Qt::black));
+    painter.drawRect(headerRect);
+    
+    // Draw header cells with borders
+    for (int i = 0; i < headers.size(); ++i) {
+        int colWidth = tableWidth * columnWidths[i];
+        QRect cellRect(x, y, colWidth, rowHeight);
+        
+        // Draw cell border
+        painter.drawRect(cellRect);
+        
+        // Draw header text
+        painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+        x += colWidth;
+    }
+    
+    y += rowHeight;
+    painter.setFont(regularFont);
+    
+    // Count visible rows
+    int visibleRowCount = 0;
+    for (int row = 0; row < ui->meetingTableWidget->rowCount(); ++row) {
+        if (!ui->meetingTableWidget->isRowHidden(row)) {
+            visibleRowCount++;
+        }
+    }
+    
+    if (visibleRowCount == 0) {
+        QRect noDataRect(20, y, tableWidth, rowHeight);
+        painter.drawRect(noDataRect);
+        painter.drawText(noDataRect, Qt::AlignCenter, "No meetings to display.");
+        painter.end();
+        
+        // Show notification
+        QMessageBox::information(nullptr, "Export Complete", "PDF file created, but no meetings were available to display.");
         return;
     }
 
-    QPrinter printer(QPrinter::HighResolution);
-    printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(filePath);
-
-    QPainter painter(&printer);
-    QRect rect = painter.viewport();
-    int side = qMin(rect.width(), rect.height());
-
-    painter.setViewport(0, 0, side, side + 200);
-    painter.setWindow(0, 0, side, side + 200);
-
-    painter.drawText(10, 20, QString("Meeting Details"));
-    painter.drawText(10, 40, QString("ID: %1").arg(id));
-    painter.drawText(10, 60, QString("Title: %1").arg(m.getTitle()));
-    painter.drawText(10, 80, QString("Organiser: %1").arg(m.getOrganiser()));
-    painter.drawText(10, 100, QString("Participant: %1").arg(m.getParticipant()));
-    painter.drawText(10, 120, QString("Agenda: %1").arg(m.getAgenda()));
-    painter.drawText(10, 140, QString("Duration: %1 min").arg(m.getDuration()));
-    painter.drawText(10, 160, QString("Date: %1").arg(m.getDatem().toString("yyyy-MM-dd hh:mm")));
-
-    QPixmap scaledQrCode = qrCode.scaled(200, 200, Qt::KeepAspectRatio);
-    painter.drawPixmap(10, 180, scaledQrCode);
+    // Alternate row colors
+    QColor altRowColor(245, 245, 245);
+    int visibleRowIndex = 0;
+    
+    for (int row = 0; row < ui->meetingTableWidget->rowCount(); ++row) {
+        // Skip hidden rows (filtered out by search)
+        if (ui->meetingTableWidget->isRowHidden(row)) {
+            continue;
+        }
+        
+        // Set alternating row colors
+        if (visibleRowIndex % 2 == 1) {
+            QRect rowRect(20, y, tableWidth, rowHeight);
+            painter.fillRect(rowRect, altRowColor);
+        }
+        visibleRowIndex++;
+        
+        x = 20;
+        for (int col = 0; col < headers.size(); ++col) {
+            int colWidth = tableWidth * columnWidths[col];
+            QRect cellRect(x, y, colWidth, rowHeight);
+            
+            // Draw cell border
+            painter.drawRect(cellRect);
+            
+            // Get and format cell data
+            QString text = ui->meetingTableWidget->item(row, col) ? ui->meetingTableWidget->item(row, col)->text() : "";
+            
+            // Format duration column
+            if (col == 5 && !text.contains("min")) {
+                text += " min";
+            }
+            
+            // Draw cell text with padding
+            painter.drawText(cellRect.adjusted(5, 5, -5, -5), Qt::AlignVCenter | Qt::AlignLeft, text);
+            x += colWidth;
+        }
+        
+        y += rowHeight;
+        
+        // Check if we need a new page
+        if (y > pdfWriter.height() - 40) {
+            pdfWriter.newPage();
+            y = 50;
+            
+            // Redraw header on new page
+            painter.setFont(headerFont);
+            
+            // Draw table header
+            x = 20;
+            QRect headerRect(20, y, tableWidth, rowHeight);
+            painter.fillRect(headerRect, QColor(230, 230, 230));
+            painter.drawRect(headerRect);
+            
+            for (int i = 0; i < headers.size(); ++i) {
+                int colWidth = tableWidth * columnWidths[i];
+                QRect cellRect(x, y, colWidth, rowHeight);
+                painter.drawRect(cellRect);
+                painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+                x += colWidth;
+            }
+            
+            y += rowHeight;
+            painter.setFont(regularFont);
+        }
+    }
 
     painter.end();
 
+    // Show success message
+    QMessageBox::information(nullptr, "Success", "Meeting list exported to PDF successfully!");
+    
     if (notificationManager) {
-        notificationManager->addNotification("PDF Exported", "Meeting ID: " + QString::number(id),
-                                             "PDF saved to " + filePath, -1);
+        notificationManager->addNotification("PDF Exported", "Meeting Section", 
+                                         "Meeting list exported to " + fileName, -1);
     }
-    QMessageBox::information(nullptr, "Success", "Meeting exported to PDF successfully!");
 }
 
 void MeetingManager::handleTabChanged(int index)

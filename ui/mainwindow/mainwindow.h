@@ -59,6 +59,10 @@ private:
     meeting createMeetingFromInput(const QString &input);
     bool validateMeetingInput(const QStringList &parts, QString &errorMessage);
     
+    // Table display improvement methods
+    void improveTableDisplay(QTableView* tableView);
+    void improveTableWidgetDisplay(QTableWidget* tableWidget);
+    
     // Chart helper methods
     void setupChartConnections();
     void setupClientChart();

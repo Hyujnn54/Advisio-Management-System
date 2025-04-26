@@ -1058,7 +1058,7 @@ QPushButton:hover { color: darkblue; }</string>
               <item>
                <widget class="QTabWidget" name="meetingTabWidget">
                 <property name="currentIndex">
-                 <number>3</number>
+                 <number>1</number>
                 </property>
                 <widget class="QWidget" name="meetingAddTab">
                  <attribute name="title">
@@ -1224,9 +1224,18 @@ QPushButton:hover { color: darkblue; }</string>
                    <widget class="QTableWidget" name="meetingTableWidget">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                      <horstretch>1</horstretch>
-                      <verstretch>0</verstretch>
+                      <horstretch>0</horstretch>
+                      <verstretch>1</verstretch>
                      </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>300</height>
+                     </size>
+                    </property>
+                    <property name="alternatingRowColors">
+                     <bool>true</bool>
                     </property>
                     <property name="selectionMode">
                      <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
@@ -1234,6 +1243,24 @@ QPushButton:hover { color: darkblue; }</string>
                     <property name="selectionBehavior">
                      <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
                     </property>
+                    <property name="showGrid">
+                     <bool>true</bool>
+                    </property>
+                    <property name="gridStyle">
+                     <enum>Qt::PenStyle::SolidLine</enum>
+                    </property>
+                    <property name="sortingEnabled">
+                     <bool>true</bool>
+                    </property>
+                    <attribute name="horizontalHeaderDefaultSectionSize">
+                     <number>120</number>
+                    </attribute>
+                    <attribute name="horizontalHeaderStretchLastSection">
+                     <bool>true</bool>
+                    </attribute>
+                    <attribute name="verticalHeaderVisible">
+                     <bool>false</bool>
+                    </attribute>
                     <column>
                      <property name="text">
                       <string>ID</string>
