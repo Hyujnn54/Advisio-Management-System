@@ -19,7 +19,7 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     meetingManager(new MeetingManager(dbConnected, this)),
     notificationManager(new NotificationManager(this)),
     networkManager(new QNetworkAccessManager(this)),
-    chartWindow(new ChartWindow(this))
+    chartWindow(nullptr) // Initialize to nullptr first
 {
     qDebug() << "Entering MainWindow constructor";
 
@@ -112,6 +112,11 @@ void MainWindow::on_statisticsButton_clicked()
     }
     
     try {
+        // Create chart window if it doesn't exist yet
+        if (!chartWindow) {
+            chartWindow = new ChartWindow(this);
+        }
+        
         // Show chart window with error handling
         chartWindow->show();
         
@@ -131,6 +136,12 @@ void MainWindow::on_statisticsButton_clicked()
             if (statsComboBox->count() > 0) {
                 statsComboBox->setCurrentIndex(0);
             }
+        }
+        
+        // Trigger chart update
+        QPushButton* refreshButton = chartWindow->findChild<QPushButton*>("refreshButton");
+        if (refreshButton) {
+            refreshButton->click();
         }
     } catch (const std::exception& e) {
         qDebug() << "Exception in on_statisticsButton_clicked: " << e.what();

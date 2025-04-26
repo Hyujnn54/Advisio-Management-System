@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Statistics Chart</string>
+   <string>Advanced Statistics</string>
   </property>
   <property name="styleSheet">
    <string notr="true">
@@ -49,6 +49,14 @@
         padding: 5px; 
         font-style: italic; 
     }
+    QLabel#percentageLabel {
+        font-weight: bold;
+        font-size: 14px;
+        color: #333;
+        background-color: rgba(255, 255, 255, 0.7);
+        border-radius: 5px;
+        padding: 5px;
+    }
    </string>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -71,7 +79,7 @@
     <item>
      <widget class="QGroupBox" name="chartGroupBox">
       <property name="title">
-       <string>Statistics</string>
+       <string>Advanced Statistics Dashboard</string>
       </property>
       <layout class="QVBoxLayout" name="chartLayout">
        <property name="spacing">
@@ -85,7 +93,7 @@
          <item>
           <widget class="QLabel" name="statsTypeLabel">
            <property name="text">
-            <string>Statistics Type:</string>
+            <string>Data Source:</string>
            </property>
           </widget>
          </item>
@@ -107,6 +115,16 @@
             </property>
            </item>
           </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="chartDetailLabel">
+           <property name="text">
+            <string>Analyze by:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="chartDetailComboBox"/>
          </item>
          <item>
           <widget class="QLabel" name="chartTypeLabel">
@@ -139,15 +157,45 @@
            </property>
           </widget>
          </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="buttonLayout">
+         <property name="spacing">
+          <number>10</number>
+         </property>
          <item>
           <widget class="QPushButton" name="refreshButton">
            <property name="text">
-            <string>Refresh</string>
+            <string>Refresh Data</string>
+           </property>
+           <property name="icon">
+            <iconset theme="view-refresh"/>
            </property>
           </widget>
          </item>
          <item>
-          <spacer name="controlSpacer">
+          <widget class="QPushButton" name="resetButton">
+           <property name="text">
+            <string>Reset View</string>
+           </property>
+           <property name="icon">
+            <iconset theme="edit-clear"/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="percentageLabel">
+           <property name="text">
+            <string/>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="buttonSpacer">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>

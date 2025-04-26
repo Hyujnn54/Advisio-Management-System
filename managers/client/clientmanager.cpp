@@ -529,20 +529,39 @@ bool ClientManager::eventFilter(QObject *watched, QEvent *event)
 void ClientManager::loadEmployees()
 {
     qDebug() << "Entering loadEmployees";
-    QSqlQuery query("SELECT ID, (FIRST_NAME || ' ' || LAST_NAME) AS FULL_NAME FROM AHMED.EMPLOYEE");
-    ui->clientConsultantComboBox->clear();
-    employeeMap.clear();
-    if (!query.exec()) {
-        qDebug() << "Error in loadEmployees:" << query.lastError().text();
-        return;
+    try {
+        // Clear existing employee data
+        employeeMap.clear();
+        
+        QSqlQuery query;
+        
+        // Prepare the query first to avoid function sequence errors
+        if (!query.prepare("SELECT ID, FIRST_NAME, LAST_NAME FROM AHMED.EMPLOYEE")) {
+            qDebug() << "Error preparing employee query:" << query.lastError().text();
+            throw std::runtime_error("Failed to prepare employee query: " + query.lastError().text().toStdString());
+        }
+        
+        // Execute the prepared query
+        if (!query.exec()) {
+            qDebug() << "QODBCResult::exec: Unable to execute statement:" << query.lastError().text();
+            throw std::runtime_error("Error in loadEmployees: " + query.lastError().text().toStdString());
+        }
+        
+        // Process results
+        while (query.next()) {
+            int id = query.value(0).toInt();
+            QString firstName = query.value(1).toString();
+            QString lastName = query.value(2).toString();
+            
+            // Store in map for later lookup
+            employeeMap[QString::number(id)] = firstName + " " + lastName;
+        }
+        
+        qDebug() << "Loaded" << employeeMap.size() << "employees successfully";
+    } catch (const std::exception& e) {
+        qDebug() << "Error in loadEmployees:" << e.what();
     }
-    while (query.next()) {
-        QString id = query.value("ID").toString();
-        QString name = query.value("FULL_NAME").toString();
-        employeeMap.insert(name, id);
-        ui->clientConsultantComboBox->addItem(name);
-    }
-    qDebug() << "Exiting loadEmployees, employee count:" << employeeMap.size();
+    qDebug() << "Exiting loadEmployees";
 }
 
 void ClientManager::refreshClientTable()

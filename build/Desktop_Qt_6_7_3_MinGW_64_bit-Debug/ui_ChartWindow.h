@@ -11,6 +11,7 @@
 
 #include <QtCharts/QChartView>
 #include <QtCore/QVariant>
+#include <QtGui/QIcon>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
@@ -36,14 +37,16 @@ public:
     QHBoxLayout *controlLayout;
     QLabel *statsTypeLabel;
     QComboBox *statsTypeComboBox;
-    QLabel *filterLabel;
-    QComboBox *filterComboBox;
+    QLabel *chartDetailLabel;
+    QComboBox *chartDetailComboBox;
     QLabel *chartTypeLabel;
     QComboBox *chartTypeComboBox;
     QCheckBox *toggleLegendCheckBox;
-    QPushButton *refreshChartButton;
-    QPushButton *resetChartButton;
-    QSpacerItem *controlSpacer;
+    QHBoxLayout *buttonLayout;
+    QPushButton *refreshButton;
+    QPushButton *resetButton;
+    QLabel *percentageLabel;
+    QSpacerItem *buttonSpacer;
     QChartView *statsChartView;
     QLabel *hoverDescriptionLabel;
     QStatusBar *statusBar;
@@ -89,6 +92,14 @@ public:
 "        "
                         "font-style: italic; \n"
 "    }\n"
+"    QLabel#percentageLabel {\n"
+"        font-weight: bold;\n"
+"        font-size: 14px;\n"
+"        color: #333;\n"
+"        background-color: rgba(255, 255, 255, 0.7);\n"
+"        border-radius: 5px;\n"
+"        padding: 5px;\n"
+"    }\n"
 "   "));
         centralwidget = new QWidget(ChartWindow);
         centralwidget->setObjectName("centralwidget");
@@ -112,19 +123,20 @@ public:
         statsTypeComboBox = new QComboBox(chartGroupBox);
         statsTypeComboBox->addItem(QString());
         statsTypeComboBox->addItem(QString());
+        statsTypeComboBox->addItem(QString());
         statsTypeComboBox->setObjectName("statsTypeComboBox");
 
         controlLayout->addWidget(statsTypeComboBox);
 
-        filterLabel = new QLabel(chartGroupBox);
-        filterLabel->setObjectName("filterLabel");
+        chartDetailLabel = new QLabel(chartGroupBox);
+        chartDetailLabel->setObjectName("chartDetailLabel");
 
-        controlLayout->addWidget(filterLabel);
+        controlLayout->addWidget(chartDetailLabel);
 
-        filterComboBox = new QComboBox(chartGroupBox);
-        filterComboBox->setObjectName("filterComboBox");
+        chartDetailComboBox = new QComboBox(chartGroupBox);
+        chartDetailComboBox->setObjectName("chartDetailComboBox");
 
-        controlLayout->addWidget(filterComboBox);
+        controlLayout->addWidget(chartDetailComboBox);
 
         chartTypeLabel = new QLabel(chartGroupBox);
         chartTypeLabel->setObjectName("chartTypeLabel");
@@ -144,22 +156,38 @@ public:
 
         controlLayout->addWidget(toggleLegendCheckBox);
 
-        refreshChartButton = new QPushButton(chartGroupBox);
-        refreshChartButton->setObjectName("refreshChartButton");
-
-        controlLayout->addWidget(refreshChartButton);
-
-        resetChartButton = new QPushButton(chartGroupBox);
-        resetChartButton->setObjectName("resetChartButton");
-
-        controlLayout->addWidget(resetChartButton);
-
-        controlSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        controlLayout->addItem(controlSpacer);
-
 
         chartLayout->addLayout(controlLayout);
+
+        buttonLayout = new QHBoxLayout();
+        buttonLayout->setSpacing(10);
+        buttonLayout->setObjectName("buttonLayout");
+        refreshButton = new QPushButton(chartGroupBox);
+        refreshButton->setObjectName("refreshButton");
+        QIcon icon(QIcon::fromTheme(QString::fromUtf8("view-refresh")));
+        refreshButton->setIcon(icon);
+
+        buttonLayout->addWidget(refreshButton);
+
+        resetButton = new QPushButton(chartGroupBox);
+        resetButton->setObjectName("resetButton");
+        QIcon icon1(QIcon::fromTheme(QString::fromUtf8("edit-clear")));
+        resetButton->setIcon(icon1);
+
+        buttonLayout->addWidget(resetButton);
+
+        percentageLabel = new QLabel(chartGroupBox);
+        percentageLabel->setObjectName("percentageLabel");
+        percentageLabel->setAlignment(Qt::AlignCenter);
+
+        buttonLayout->addWidget(percentageLabel);
+
+        buttonSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        buttonLayout->addItem(buttonSpacer);
+
+
+        chartLayout->addLayout(buttonLayout);
 
         statsChartView = new QChartView(chartGroupBox);
         statsChartView->setObjectName("statsChartView");
@@ -194,20 +222,22 @@ public:
 
     void retranslateUi(QMainWindow *ChartWindow)
     {
-        ChartWindow->setWindowTitle(QCoreApplication::translate("ChartWindow", "Statistics Chart", nullptr));
-        chartGroupBox->setTitle(QCoreApplication::translate("ChartWindow", "Statistics", nullptr));
-        statsTypeLabel->setText(QCoreApplication::translate("ChartWindow", "Statistics Type:", nullptr));
+        ChartWindow->setWindowTitle(QCoreApplication::translate("ChartWindow", "Advanced Statistics", nullptr));
+        chartGroupBox->setTitle(QCoreApplication::translate("ChartWindow", "Advanced Statistics Dashboard", nullptr));
+        statsTypeLabel->setText(QCoreApplication::translate("ChartWindow", "Data Source:", nullptr));
         statsTypeComboBox->setItemText(0, QCoreApplication::translate("ChartWindow", "Client Statistics", nullptr));
         statsTypeComboBox->setItemText(1, QCoreApplication::translate("ChartWindow", "Training Statistics", nullptr));
+        statsTypeComboBox->setItemText(2, QCoreApplication::translate("ChartWindow", "Meeting Statistics", nullptr));
 
-        filterLabel->setText(QCoreApplication::translate("ChartWindow", "Filter:", nullptr));
+        chartDetailLabel->setText(QCoreApplication::translate("ChartWindow", "Analyze by:", nullptr));
         chartTypeLabel->setText(QCoreApplication::translate("ChartWindow", "Chart Type:", nullptr));
         chartTypeComboBox->setItemText(0, QCoreApplication::translate("ChartWindow", "Bar Chart", nullptr));
         chartTypeComboBox->setItemText(1, QCoreApplication::translate("ChartWindow", "Pie Chart", nullptr));
 
         toggleLegendCheckBox->setText(QCoreApplication::translate("ChartWindow", "Show Legend", nullptr));
-        refreshChartButton->setText(QCoreApplication::translate("ChartWindow", "Refresh", nullptr));
-        resetChartButton->setText(QCoreApplication::translate("ChartWindow", "Reset", nullptr));
+        refreshButton->setText(QCoreApplication::translate("ChartWindow", "Refresh Data", nullptr));
+        resetButton->setText(QCoreApplication::translate("ChartWindow", "Reset View", nullptr));
+        percentageLabel->setText(QString());
         hoverDescriptionLabel->setText(QCoreApplication::translate("ChartWindow", "Hover over a chart element to see details", nullptr));
     } // retranslateUi
 

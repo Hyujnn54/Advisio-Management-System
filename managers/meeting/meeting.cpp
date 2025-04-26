@@ -79,10 +79,12 @@ bool meeting::add()
             if (ok) {
                 query.bindValue(":employee_id", empId);
             } else {
-                query.bindValue(":employee_id", QVariant(QVariant::Int));
+                // Update to use QMetaType instead of deprecated QVariant::Int
+                query.bindValue(":employee_id", QVariant(QMetaType(QMetaType::Int)));
             }
         } else {
-            query.bindValue(":employee_id", QVariant(QVariant::Int));
+            // Update to use QMetaType instead of deprecated QVariant::Int
+            query.bindValue(":employee_id", QVariant(QMetaType(QMetaType::Int)));
         }
         
         if (clientId.isValid() && !clientId.isNull()) {
@@ -91,10 +93,12 @@ bool meeting::add()
             if (ok) {
                 query.bindValue(":client_id", clId);
             } else {
-                query.bindValue(":client_id", QVariant(QVariant::Int));
+                // Update to use QMetaType instead of deprecated QVariant::Int
+                query.bindValue(":client_id", QVariant(QMetaType(QMetaType::Int)));
             }
         } else {
-            query.bindValue(":client_id", QVariant(QVariant::Int));
+            // Update to use QMetaType instead of deprecated QVariant::Int
+            query.bindValue(":client_id", QVariant(QMetaType(QMetaType::Int)));
         }
         
         if (resourceId.isValid() && !resourceId.isNull()) {
@@ -103,10 +107,12 @@ bool meeting::add()
             if (ok) {
                 query.bindValue(":ressource_id", resId);
             } else {
-                query.bindValue(":ressource_id", QVariant(QVariant::Int));
+                // Update to use QMetaType instead of deprecated QVariant::Int
+                query.bindValue(":ressource_id", QVariant(QMetaType(QMetaType::Int)));
             }
         } else {
-            query.bindValue(":ressource_id", QVariant(QVariant::Int));
+            // Update to use QMetaType instead of deprecated QVariant::Int
+            query.bindValue(":ressource_id", QVariant(QMetaType(QMetaType::Int)));
         }
         
         query.bindValue(":datem", m_dateTime);
@@ -233,10 +239,10 @@ bool meeting::update()
         if (ok) {
             query.bindValue(":employeeId", empId);
         } else {
-            query.bindValue(":employeeId", QVariant(QVariant::Int));
+            query.bindValue(":employeeId", QVariant(QMetaType(QMetaType::Int)));
         }
     } else {
-        query.bindValue(":employeeId", QVariant(QVariant::Int));
+        query.bindValue(":employeeId", QVariant(QMetaType(QMetaType::Int)));
     }
     
     if (clientId.isValid() && !clientId.isNull()) {
@@ -245,10 +251,10 @@ bool meeting::update()
         if (ok) {
             query.bindValue(":clientId", clId);
         } else {
-            query.bindValue(":clientId", QVariant(QVariant::Int));
+            query.bindValue(":clientId", QVariant(QMetaType(QMetaType::Int)));
         }
     } else {
-        query.bindValue(":clientId", QVariant(QVariant::Int));
+        query.bindValue(":clientId", QVariant(QMetaType(QMetaType::Int)));
     }
     
     if (resourceId.isValid() && !resourceId.isNull()) {
@@ -257,10 +263,10 @@ bool meeting::update()
         if (ok) {
             query.bindValue(":resourceId", resId);
         } else {
-            query.bindValue(":resourceId", QVariant(QVariant::Int));
+            query.bindValue(":resourceId", QVariant(QMetaType(QMetaType::Int)));
         }
     } else {
-        query.bindValue(":resourceId", QVariant(QVariant::Int));
+        query.bindValue(":resourceId", QVariant(QMetaType(QMetaType::Int)));
     }
     
     query.bindValue(":datem", m_dateTime);

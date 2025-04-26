@@ -1134,6 +1134,8 @@ release/moc_clientmanager.cpp: ../../managers/client/clientmanager.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qvxymodelmapper.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qxylegendmarker.h \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QPropertyAnimation \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QSequentialAnimationGroup \
 		../../core/notificationmanager.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCore/QVector \
 		release/moc_predefs.h \
@@ -2244,6 +2246,8 @@ release/moc_chartwindow.cpp: ../../ui/chartwindow/chartwindow.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qvxymodelmapper.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qxylegendmarker.h \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QPropertyAnimation \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QSequentialAnimationGroup \
 		release/moc_predefs.h \
 		C:/Qt/6.7.3/mingw_64/bin/moc.exe
 	'C:\Qt\6.7.3\mingw_64\bin\moc.exe' $(DEFINES) --include C:/Users/shaco/OneDrive/Documents/client/build/Desktop_Qt_6_7_3_MinGW_64_bit-Debug/release/moc_predefs.h -IC:/Qt/6.7.3/mingw_64/mkspecs/win32-g++ -IC:/Users/shaco/OneDrive/Documents/client -IC:/Users/shaco/OneDrive/Documents/client/core -IC:/Users/shaco/OneDrive/Documents/client/managers/client -IC:/Users/shaco/OneDrive/Documents/client/managers/training -IC:/Users/shaco/OneDrive/Documents/client/managers/meeting -IC:/Users/shaco/OneDrive/Documents/client/ui/mainwindow -IC:/Users/shaco/OneDrive/Documents/client/ui/chartwindow -IC:/Users/shaco/OneDrive/Documents/client/dialog/updateclientdialog -IC:/Users/shaco/OneDrive/Documents/client/dialog/updatetrainingdialog -IC:/Users/shaco/OneDrive/Documents/client/dialog/updatemeeting -IC:/Users/shaco/OneDrive/Documents/client/lib/qrcodegen -IC:/Qt/6.7.3/mingw_64/include -IC:/Qt/6.7.3/mingw_64/include/QtPrintSupport -IC:/Qt/6.7.3/mingw_64/include/QtCharts -IC:/Qt/6.7.3/mingw_64/include/QtOpenGLWidgets -IC:/Qt/6.7.3/mingw_64/include/QtWidgets -IC:/Qt/6.7.3/mingw_64/include/QtOpenGL -IC:/Qt/6.7.3/mingw_64/include/QtGui -IC:/Qt/6.7.3/mingw_64/include/QtSql -IC:/Qt/6.7.3/mingw_64/include/QtNetwork -IC:/Qt/6.7.3/mingw_64/include/QtCore -I. -IC:/Qt/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include/c++ -IC:/Qt/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include/c++/x86_64-w64-mingw32 -IC:/Qt/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include/c++/backward -IC:/Qt/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include -IC:/Qt/Tools/mingw1120_64/lib/gcc/x86_64-w64-mingw32/11.2.0/include-fixed -IC:/Qt/Tools/mingw1120_64/x86_64-w64-mingw32/include ../../ui/chartwindow/chartwindow.h -o release/moc_chartwindow.cpp
@@ -2926,6 +2930,8 @@ release/moc_mainwindow.cpp: ../../ui/mainwindow/mainwindow.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qvxymodelmapper.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qxylegendmarker.h \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QPropertyAnimation \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QSequentialAnimationGroup \
 		../../core/notificationmanager.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCore/QVector \
 		../../managers/training/trainingmanager.h \
@@ -4782,6 +4788,8 @@ release/main.o: ../../core/main.cpp ../../ui/mainwindow/mainwindow.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qvxymodelmapper.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qxylegendmarker.h \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QPropertyAnimation \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QSequentialAnimationGroup \
 		../../core/notificationmanager.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCore/QVector \
 		../../managers/training/trainingmanager.h \
@@ -5751,6 +5759,8 @@ release/clientmanager.o: ../../managers/client/clientmanager.cpp ../../managers/
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qvxymodelmapper.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qxylegendmarker.h \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QPropertyAnimation \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QSequentialAnimationGroup \
 		../../core/notificationmanager.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCore/QVector \
 		ui_mainwindow.h \
@@ -7354,7 +7364,10 @@ release/chartwindow.o: ../../ui/chartwindow/chartwindow.cpp ../../ui/chartwindow
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qvxymodelmapper.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qxylegendmarker.h \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QLabel \
-		ui_chartwindow.h \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QPropertyAnimation \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QSequentialAnimationGroup \
+		ui_ChartWindow.h \
+		C:/Qt/6.7.3/mingw_64/include/QtGui/QIcon \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QApplication \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QCheckBox \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QComboBox \
@@ -7375,7 +7388,11 @@ release/chartwindow.o: ../../ui/chartwindow/chartwindow.cpp ../../ui/chartwindow
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QMessageBox \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/QBarSeries \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QGraphicsTextItem \
-		C:/Qt/6.7.3/mingw_64/include/QtCore/QDebug
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QDebug \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QTimer \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QParallelAnimationGroup \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QEasingCurve \
+		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QGraphicsOpacityEffect
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o release/chartwindow.o ../../ui/chartwindow/chartwindow.cpp
 
 release/mainwindow.o: ../../ui/mainwindow/mainwindow.cpp ../../ui/mainwindow/mainwindow.h \
@@ -8056,6 +8073,8 @@ release/mainwindow.o: ../../ui/mainwindow/mainwindow.cpp ../../ui/mainwindow/mai
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qvxymodelmapper.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCharts/qxylegendmarker.h \
 		C:/Qt/6.7.3/mingw_64/include/QtWidgets/QLabel \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QPropertyAnimation \
+		C:/Qt/6.7.3/mingw_64/include/QtCore/QSequentialAnimationGroup \
 		../../core/notificationmanager.h \
 		C:/Qt/6.7.3/mingw_64/include/QtCore/QVector \
 		../../managers/training/trainingmanager.h \
