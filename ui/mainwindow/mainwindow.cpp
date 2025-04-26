@@ -9,6 +9,14 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDebug>
+#include <QtCharts/QChart>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QChartView>
 
 MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     : QMainWindow(parent),
@@ -18,8 +26,7 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     trainingManager(new TrainingManager(dbConnected, this)),
     meetingManager(new MeetingManager(dbConnected, this)),
     notificationManager(new NotificationManager(this)),
-    networkManager(new QNetworkAccessManager(this)),
-    chartWindow(nullptr) // Initialize to nullptr first
+    networkManager(new QNetworkAccessManager(this))
 {
     qDebug() << "Entering MainWindow constructor";
 
@@ -35,6 +42,7 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     meetingManager->setNotificationManager(notificationManager);
 
     setupUiConnections();
+    setupChartConnections();
 
     // Connect networkManager and AI chat signals after UI setup
     connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onAIResponseReceived);
@@ -53,6 +61,12 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
         clientManager->initialize(ui);
         trainingManager->initialize(ui);
         meetingManager->initialize(ui);
+        
+        // Initialize charts for each section
+        setupClientChart();
+        setupTrainingChart();
+        setupMeetingChart();
+        
         on_meetingSectionButton_clicked();
     }
 
@@ -69,7 +83,6 @@ MainWindow::~MainWindow()
     delete meetingManager;
     delete notificationManager;
     delete networkManager;
-    delete chartWindow;
     delete ui;
 }
 
@@ -111,45 +124,75 @@ void MainWindow::on_statisticsButton_clicked()
         return;
     }
     
-    try {
-        // Create chart window if it doesn't exist yet
-        if (!chartWindow) {
-            chartWindow = new ChartWindow(this);
-        }
-        
-        // Show chart window with error handling
-        chartWindow->show();
-        
-        // Find the combo box with error handling
-        QComboBox* statsComboBox = chartWindow->findChild<QComboBox*>("statsTypeComboBox");
-        if (!statsComboBox) {
-            qDebug() << "Error: statsTypeComboBox not found in ChartWindow";
-            return;
-        }
-        
-        // Set to default statistics type that's less likely to crash
-        int meetingStatsIndex = statsComboBox->findText("Meeting Statistics");
-        if (meetingStatsIndex >= 0) {
-            statsComboBox->setCurrentIndex(meetingStatsIndex);
-        } else {
-            // If "Meeting Statistics" not found, use the first item
-            if (statsComboBox->count() > 0) {
-                statsComboBox->setCurrentIndex(0);
-            }
-        }
-        
-        // Trigger chart update
-        QPushButton* refreshButton = chartWindow->findChild<QPushButton*>("refreshButton");
-        if (refreshButton) {
-            refreshButton->click();
-        }
-    } catch (const std::exception& e) {
-        qDebug() << "Exception in on_statisticsButton_clicked: " << e.what();
-        QMessageBox::critical(this, "Error", "An error occurred opening statistics: " + QString(e.what()));
-    } catch (...) {
-        qDebug() << "Unknown exception in on_statisticsButton_clicked";
-        QMessageBox::critical(this, "Error", "An unknown error occurred opening statistics");
+    // Navigate to the current section's statistics tab
+    QWidget* currentPage = ui->mainStackedWidget->currentWidget();
+    
+    if (currentPage == ui->clientPage) {
+        ui->clientTabWidget->setCurrentIndex(ui->clientTabWidget->indexOf(ui->clientStatisticsTab));
+        updateClientChart();
+    } 
+    else if (currentPage == ui->trainingPage) {
+        ui->trainingTabWidget->setCurrentIndex(ui->trainingTabWidget->indexOf(ui->trainingStatisticsTab));
+        updateTrainingChart();
+    } 
+    else if (currentPage == ui->meetingPage) {
+        ui->meetingTabWidget->setCurrentIndex(ui->meetingTabWidget->indexOf(ui->meetingStatisticsTab));
+        updateMeetingChart();
+    } 
+    else {
+        QMessageBox::information(this, "Statistics", "Please navigate to a section first (Clients, Training, or Meetings).");
     }
+}
+
+void MainWindow::on_clientChartRefreshButton_clicked()
+{
+    updateClientChart();
+}
+
+void MainWindow::on_trainingChartRefreshButton_clicked()
+{
+    updateTrainingChart();
+}
+
+void MainWindow::on_meetingChartRefreshButton_clicked()
+{
+    updateMeetingChart();
+}
+
+void MainWindow::on_clientChartTypeComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateClientChart();
+}
+
+void MainWindow::on_trainingChartTypeComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateTrainingChart();
+}
+
+void MainWindow::on_meetingChartTypeComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateMeetingChart();
+}
+
+void MainWindow::on_clientChartFilterComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateClientChart();
+}
+
+void MainWindow::on_trainingChartFilterComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateTrainingChart();
+}
+
+void MainWindow::on_meetingChartFilterComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateMeetingChart();
 }
 
 void MainWindow::toggleSidebar()
@@ -488,7 +531,418 @@ void MainWindow::onAIResponseReceived(QNetworkReply *reply)
     qDebug() << "Exiting onAIResponseReceived";
 }
 
-ChartWindow* MainWindow::getChartWindow() const
+void MainWindow::setupChartConnections()
 {
-    return chartWindow;
+    if (!m_dbConnected) return;
+    
+    // Connect client chart controls
+    connect(ui->clientChartRefreshButton, &QPushButton::clicked, this, &MainWindow::on_clientChartRefreshButton_clicked);
+    connect(ui->clientChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_clientChartTypeComboBox_currentIndexChanged);
+    connect(ui->clientChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_clientChartFilterComboBox_currentIndexChanged);
+    
+    // Connect training chart controls
+    connect(ui->trainingChartRefreshButton, &QPushButton::clicked, this, &MainWindow::on_trainingChartRefreshButton_clicked);
+    connect(ui->trainingChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_trainingChartTypeComboBox_currentIndexChanged);
+    connect(ui->trainingChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_trainingChartFilterComboBox_currentIndexChanged);
+    
+    // Connect meeting chart controls
+    connect(ui->meetingChartRefreshButton, &QPushButton::clicked, this, &MainWindow::on_meetingChartRefreshButton_clicked);
+    connect(ui->meetingChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_meetingChartTypeComboBox_currentIndexChanged);
+    connect(ui->meetingChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_meetingChartFilterComboBox_currentIndexChanged);
+}
+
+void MainWindow::setupClientChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart 
+    QChart *chart = new QChart();
+    chart->setTitle("Client Statistics");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    
+    // Set the chart on the ChartView
+    ui->clientChartView->setChart(chart);
+    ui->clientChartView->setRenderHint(QPainter::Antialiasing);
+    
+    // Enable chart hover effects
+    ui->clientChartView->setRubberBand(QChartView::RectangleRubberBand);
+    
+    // Update with initial data
+    updateClientChart();
+}
+
+void MainWindow::setupTrainingChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart 
+    QChart *chart = new QChart();
+    chart->setTitle("Training Statistics");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    
+    // Set the chart on the ChartView
+    ui->trainingChartView->setChart(chart);
+    ui->trainingChartView->setRenderHint(QPainter::Antialiasing);
+    
+    // Enable chart hover effects
+    ui->trainingChartView->setRubberBand(QChartView::RectangleRubberBand);
+    
+    // Update with initial data
+    updateTrainingChart();
+}
+
+void MainWindow::setupMeetingChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart 
+    QChart *chart = new QChart();
+    chart->setTitle("Meeting Statistics");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    
+    // Set the chart on the ChartView
+    ui->meetingChartView->setChart(chart);
+    ui->meetingChartView->setRenderHint(QPainter::Antialiasing);
+    
+    // Enable chart hover effects
+    ui->meetingChartView->setRubberBand(QChartView::RectangleRubberBand);
+    
+    // Update with initial data
+    updateMeetingChart();
+}
+
+void MainWindow::updateClientChart()
+{
+    if (!m_dbConnected) return;
+    
+    try {
+        // Get chart type and filter
+        QString chartType = ui->clientChartTypeComboBox->currentText();
+        QString filter = ui->clientChartFilterComboBox->currentText();
+        bool showLegend = ui->clientToggleLegendCheckBox->isChecked();
+        
+        // Get the chart from the view
+        QChart *chart = ui->clientChartView->chart();
+        if (!chart) return;
+        
+        // Clear existing series
+        chart->removeAllSeries();
+        
+        // Update chart title based on filter
+        chart->setTitle(QString("Client Statistics by %1").arg(filter));
+        
+        // Show/hide legend based on checkbox
+        chart->legend()->setVisible(showLegend);
+        
+        // Create appropriate chart based on selection
+        if (chartType == "Pie Chart") {
+            QPieSeries *series = new QPieSeries();
+            
+            // Get data from database through client manager
+            QMap<QString, int> data = clientManager->getStatisticsByCategory(filter);
+            
+            // Add slices to the pie series
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                QPieSlice *slice = series->append(it.key(), it.value());
+                slice->setLabelVisible(true);
+                slice->setLabel(QString("%1: %2%").arg(it.key()).arg(100 * slice->percentage(), 0, 'f', 1));
+                
+                // Connect slice signals for hover effects
+                connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    if (hovered) {
+                        slice->setExploded(true);
+                        ui->clientHoverDescriptionLabel->setText(
+                            QString("%1: %2 clients (%3%)").arg(
+                                slice->label(), 
+                                QString::number(slice->value()),
+                                QString::number(100 * slice->percentage(), 'f', 1)
+                            )
+                        );
+                    } else {
+                        slice->setExploded(false);
+                        ui->clientHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                    }
+                });
+            }
+            
+            chart->addSeries(series);
+        } else if (chartType == "Bar Chart") {
+            QBarSeries *series = new QBarSeries();
+            
+            // Get data from database through client manager
+            QMap<QString, int> data = clientManager->getStatisticsByCategory(filter);
+            
+            // Create a bar set
+            QBarSet *set = new QBarSet("Clients");
+            
+            // Create categories list for axis
+            QStringList categories;
+            
+            // Add values to the bar set
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                *set << it.value();
+                categories << it.key();
+            }
+            
+            series->append(set);
+            chart->addSeries(series);
+            
+            // Create axes
+            QBarCategoryAxis *axisX = new QBarCategoryAxis();
+            axisX->append(categories);
+            chart->addAxis(axisX, Qt::AlignBottom);
+            series->attachAxis(axisX);
+            
+            QValueAxis *axisY = new QValueAxis();
+            axisY->setRange(0, set->at(set->count() - 1) * 1.1); // Set range with some padding
+            chart->addAxis(axisY, Qt::AlignLeft);
+            series->attachAxis(axisY);
+            
+            // Connect hover signals
+            connect(series, &QBarSeries::hovered, [this](bool status, int index, QBarSet *barset) {
+                if (status) {
+                    ui->clientHoverDescriptionLabel->setText(
+                        QString("%1: %2 clients").arg(
+                            barset->label(), 
+                            QString::number(barset->at(index))
+                        )
+                    );
+                } else {
+                    ui->clientHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                }
+            });
+        }
+    } catch (const std::exception& e) {
+        qDebug() << "Exception in updateClientChart:" << e.what();
+        QMessageBox::warning(this, "Chart Error", "Failed to update client chart: " + QString(e.what()));
+    } catch (...) {
+        qDebug() << "Unknown exception in updateClientChart";
+        QMessageBox::warning(this, "Chart Error", "Unknown error updating client chart");
+    }
+}
+
+void MainWindow::updateTrainingChart()
+{
+    if (!m_dbConnected) return;
+    
+    try {
+        // Get chart type and filter
+        QString chartType = ui->trainingChartTypeComboBox->currentText();
+        QString filter = ui->trainingChartFilterComboBox->currentText();
+        bool showLegend = ui->trainingToggleLegendCheckBox->isChecked();
+        
+        // Get the chart from the view
+        QChart *chart = ui->trainingChartView->chart();
+        if (!chart) return;
+        
+        // Clear existing series
+        chart->removeAllSeries();
+        
+        // Update chart title based on filter
+        chart->setTitle(QString("Training Statistics by %1").arg(filter));
+        
+        // Show/hide legend based on checkbox
+        chart->legend()->setVisible(showLegend);
+        
+        // Create appropriate chart based on selection
+        if (chartType == "Pie Chart") {
+            QPieSeries *series = new QPieSeries();
+            
+            // Get data from database through training manager
+            QMap<QString, int> data = trainingManager->getStatisticsByCategory(filter);
+            
+            // Add slices to the pie series
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                QPieSlice *slice = series->append(it.key(), it.value());
+                slice->setLabelVisible(true);
+                slice->setLabel(QString("%1: %2%").arg(it.key()).arg(100 * slice->percentage(), 0, 'f', 1));
+                
+                // Connect slice signals for hover effects
+                connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    if (hovered) {
+                        slice->setExploded(true);
+                        ui->trainingHoverDescriptionLabel->setText(
+                            QString("%1: %2 trainings (%3%)").arg(
+                                slice->label(), 
+                                QString::number(slice->value()),
+                                QString::number(100 * slice->percentage(), 'f', 1)
+                            )
+                        );
+                    } else {
+                        slice->setExploded(false);
+                        ui->trainingHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                    }
+                });
+            }
+            
+            chart->addSeries(series);
+        } else if (chartType == "Bar Chart") {
+            QBarSeries *series = new QBarSeries();
+            
+            // Get data from database through training manager
+            QMap<QString, int> data = trainingManager->getStatisticsByCategory(filter);
+            
+            // Create a bar set
+            QBarSet *set = new QBarSet("Trainings");
+            
+            // Create categories list for axis
+            QStringList categories;
+            
+            // Add values to the bar set
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                *set << it.value();
+                categories << it.key();
+            }
+            
+            series->append(set);
+            chart->addSeries(series);
+            
+            // Create axes
+            QBarCategoryAxis *axisX = new QBarCategoryAxis();
+            axisX->append(categories);
+            chart->addAxis(axisX, Qt::AlignBottom);
+            series->attachAxis(axisX);
+            
+            QValueAxis *axisY = new QValueAxis();
+            axisY->setRange(0, set->at(set->count() - 1) * 1.1); // Set range with some padding
+            chart->addAxis(axisY, Qt::AlignLeft);
+            series->attachAxis(axisY);
+            
+            // Connect hover signals
+            connect(series, &QBarSeries::hovered, [this](bool status, int index, QBarSet *barset) {
+                if (status) {
+                    ui->trainingHoverDescriptionLabel->setText(
+                        QString("%1: %2 trainings").arg(
+                            barset->label(), 
+                            QString::number(barset->at(index))
+                        )
+                    );
+                } else {
+                    ui->trainingHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                }
+            });
+        }
+    } catch (const std::exception& e) {
+        qDebug() << "Exception in updateTrainingChart:" << e.what();
+        QMessageBox::warning(this, "Chart Error", "Failed to update training chart: " + QString(e.what()));
+    } catch (...) {
+        qDebug() << "Unknown exception in updateTrainingChart";
+        QMessageBox::warning(this, "Chart Error", "Unknown error updating training chart");
+    }
+}
+
+void MainWindow::updateMeetingChart()
+{
+    if (!m_dbConnected) return;
+    
+    try {
+        // Get chart type and filter
+        QString chartType = ui->meetingChartTypeComboBox->currentText();
+        QString filter = ui->meetingChartFilterComboBox->currentText();
+        bool showLegend = ui->meetingToggleLegendCheckBox->isChecked();
+        
+        // Get the chart from the view
+        QChart *chart = ui->meetingChartView->chart();
+        if (!chart) return;
+        
+        // Clear existing series
+        chart->removeAllSeries();
+        
+        // Update chart title based on filter
+        chart->setTitle(QString("Meeting Statistics by %1").arg(filter));
+        
+        // Show/hide legend based on checkbox
+        chart->legend()->setVisible(showLegend);
+        
+        // Create appropriate chart based on selection
+        if (chartType == "Pie Chart") {
+            QPieSeries *series = new QPieSeries();
+            
+            // Get data from database through meeting manager
+            QMap<QString, int> data = meetingManager->getStatisticsByCategory(filter);
+            
+            // Add slices to the pie series
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                QPieSlice *slice = series->append(it.key(), it.value());
+                slice->setLabelVisible(true);
+                slice->setLabel(QString("%1: %2%").arg(it.key()).arg(100 * slice->percentage(), 0, 'f', 1));
+                
+                // Connect slice signals for hover effects
+                connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    if (hovered) {
+                        slice->setExploded(true);
+                        ui->meetingHoverDescriptionLabel->setText(
+                            QString("%1: %2 meetings (%3%)").arg(
+                                slice->label(), 
+                                QString::number(slice->value()),
+                                QString::number(100 * slice->percentage(), 'f', 1)
+                            )
+                        );
+                    } else {
+                        slice->setExploded(false);
+                        ui->meetingHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                    }
+                });
+            }
+            
+            chart->addSeries(series);
+        } else if (chartType == "Bar Chart") {
+            QBarSeries *series = new QBarSeries();
+            
+            // Get data from database through meeting manager
+            QMap<QString, int> data = meetingManager->getStatisticsByCategory(filter);
+            
+            // Create a bar set
+            QBarSet *set = new QBarSet("Meetings");
+            
+            // Create categories list for axis
+            QStringList categories;
+            
+            // Add values to the bar set
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                *set << it.value();
+                categories << it.key();
+            }
+            
+            series->append(set);
+            chart->addSeries(series);
+            
+            // Create axes
+            QBarCategoryAxis *axisX = new QBarCategoryAxis();
+            axisX->append(categories);
+            chart->addAxis(axisX, Qt::AlignBottom);
+            series->attachAxis(axisX);
+            
+            QValueAxis *axisY = new QValueAxis();
+            axisY->setRange(0, set->at(set->count() - 1) * 1.1); // Set range with some padding
+            chart->addAxis(axisY, Qt::AlignLeft);
+            series->attachAxis(axisY);
+            
+            // Connect hover signals
+            connect(series, &QBarSeries::hovered, [this](bool status, int index, QBarSet *barset) {
+                if (status) {
+                    ui->meetingHoverDescriptionLabel->setText(
+                        QString("%1: %2 meetings").arg(
+                            barset->label(), 
+                            QString::number(barset->at(index))
+                        )
+                    );
+                } else {
+                    ui->meetingHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                }
+            });
+        }
+    } catch (const std::exception& e) {
+        qDebug() << "Exception in updateMeetingChart:" << e.what();
+        QMessageBox::warning(this, "Chart Error", "Failed to update meeting chart: " + QString(e.what()));
+    } catch (...) {
+        qDebug() << "Unknown exception in updateMeetingChart";
+        QMessageBox::warning(this, "Chart Error", "Unknown error updating meeting chart");
+    }
 }

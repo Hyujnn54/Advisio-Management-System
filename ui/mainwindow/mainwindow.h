@@ -6,9 +6,11 @@
 #include "managers/training/trainingmanager.h"
 #include "managers/meeting/meetingmanager.h"
 #include "core/notificationmanager.h"
-#include "ui/chartwindow/chartwindow.h"
 #include <QMainWindow>
 #include <QNetworkAccessManager>
+#include <QtCharts/QChartView>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QBarSeries>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -23,7 +25,6 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(bool dbConnected, QWidget *parent = nullptr);
     ~MainWindow();
-    ChartWindow* getChartWindow() const;
 
 private slots:
     void on_clientSectionButton_clicked();
@@ -38,6 +39,17 @@ private slots:
     void on_chatClearButton_clicked();
     void processUserInput(const QString &input);
     void onAIResponseReceived(QNetworkReply *reply);
+    
+    // New chart handlers for each section
+    void on_clientChartRefreshButton_clicked();
+    void on_trainingChartRefreshButton_clicked();
+    void on_meetingChartRefreshButton_clicked();
+    void on_clientChartTypeComboBox_currentIndexChanged(int index);
+    void on_trainingChartTypeComboBox_currentIndexChanged(int index);
+    void on_meetingChartTypeComboBox_currentIndexChanged(int index);
+    void on_clientChartFilterComboBox_currentIndexChanged(int index);
+    void on_trainingChartFilterComboBox_currentIndexChanged(int index);
+    void on_meetingChartFilterComboBox_currentIndexChanged(int index);
 
 private:
     void setupUiConnections();
@@ -46,6 +58,15 @@ private:
     void appendChatMessage(const QString &message, bool isBot = false);
     meeting createMeetingFromInput(const QString &input);
     bool validateMeetingInput(const QStringList &parts, QString &errorMessage);
+    
+    // Chart helper methods
+    void setupChartConnections();
+    void setupClientChart();
+    void setupTrainingChart();
+    void setupMeetingChart();
+    void updateClientChart();
+    void updateTrainingChart();
+    void updateMeetingChart();
 
     Ui::MainWindow *ui;
     bool m_dbConnected;
@@ -54,7 +75,6 @@ private:
     MeetingManager *meetingManager;
     NotificationManager *notificationManager;
     QNetworkAccessManager *networkManager;
-    ChartWindow *chartWindow;
 };
 
 #endif // MAINWINDOW_H

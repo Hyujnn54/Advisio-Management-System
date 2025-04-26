@@ -350,14 +350,14 @@ QPushButton:hover { color: darkblue; }</string>
           <item>
            <widget class="QStackedWidget" name="mainStackedWidget">
             <property name="currentIndex">
-             <number>2</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="clientPage">
              <layout class="QVBoxLayout" name="clientPageLayout">
               <item>
                <widget class="QTabWidget" name="clientTabWidget">
                 <property name="currentIndex">
-                 <number>1</number>
+                 <number>3</number>
                 </property>
                 <widget class="QWidget" name="clientAddTab">
                  <property name="contextMenuPolicy">
@@ -576,7 +576,7 @@ QPushButton:hover { color: darkblue; }</string>
                  <attribute name="title">
                   <string>Consultation Calendar</string>
                  </attribute>
-                 <layout class="QVBoxLayout" name="clientCalendarLayout">
+                 <layout class="QHBoxLayout" name="clientCalendarLayout">
                   <item>
                    <widget class="QCalendarWidget" name="clientConsultationCalendar">
                     <property name="minimumSize">
@@ -631,6 +631,112 @@ QPushButton:hover { color: darkblue; }</string>
                   </item>
                  </layout>
                 </widget>
+                <widget class="QWidget" name="clientStatisticsTab">
+                 <attribute name="title">
+                  <string>Statistics</string>
+                 </attribute>
+                 <layout class="QVBoxLayout" name="clientStatsLayout">
+                  <item>
+                   <widget class="QGroupBox" name="clientChartControlsGroupBox">
+                    <property name="title">
+                     <string>Chart Options</string>
+                    </property>
+                    <layout class="QHBoxLayout" name="clientChartControlsLayout">
+                     <item>
+                      <widget class="QLabel" name="clientChartTypeLabel">
+                       <property name="text">
+                        <string>Chart Type:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="clientChartTypeComboBox">
+                       <item>
+                        <property name="text">
+                         <string>Pie Chart</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Bar Chart</string>
+                        </property>
+                       </item>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="clientChartFilterLabel">
+                       <property name="text">
+                        <string>Filter By:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="clientChartFilterComboBox">
+                       <item>
+                        <property name="text">
+                         <string>Sector</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Consultant</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Date</string>
+                        </property>
+                       </item>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="clientToggleLegendCheckBox">
+                       <property name="text">
+                        <string>Show Legend</string>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="clientChartRefreshButton">
+                       <property name="text">
+                        <string>Refresh</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QChartView" name="clientChartView" native="true">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>400</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="clientHoverDescriptionLabel">
+                    <property name="text">
+                     <string>Hover over a chart element to see details</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignmentFlag::AlignCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
                </widget>
               </item>
              </layout>
@@ -640,7 +746,7 @@ QPushButton:hover { color: darkblue; }</string>
               <item>
                <widget class="QTabWidget" name="trainingTabWidget">
                 <property name="currentIndex">
-                 <number>1</number>
+                 <number>2</number>
                 </property>
                 <widget class="QWidget" name="trainingAddTab">
                  <property name="contextMenuPolicy">
@@ -844,6 +950,112 @@ QPushButton:hover { color: darkblue; }</string>
                   </item>
                  </layout>
                 </widget>
+                <widget class="QWidget" name="trainingStatisticsTab">
+                 <attribute name="title">
+                  <string>Statistics</string>
+                 </attribute>
+                 <layout class="QVBoxLayout" name="trainingStatsLayout">
+                  <item>
+                   <widget class="QGroupBox" name="trainingChartControlsGroupBox">
+                    <property name="title">
+                     <string>Chart Options</string>
+                    </property>
+                    <layout class="QHBoxLayout" name="trainingChartControlsLayout">
+                     <item>
+                      <widget class="QLabel" name="trainingChartTypeLabel">
+                       <property name="text">
+                        <string>Chart Type:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="trainingChartTypeComboBox">
+                       <item>
+                        <property name="text">
+                         <string>Pie Chart</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Bar Chart</string>
+                        </property>
+                       </item>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="trainingChartFilterLabel">
+                       <property name="text">
+                        <string>Filter By:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="trainingChartFilterComboBox">
+                       <item>
+                        <property name="text">
+                         <string>Trainer</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Price</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Date</string>
+                        </property>
+                       </item>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="trainingToggleLegendCheckBox">
+                       <property name="text">
+                        <string>Show Legend</string>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="trainingChartRefreshButton">
+                       <property name="text">
+                        <string>Refresh</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QChartView" name="trainingChartView" native="true">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>400</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="trainingHoverDescriptionLabel">
+                    <property name="text">
+                     <string>Hover over a chart element to see details</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignmentFlag::AlignCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
                </widget>
               </item>
              </layout>
@@ -853,7 +1065,7 @@ QPushButton:hover { color: darkblue; }</string>
               <item>
                <widget class="QTabWidget" name="meetingTabWidget">
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>3</number>
                 </property>
                 <widget class="QWidget" name="meetingAddTab">
                  <attribute name="title">
@@ -1152,6 +1364,112 @@ QPushButton:hover { color: darkblue; }</string>
                   </item>
                  </layout>
                 </widget>
+                <widget class="QWidget" name="meetingStatisticsTab">
+                 <attribute name="title">
+                  <string>Statistics</string>
+                 </attribute>
+                 <layout class="QVBoxLayout" name="meetingStatsLayout">
+                  <item>
+                   <widget class="QGroupBox" name="meetingChartControlsGroupBox">
+                    <property name="title">
+                     <string>Chart Options</string>
+                    </property>
+                    <layout class="QHBoxLayout" name="meetingChartControlsLayout">
+                     <item>
+                      <widget class="QLabel" name="meetingChartTypeLabel">
+                       <property name="text">
+                        <string>Chart Type:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="meetingChartTypeComboBox">
+                       <item>
+                        <property name="text">
+                         <string>Pie Chart</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Bar Chart</string>
+                        </property>
+                       </item>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="meetingChartFilterLabel">
+                       <property name="text">
+                        <string>Filter By:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="meetingChartFilterComboBox">
+                       <item>
+                        <property name="text">
+                         <string>Organiser</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Agenda</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>Date</string>
+                        </property>
+                       </item>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="meetingToggleLegendCheckBox">
+                       <property name="text">
+                        <string>Show Legend</string>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="meetingChartRefreshButton">
+                       <property name="text">
+                        <string>Refresh</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QChartView" name="meetingChartView" native="true">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>400</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="meetingHoverDescriptionLabel">
+                    <property name="text">
+                     <string>Hover over a chart element to see details</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignmentFlag::AlignCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
                </widget>
               </item>
              </layout>
@@ -1168,6 +1486,13 @@ QPushButton:hover { color: darkblue; }</string>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QChartView</class>
+   <extends>QWidget</extends>
+   <header>qchartview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

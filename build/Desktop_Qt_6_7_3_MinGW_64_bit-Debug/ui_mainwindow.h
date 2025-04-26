@@ -9,9 +9,11 @@
 #ifndef UI_MAINWINDOW_H
 #define UI_MAINWINDOW_H
 
+#include <QtCharts/QChartView>
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCalendarWidget>
+#include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDateEdit>
 #include <QtWidgets/QDateTimeEdit>
@@ -101,13 +103,25 @@ public:
     QPushButton *clientUpdateButton;
     QPushButton *clientExportPdfButton;
     QWidget *clientCalendarTab;
-    QVBoxLayout *clientCalendarLayout;
+    QHBoxLayout *clientCalendarLayout;
     QCalendarWidget *clientConsultationCalendar;
     QGroupBox *clientCalendarDetailsBox;
     QVBoxLayout *clientCalendarDetailsLayout;
     QLabel *clientSelectedDateLabel;
     QLabel *clientConsultationCountLabel;
     QTableView *clientDateConsultationsView;
+    QWidget *clientStatisticsTab;
+    QVBoxLayout *clientStatsLayout;
+    QGroupBox *clientChartControlsGroupBox;
+    QHBoxLayout *clientChartControlsLayout;
+    QLabel *clientChartTypeLabel;
+    QComboBox *clientChartTypeComboBox;
+    QLabel *clientChartFilterLabel;
+    QComboBox *clientChartFilterComboBox;
+    QCheckBox *clientToggleLegendCheckBox;
+    QPushButton *clientChartRefreshButton;
+    QChartView *clientChartView;
+    QLabel *clientHoverDescriptionLabel;
     QWidget *trainingPage;
     QVBoxLayout *trainingPageLayout;
     QTabWidget *trainingTabWidget;
@@ -142,6 +156,18 @@ public:
     QPushButton *trainingDeleteButton;
     QPushButton *trainingUpdateButton;
     QPushButton *trainingExportButton;
+    QWidget *trainingStatisticsTab;
+    QVBoxLayout *trainingStatsLayout;
+    QGroupBox *trainingChartControlsGroupBox;
+    QHBoxLayout *trainingChartControlsLayout;
+    QLabel *trainingChartTypeLabel;
+    QComboBox *trainingChartTypeComboBox;
+    QLabel *trainingChartFilterLabel;
+    QComboBox *trainingChartFilterComboBox;
+    QCheckBox *trainingToggleLegendCheckBox;
+    QPushButton *trainingChartRefreshButton;
+    QChartView *trainingChartView;
+    QLabel *trainingHoverDescriptionLabel;
     QWidget *meetingPage;
     QVBoxLayout *meetingPageLayout;
     QTabWidget *meetingTabWidget;
@@ -182,6 +208,18 @@ public:
     QLineEdit *meetingChatInputLineEdit;
     QPushButton *meetingChatSendButton;
     QPushButton *meetingChatClearButton;
+    QWidget *meetingStatisticsTab;
+    QVBoxLayout *meetingStatsLayout;
+    QGroupBox *meetingChartControlsGroupBox;
+    QHBoxLayout *meetingChartControlsLayout;
+    QLabel *meetingChartTypeLabel;
+    QComboBox *meetingChartTypeComboBox;
+    QLabel *meetingChartFilterLabel;
+    QComboBox *meetingChartFilterComboBox;
+    QCheckBox *meetingToggleLegendCheckBox;
+    QPushButton *meetingChartRefreshButton;
+    QChartView *meetingChartView;
+    QLabel *meetingHoverDescriptionLabel;
     QStatusBar *statusBar;
 
     void setupUi(QMainWindow *MainWindow)
@@ -491,7 +529,7 @@ public:
         clientTabWidget->addTab(clientManageTab, QString());
         clientCalendarTab = new QWidget();
         clientCalendarTab->setObjectName("clientCalendarTab");
-        clientCalendarLayout = new QVBoxLayout(clientCalendarTab);
+        clientCalendarLayout = new QHBoxLayout(clientCalendarTab);
         clientCalendarLayout->setObjectName("clientCalendarLayout");
         clientConsultationCalendar = new QCalendarWidget(clientCalendarTab);
         clientConsultationCalendar->setObjectName("clientConsultationCalendar");
@@ -527,6 +565,71 @@ public:
         clientCalendarLayout->addWidget(clientCalendarDetailsBox);
 
         clientTabWidget->addTab(clientCalendarTab, QString());
+        clientStatisticsTab = new QWidget();
+        clientStatisticsTab->setObjectName("clientStatisticsTab");
+        clientStatsLayout = new QVBoxLayout(clientStatisticsTab);
+        clientStatsLayout->setObjectName("clientStatsLayout");
+        clientChartControlsGroupBox = new QGroupBox(clientStatisticsTab);
+        clientChartControlsGroupBox->setObjectName("clientChartControlsGroupBox");
+        clientChartControlsLayout = new QHBoxLayout(clientChartControlsGroupBox);
+        clientChartControlsLayout->setObjectName("clientChartControlsLayout");
+        clientChartTypeLabel = new QLabel(clientChartControlsGroupBox);
+        clientChartTypeLabel->setObjectName("clientChartTypeLabel");
+
+        clientChartControlsLayout->addWidget(clientChartTypeLabel);
+
+        clientChartTypeComboBox = new QComboBox(clientChartControlsGroupBox);
+        clientChartTypeComboBox->addItem(QString());
+        clientChartTypeComboBox->addItem(QString());
+        clientChartTypeComboBox->setObjectName("clientChartTypeComboBox");
+
+        clientChartControlsLayout->addWidget(clientChartTypeComboBox);
+
+        clientChartFilterLabel = new QLabel(clientChartControlsGroupBox);
+        clientChartFilterLabel->setObjectName("clientChartFilterLabel");
+
+        clientChartControlsLayout->addWidget(clientChartFilterLabel);
+
+        clientChartFilterComboBox = new QComboBox(clientChartControlsGroupBox);
+        clientChartFilterComboBox->addItem(QString());
+        clientChartFilterComboBox->addItem(QString());
+        clientChartFilterComboBox->addItem(QString());
+        clientChartFilterComboBox->setObjectName("clientChartFilterComboBox");
+
+        clientChartControlsLayout->addWidget(clientChartFilterComboBox);
+
+        clientToggleLegendCheckBox = new QCheckBox(clientChartControlsGroupBox);
+        clientToggleLegendCheckBox->setObjectName("clientToggleLegendCheckBox");
+        clientToggleLegendCheckBox->setChecked(true);
+
+        clientChartControlsLayout->addWidget(clientToggleLegendCheckBox);
+
+        clientChartRefreshButton = new QPushButton(clientChartControlsGroupBox);
+        clientChartRefreshButton->setObjectName("clientChartRefreshButton");
+
+        clientChartControlsLayout->addWidget(clientChartRefreshButton);
+
+
+        clientStatsLayout->addWidget(clientChartControlsGroupBox);
+
+        clientChartView = new QChartView(clientStatisticsTab);
+        clientChartView->setObjectName("clientChartView");
+        QSizePolicy sizePolicy2(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+        sizePolicy2.setHorizontalStretch(0);
+        sizePolicy2.setVerticalStretch(0);
+        sizePolicy2.setHeightForWidth(clientChartView->sizePolicy().hasHeightForWidth());
+        clientChartView->setSizePolicy(sizePolicy2);
+        clientChartView->setMinimumSize(QSize(0, 400));
+
+        clientStatsLayout->addWidget(clientChartView);
+
+        clientHoverDescriptionLabel = new QLabel(clientStatisticsTab);
+        clientHoverDescriptionLabel->setObjectName("clientHoverDescriptionLabel");
+        clientHoverDescriptionLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        clientStatsLayout->addWidget(clientHoverDescriptionLabel);
+
+        clientTabWidget->addTab(clientStatisticsTab, QString());
 
         clientPageLayout->addWidget(clientTabWidget);
 
@@ -684,6 +787,68 @@ public:
         trainingManageLayout->addLayout(trainingManageButtonLayout);
 
         trainingTabWidget->addTab(trainingManageTab, QString());
+        trainingStatisticsTab = new QWidget();
+        trainingStatisticsTab->setObjectName("trainingStatisticsTab");
+        trainingStatsLayout = new QVBoxLayout(trainingStatisticsTab);
+        trainingStatsLayout->setObjectName("trainingStatsLayout");
+        trainingChartControlsGroupBox = new QGroupBox(trainingStatisticsTab);
+        trainingChartControlsGroupBox->setObjectName("trainingChartControlsGroupBox");
+        trainingChartControlsLayout = new QHBoxLayout(trainingChartControlsGroupBox);
+        trainingChartControlsLayout->setObjectName("trainingChartControlsLayout");
+        trainingChartTypeLabel = new QLabel(trainingChartControlsGroupBox);
+        trainingChartTypeLabel->setObjectName("trainingChartTypeLabel");
+
+        trainingChartControlsLayout->addWidget(trainingChartTypeLabel);
+
+        trainingChartTypeComboBox = new QComboBox(trainingChartControlsGroupBox);
+        trainingChartTypeComboBox->addItem(QString());
+        trainingChartTypeComboBox->addItem(QString());
+        trainingChartTypeComboBox->setObjectName("trainingChartTypeComboBox");
+
+        trainingChartControlsLayout->addWidget(trainingChartTypeComboBox);
+
+        trainingChartFilterLabel = new QLabel(trainingChartControlsGroupBox);
+        trainingChartFilterLabel->setObjectName("trainingChartFilterLabel");
+
+        trainingChartControlsLayout->addWidget(trainingChartFilterLabel);
+
+        trainingChartFilterComboBox = new QComboBox(trainingChartControlsGroupBox);
+        trainingChartFilterComboBox->addItem(QString());
+        trainingChartFilterComboBox->addItem(QString());
+        trainingChartFilterComboBox->addItem(QString());
+        trainingChartFilterComboBox->setObjectName("trainingChartFilterComboBox");
+
+        trainingChartControlsLayout->addWidget(trainingChartFilterComboBox);
+
+        trainingToggleLegendCheckBox = new QCheckBox(trainingChartControlsGroupBox);
+        trainingToggleLegendCheckBox->setObjectName("trainingToggleLegendCheckBox");
+        trainingToggleLegendCheckBox->setChecked(true);
+
+        trainingChartControlsLayout->addWidget(trainingToggleLegendCheckBox);
+
+        trainingChartRefreshButton = new QPushButton(trainingChartControlsGroupBox);
+        trainingChartRefreshButton->setObjectName("trainingChartRefreshButton");
+
+        trainingChartControlsLayout->addWidget(trainingChartRefreshButton);
+
+
+        trainingStatsLayout->addWidget(trainingChartControlsGroupBox);
+
+        trainingChartView = new QChartView(trainingStatisticsTab);
+        trainingChartView->setObjectName("trainingChartView");
+        sizePolicy2.setHeightForWidth(trainingChartView->sizePolicy().hasHeightForWidth());
+        trainingChartView->setSizePolicy(sizePolicy2);
+        trainingChartView->setMinimumSize(QSize(0, 400));
+
+        trainingStatsLayout->addWidget(trainingChartView);
+
+        trainingHoverDescriptionLabel = new QLabel(trainingStatisticsTab);
+        trainingHoverDescriptionLabel->setObjectName("trainingHoverDescriptionLabel");
+        trainingHoverDescriptionLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        trainingStatsLayout->addWidget(trainingHoverDescriptionLabel);
+
+        trainingTabWidget->addTab(trainingStatisticsTab, QString());
 
         trainingPageLayout->addWidget(trainingTabWidget);
 
@@ -820,11 +985,11 @@ public:
         QTableWidgetItem *__qtablewidgetitem6 = new QTableWidgetItem();
         meetingTableWidget->setHorizontalHeaderItem(6, __qtablewidgetitem6);
         meetingTableWidget->setObjectName("meetingTableWidget");
-        QSizePolicy sizePolicy2(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
-        sizePolicy2.setHorizontalStretch(1);
-        sizePolicy2.setVerticalStretch(0);
-        sizePolicy2.setHeightForWidth(meetingTableWidget->sizePolicy().hasHeightForWidth());
-        meetingTableWidget->setSizePolicy(sizePolicy2);
+        QSizePolicy sizePolicy3(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+        sizePolicy3.setHorizontalStretch(1);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(meetingTableWidget->sizePolicy().hasHeightForWidth());
+        meetingTableWidget->setSizePolicy(sizePolicy3);
         meetingTableWidget->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
         meetingTableWidget->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
 
@@ -891,6 +1056,68 @@ public:
         meetingChatLayout->addLayout(meetingChatInputLayout);
 
         meetingTabWidget->addTab(meetingChatTab, QString());
+        meetingStatisticsTab = new QWidget();
+        meetingStatisticsTab->setObjectName("meetingStatisticsTab");
+        meetingStatsLayout = new QVBoxLayout(meetingStatisticsTab);
+        meetingStatsLayout->setObjectName("meetingStatsLayout");
+        meetingChartControlsGroupBox = new QGroupBox(meetingStatisticsTab);
+        meetingChartControlsGroupBox->setObjectName("meetingChartControlsGroupBox");
+        meetingChartControlsLayout = new QHBoxLayout(meetingChartControlsGroupBox);
+        meetingChartControlsLayout->setObjectName("meetingChartControlsLayout");
+        meetingChartTypeLabel = new QLabel(meetingChartControlsGroupBox);
+        meetingChartTypeLabel->setObjectName("meetingChartTypeLabel");
+
+        meetingChartControlsLayout->addWidget(meetingChartTypeLabel);
+
+        meetingChartTypeComboBox = new QComboBox(meetingChartControlsGroupBox);
+        meetingChartTypeComboBox->addItem(QString());
+        meetingChartTypeComboBox->addItem(QString());
+        meetingChartTypeComboBox->setObjectName("meetingChartTypeComboBox");
+
+        meetingChartControlsLayout->addWidget(meetingChartTypeComboBox);
+
+        meetingChartFilterLabel = new QLabel(meetingChartControlsGroupBox);
+        meetingChartFilterLabel->setObjectName("meetingChartFilterLabel");
+
+        meetingChartControlsLayout->addWidget(meetingChartFilterLabel);
+
+        meetingChartFilterComboBox = new QComboBox(meetingChartControlsGroupBox);
+        meetingChartFilterComboBox->addItem(QString());
+        meetingChartFilterComboBox->addItem(QString());
+        meetingChartFilterComboBox->addItem(QString());
+        meetingChartFilterComboBox->setObjectName("meetingChartFilterComboBox");
+
+        meetingChartControlsLayout->addWidget(meetingChartFilterComboBox);
+
+        meetingToggleLegendCheckBox = new QCheckBox(meetingChartControlsGroupBox);
+        meetingToggleLegendCheckBox->setObjectName("meetingToggleLegendCheckBox");
+        meetingToggleLegendCheckBox->setChecked(true);
+
+        meetingChartControlsLayout->addWidget(meetingToggleLegendCheckBox);
+
+        meetingChartRefreshButton = new QPushButton(meetingChartControlsGroupBox);
+        meetingChartRefreshButton->setObjectName("meetingChartRefreshButton");
+
+        meetingChartControlsLayout->addWidget(meetingChartRefreshButton);
+
+
+        meetingStatsLayout->addWidget(meetingChartControlsGroupBox);
+
+        meetingChartView = new QChartView(meetingStatisticsTab);
+        meetingChartView->setObjectName("meetingChartView");
+        sizePolicy2.setHeightForWidth(meetingChartView->sizePolicy().hasHeightForWidth());
+        meetingChartView->setSizePolicy(sizePolicy2);
+        meetingChartView->setMinimumSize(QSize(0, 400));
+
+        meetingStatsLayout->addWidget(meetingChartView);
+
+        meetingHoverDescriptionLabel = new QLabel(meetingStatisticsTab);
+        meetingHoverDescriptionLabel->setObjectName("meetingHoverDescriptionLabel");
+        meetingHoverDescriptionLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        meetingStatsLayout->addWidget(meetingHoverDescriptionLabel);
+
+        meetingTabWidget->addTab(meetingStatisticsTab, QString());
 
         meetingPageLayout->addWidget(meetingTabWidget);
 
@@ -911,10 +1138,10 @@ public:
 
         retranslateUi(MainWindow);
 
-        mainStackedWidget->setCurrentIndex(2);
-        clientTabWidget->setCurrentIndex(1);
-        trainingTabWidget->setCurrentIndex(1);
-        meetingTabWidget->setCurrentIndex(0);
+        mainStackedWidget->setCurrentIndex(1);
+        clientTabWidget->setCurrentIndex(3);
+        trainingTabWidget->setCurrentIndex(2);
+        meetingTabWidget->setCurrentIndex(3);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -960,6 +1187,20 @@ public:
         clientSelectedDateLabel->setText(QCoreApplication::translate("MainWindow", "Selected date: ", nullptr));
         clientConsultationCountLabel->setText(QCoreApplication::translate("MainWindow", "Consultations: 0", nullptr));
         clientTabWidget->setTabText(clientTabWidget->indexOf(clientCalendarTab), QCoreApplication::translate("MainWindow", "Consultation Calendar", nullptr));
+        clientChartControlsGroupBox->setTitle(QCoreApplication::translate("MainWindow", "Chart Options", nullptr));
+        clientChartTypeLabel->setText(QCoreApplication::translate("MainWindow", "Chart Type:", nullptr));
+        clientChartTypeComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Pie Chart", nullptr));
+        clientChartTypeComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "Bar Chart", nullptr));
+
+        clientChartFilterLabel->setText(QCoreApplication::translate("MainWindow", "Filter By:", nullptr));
+        clientChartFilterComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Sector", nullptr));
+        clientChartFilterComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "Consultant", nullptr));
+        clientChartFilterComboBox->setItemText(2, QCoreApplication::translate("MainWindow", "Date", nullptr));
+
+        clientToggleLegendCheckBox->setText(QCoreApplication::translate("MainWindow", "Show Legend", nullptr));
+        clientChartRefreshButton->setText(QCoreApplication::translate("MainWindow", "Refresh", nullptr));
+        clientHoverDescriptionLabel->setText(QCoreApplication::translate("MainWindow", "Hover over a chart element to see details", nullptr));
+        clientTabWidget->setTabText(clientTabWidget->indexOf(clientStatisticsTab), QCoreApplication::translate("MainWindow", "Statistics", nullptr));
         trainingPriceLabel->setText(QCoreApplication::translate("MainWindow", "Price", nullptr));
         trainingDescriptionLabel->setText(QCoreApplication::translate("MainWindow", "Description", nullptr));
         trainingTimeLabel->setText(QCoreApplication::translate("MainWindow", "Time", nullptr));
@@ -981,6 +1222,20 @@ public:
         trainingUpdateButton->setText(QCoreApplication::translate("MainWindow", "Update", nullptr));
         trainingExportButton->setText(QCoreApplication::translate("MainWindow", "PDF", nullptr));
         trainingTabWidget->setTabText(trainingTabWidget->indexOf(trainingManageTab), QCoreApplication::translate("MainWindow", "Manage Training", nullptr));
+        trainingChartControlsGroupBox->setTitle(QCoreApplication::translate("MainWindow", "Chart Options", nullptr));
+        trainingChartTypeLabel->setText(QCoreApplication::translate("MainWindow", "Chart Type:", nullptr));
+        trainingChartTypeComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Pie Chart", nullptr));
+        trainingChartTypeComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "Bar Chart", nullptr));
+
+        trainingChartFilterLabel->setText(QCoreApplication::translate("MainWindow", "Filter By:", nullptr));
+        trainingChartFilterComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Trainer", nullptr));
+        trainingChartFilterComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "Price", nullptr));
+        trainingChartFilterComboBox->setItemText(2, QCoreApplication::translate("MainWindow", "Date", nullptr));
+
+        trainingToggleLegendCheckBox->setText(QCoreApplication::translate("MainWindow", "Show Legend", nullptr));
+        trainingChartRefreshButton->setText(QCoreApplication::translate("MainWindow", "Refresh", nullptr));
+        trainingHoverDescriptionLabel->setText(QCoreApplication::translate("MainWindow", "Hover over a chart element to see details", nullptr));
+        trainingTabWidget->setTabText(trainingTabWidget->indexOf(trainingStatisticsTab), QCoreApplication::translate("MainWindow", "Statistics", nullptr));
         meetingTitleLabel->setText(QCoreApplication::translate("MainWindow", "Title", nullptr));
         meetingOrganiserLabel->setText(QCoreApplication::translate("MainWindow", "Organiser", nullptr));
         meetingParticipantLabel->setText(QCoreApplication::translate("MainWindow", "Participant", nullptr));
@@ -1025,6 +1280,20 @@ public:
         meetingChatSendButton->setText(QCoreApplication::translate("MainWindow", "Send", nullptr));
         meetingChatClearButton->setText(QCoreApplication::translate("MainWindow", "Clear Chat", nullptr));
         meetingTabWidget->setTabText(meetingTabWidget->indexOf(meetingChatTab), QCoreApplication::translate("MainWindow", "Chat Assistant", nullptr));
+        meetingChartControlsGroupBox->setTitle(QCoreApplication::translate("MainWindow", "Chart Options", nullptr));
+        meetingChartTypeLabel->setText(QCoreApplication::translate("MainWindow", "Chart Type:", nullptr));
+        meetingChartTypeComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Pie Chart", nullptr));
+        meetingChartTypeComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "Bar Chart", nullptr));
+
+        meetingChartFilterLabel->setText(QCoreApplication::translate("MainWindow", "Filter By:", nullptr));
+        meetingChartFilterComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Organiser", nullptr));
+        meetingChartFilterComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "Agenda", nullptr));
+        meetingChartFilterComboBox->setItemText(2, QCoreApplication::translate("MainWindow", "Date", nullptr));
+
+        meetingToggleLegendCheckBox->setText(QCoreApplication::translate("MainWindow", "Show Legend", nullptr));
+        meetingChartRefreshButton->setText(QCoreApplication::translate("MainWindow", "Refresh", nullptr));
+        meetingHoverDescriptionLabel->setText(QCoreApplication::translate("MainWindow", "Hover over a chart element to see details", nullptr));
+        meetingTabWidget->setTabText(meetingTabWidget->indexOf(meetingStatisticsTab), QCoreApplication::translate("MainWindow", "Statistics", nullptr));
     } // retranslateUi
 
 };
