@@ -30,35 +30,6 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     applyLightTheme();
     setAttribute(Qt::WA_DeleteOnClose);
 
-    // Initialize chart widgets with layouts
-    if (!ui->clientSectorChartWidget->layout()) {
-        ui->clientSectorChartWidget->setLayout(new QVBoxLayout(ui->clientSectorChartWidget));
-    }
-    if (!ui->clientTimeChartWidget->layout()) {
-        ui->clientTimeChartWidget->setLayout(new QVBoxLayout(ui->clientTimeChartWidget));
-    }
-    if (!ui->clientConsultantChartWidget->layout()) {
-        ui->clientConsultantChartWidget->setLayout(new QVBoxLayout(ui->clientConsultantChartWidget));
-    }
-    if (!ui->trainingTypeChartWidget->layout()) {
-        ui->trainingTypeChartWidget->setLayout(new QVBoxLayout(ui->trainingTypeChartWidget));
-    }
-    if (!ui->trainingPriceChartWidget->layout()) {
-        ui->trainingPriceChartWidget->setLayout(new QVBoxLayout(ui->trainingPriceChartWidget));
-    }
-    if (!ui->trainingTrainerChartWidget->layout()) {
-        ui->trainingTrainerChartWidget->setLayout(new QVBoxLayout(ui->trainingTrainerChartWidget));
-    }
-    if (!ui->meetingAgendaChartWidget->layout()) {
-        ui->meetingAgendaChartWidget->setLayout(new QVBoxLayout(ui->meetingAgendaChartWidget));
-    }
-    if (!ui->meetingMonthChartWidget->layout()) {
-        ui->meetingMonthChartWidget->setLayout(new QVBoxLayout(ui->meetingMonthChartWidget));
-    }
-    if (!ui->meetingOrganizerChartWidget->layout()) {
-        ui->meetingOrganizerChartWidget->setLayout(new QVBoxLayout(ui->meetingOrganizerChartWidget));
-    }
-
     clientManager->setNotificationManager(notificationManager);
     trainingManager->setNotificationManager(notificationManager);
     meetingManager->setNotificationManager(notificationManager);
@@ -111,61 +82,26 @@ void MainWindow::setupUiConnections()
     connect(ui->statisticsButton, &QPushButton::clicked, this, &MainWindow::on_statisticsButton_clicked);
     connect(ui->menuButton, &QPushButton::clicked, this, &MainWindow::toggleSidebar);
     connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
-    
-    // Stats tab change connections for embedded charts
-    connect(ui->clientTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
-        if (index == ui->clientTabWidget->indexOf(ui->clientStatsTab)) {
-            updateEmbeddedCharts();
-        }
-    });
-    
-    connect(ui->trainingTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
-        if (index == ui->trainingTabWidget->indexOf(ui->trainingStatsTab)) {
-            updateEmbeddedCharts();
-        }
-    });
-    
-    connect(ui->meetingTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
-        if (index == ui->meetingTabWidget->indexOf(ui->meetingStatsTab)) {
-            updateEmbeddedCharts();
-        }
-    });
-    
-    // Fixed direct connections for chat buttons to avoid "no matching signal" errors
     connect(ui->meetingChatSendButton, &QPushButton::clicked, this, &MainWindow::on_chatSendButton_clicked);
     connect(ui->meetingChatClearButton, &QPushButton::clicked, this, &MainWindow::on_chatClearButton_clicked);
-    
-    qDebug() << "All UI connections established successfully";
 }
 
 void MainWindow::on_clientSectionButton_clicked()
 {
     ui->mainStackedWidget->setCurrentWidget(ui->clientPage);
     clientManager->refresh();
-    // Update charts if we're on the stats tab
-    if (ui->clientTabWidget->currentWidget() == ui->clientStatsTab) {
-        updateEmbeddedCharts();
-    }
 }
 
 void MainWindow::on_trainingSectionButton_clicked()
 {
     ui->mainStackedWidget->setCurrentWidget(ui->trainingPage);
     trainingManager->refresh();
-    // Update charts if we're on the stats tab
-    if (ui->trainingTabWidget->currentWidget() == ui->trainingStatsTab) {
-        updateEmbeddedCharts();
-    }
 }
 
 void MainWindow::on_meetingSectionButton_clicked()
 {
     ui->mainStackedWidget->setCurrentWidget(ui->meetingPage);
     meetingManager->refreshTableWidget();
-    // Update charts if we're on the stats tab
-    if (ui->meetingTabWidget->currentWidget() == ui->meetingStatsTab) {
-        updateEmbeddedCharts();
-    }
 }
 
 void MainWindow::on_statisticsButton_clicked()
@@ -176,90 +112,43 @@ void MainWindow::on_statisticsButton_clicked()
     }
     
     try {
-        // Create chart window if it doesn't exist yet or if it was closed/deleted
-        if (!chartWindow || !chartWindow->isVisible()) {
-            // If we had a previous chart window that was closed but not nullified
-            if (chartWindow) {
-                delete chartWindow;
-                chartWindow = nullptr;
-            }
-            
-            // Create a new chart window and track its close event
+        // Create chart window if it doesn't exist yet
+        if (!chartWindow) {
             chartWindow = new ChartWindow(this);
-            
-            // Connect the destroyed signal to reset our pointer
-            connect(chartWindow, &QObject::destroyed, this, [this]() {
-                qDebug() << "ChartWindow destroyed, resetting pointer";
-                chartWindow = nullptr;
-            });
         }
         
-        // Ensure chart window stays on top and is activated
-        chartWindow->setWindowFlags(chartWindow->windowFlags() | Qt::WindowStaysOnTopHint);
+        // Show chart window with error handling
         chartWindow->show();
-        chartWindow->raise();
-        chartWindow->activateWindow();
         
-        // Find the combo boxes with error handling
+        // Find the combo box with error handling
         QComboBox* statsComboBox = chartWindow->findChild<QComboBox*>("statsTypeComboBox");
-        QComboBox* chartTypeComboBox = chartWindow->findChild<QComboBox*>("chartTypeComboBox");
-        QComboBox* detailComboBox = chartWindow->findChild<QComboBox*>("chartDetailComboBox");
-        
-        if (!statsComboBox || !chartTypeComboBox || !detailComboBox) {
-            qDebug() << "Warning: One or more combo boxes not found in ChartWindow";
+        if (!statsComboBox) {
+            qDebug() << "Error: statsTypeComboBox not found in ChartWindow";
             return;
         }
         
-        // Block signals during configuration
-        statsComboBox->blockSignals(true);
-        chartTypeComboBox->blockSignals(true);
-        detailComboBox->blockSignals(true);
-        
-        // Set to Meeting Statistics by default which tends to be more reliable
+        // Set to default statistics type that's less likely to crash
         int meetingStatsIndex = statsComboBox->findText("Meeting Statistics");
         if (meetingStatsIndex >= 0) {
             statsComboBox->setCurrentIndex(meetingStatsIndex);
-        }
-        
-        // Set to Bar Chart which is generally more stable than pie charts
-        int barChartIndex = chartTypeComboBox->findText("Bar Chart");
-        if (barChartIndex >= 0) {
-            chartTypeComboBox->setCurrentIndex(barChartIndex);
-        }
-        
-        // Re-enable signals
-        statsComboBox->blockSignals(false);
-        chartTypeComboBox->blockSignals(false);
-        detailComboBox->blockSignals(false);
-        
-        // Use reset button to safely refresh with our new settings
-        QPushButton* resetButton = chartWindow->findChild<QPushButton*>("resetButton");
-        if (resetButton) {
-            resetButton->click();
         } else {
-            QPushButton* refreshButton = chartWindow->findChild<QPushButton*>("refreshButton");
-            if (refreshButton) {
-                refreshButton->click();
+            // If "Meeting Statistics" not found, use the first item
+            if (statsComboBox->count() > 0) {
+                statsComboBox->setCurrentIndex(0);
             }
+        }
+        
+        // Trigger chart update
+        QPushButton* refreshButton = chartWindow->findChild<QPushButton*>("refreshButton");
+        if (refreshButton) {
+            refreshButton->click();
         }
     } catch (const std::exception& e) {
         qDebug() << "Exception in on_statisticsButton_clicked: " << e.what();
-        QMessageBox::critical(this, "Chart Error", "An error occurred opening statistics: " + QString(e.what()));
-        
-        // Clean up in case of exception
-        if (chartWindow) {
-            delete chartWindow;
-            chartWindow = nullptr;
-        }
+        QMessageBox::critical(this, "Error", "An error occurred opening statistics: " + QString(e.what()));
     } catch (...) {
         qDebug() << "Unknown exception in on_statisticsButton_clicked";
-        QMessageBox::critical(this, "Chart Error", "An unknown error occurred opening statistics");
-        
-        // Clean up in case of exception
-        if (chartWindow) {
-            delete chartWindow;
-            chartWindow = nullptr;
-        }
+        QMessageBox::critical(this, "Error", "An unknown error occurred opening statistics");
     }
 }
 
@@ -278,9 +167,6 @@ void MainWindow::toggleTheme()
         applyLightTheme();
         ui->themeButton->setText("Dark Theme");
     }
-    
-    // Update the charts to match the new theme
-    updateEmbeddedCharts();
 }
 
 void MainWindow::applyLightTheme()
@@ -316,162 +202,30 @@ void MainWindow::applyLightTheme()
 void MainWindow::applyDarkTheme()
 {
     qApp->setStyleSheet(R"(
-        QWidget { 
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2D2D30, stop:1 #1E1E1E); 
-            color: #E0E0E0; 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-        }
-        QPushButton { 
-            background-color: #0E639C; 
-            color: white; 
-            border: 1px solid #0E639C; 
-            border-radius: 5px; 
-            padding: 6px; 
-            font-weight: bold; 
-        }
-        QPushButton:hover { 
-            background-color: #1177BB; 
-        }
-        QPushButton:pressed { 
-            background-color: #094F7E; 
-        }
-        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { 
-            background-color: #3E3E42; 
-            border: 1px solid #555555; 
-            border-radius: 4px; 
-            padding: 4px; 
-            color: #E0E0E0; 
-        }
-        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { 
-            border: 2px solid #007ACC; 
-        }
-        QTableView, QTableWidget { 
-            background-color: #252526; 
-            border: 1px solid #3E3E42; 
-            border-radius: 4px; 
-            selection-background-color: #0E639C; 
-            selection-color: #FFFFFF; 
-            gridline-color: #3E3E42;
-            alternate-background-color: #2D2D30;
-        }
-        QHeaderView::section { 
-            background-color: #3E3E42; 
-            color: white; 
-            padding: 5px; 
-            border: none; 
-        }
-        QCalendarWidget { 
-            background-color: #252526; 
-            border: 1px solid #3E3E42; 
-            border-radius: 4px; 
-        }
-        QCalendarWidget QToolButton { 
-            background-color: #0E639C; 
-            color: white; 
-            border-radius: 3px; 
-        }
-        QTabWidget::pane { 
-            border: 1px solid #3E3E42; 
-            border-radius: 4px; 
-        }
-        QTabBar::tab { 
-            background-color: #2D2D30; 
-            color: #E0E0E0; 
-            padding: 6px; 
-            border-top-left-radius: 4px; 
-            border-top-right-radius: 4px; 
-        }
-        QTabBar::tab:selected { 
-            background-color: #0E639C; 
-            color: white; 
-        }
-        QTextEdit { 
-            background-color: #252526; 
-            border: 1px solid #3E3E42; 
-            border-radius: 4px; 
-            color: #E0E0E0; 
-            selection-background-color: #264F78;
-        }
-        QChartView { 
-            background-color: #252526; 
-            border: 1px solid #3E3E42; 
-            border-radius: 4px; 
-        }
-        QLabel { 
-            font-size: 10pt; 
-            padding: 2px; 
-        }
+        QWidget { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F28C6F, stop:1 #5C5C5C); color: #F0F0F0; font-family: 'Segoe UI', Arial, sans-serif; }
+        QPushButton { background-color: #F28C6F; color: white; border: 1px solid #D96C53; border-radius: 5px; padding: 6px; font-weight: bold; }
+        QPushButton:hover { background-color: #F5A38A; }
+        QPushButton:pressed { background-color: #D96C53; }
+        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; padding: 4px; color: #F0F0F0; }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border: 2px solid #F28C6F; }
+        QTableView, QTableWidget { background-color: #6A6A6A; border: 1px solid #4A4A4A; border-radius: 4px; selection-background-color: #F28C6F; selection-color: #F0F0F0; }
+        QHeaderView::section { background-color: #F28C6F; color: white; padding: 5px; border: none; }
+        QCalendarWidget { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; }
+        QCalendarWidget QToolButton { background-color: #F28C6F; color: white; border-radius: 3px; }
+        QTabWidget::pane { border: 1px solid #F28C6F; border-radius: 4px; }
+        QTabBar::tab { background-color: #7A7A7A; color: #F0F0F0; padding: 6px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
+        QTabBar::tab:selected { background-color: #F28C6F; color: white; }
+        QTextEdit { background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; color: #F0F0F0; }
+        QChartView { background-color: #6A6A6A; border: 1px solid #4A4A4A; border-radius: 4px; }
+        QLabel { font-size: 10pt; padding: 2px; }
         QLabel[formLabel="true"], #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
         #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel,
         #meetingTitleLabel, #meetingOrganiserLabel, #meetingParticipantLabel, #meetingAgendaLabel, #meetingDurationLabel, #meetingDateLabel {
-            font-size: 12pt; 
-            font-weight: bold; 
-            color: #007ACC; 
-            text-decoration: underline; 
-            padding: 2px; 
-            qproperty-alignment: AlignRight; 
-        }
-        #headerLabel { 
-            font-size: 18pt; 
-            font-weight: bold; 
-            color: #007ACC; 
-            qproperty-alignment: AlignCenter; 
-        }
-        #trainingNotificationLabel { 
-            font-size: 10pt; 
-            font-weight: bold; 
-            color: #007ACC; 
-        }
-        QFrame#header, QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { 
-            border: 1px solid #3E3E42; 
-            border-radius: 5px; 
-            background-color: #2D2D30;
-        }
-        QFrame#sideMenu { 
-            background-color: #252526; 
-        }
-        QScrollBar:vertical {
-            background: #2D2D30;
-            width: 10px;
-            margin: 0px;
-        }
-        QScrollBar::handle:vertical {
-            background: #3E3E42;
-            min-height: 20px;
-            border-radius: 5px;
-        }
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-            height: 0px;
-        }
-        QScrollBar:horizontal {
-            background: #2D2D30;
-            height: 10px;
-            margin: 0px;
-        }
-        QScrollBar::handle:horizontal {
-            background: #3E3E42;
-            min-width: 20px;
-            border-radius: 5px;
-        }
-        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-            width: 0px;
-        }
-        QMenu {
-            background-color: #252526;
-            border: 1px solid #3E3E42;
-        }
-        QMenu::item {
-            background-color: transparent;
-            padding: 5px 20px;
-        }
-        QMenu::item:selected {
-            background-color: #0E639C;
-        }
-        QToolTip {
-            background-color: #252526;
-            color: #E0E0E0;
-            border: 1px solid #3E3E42;
-        }
+            font-size: 12pt; font-weight: bold; color: #F28C6F; text-decoration: underline; padding: 2px; qproperty-alignment: AlignRight; }
+        #headerLabel { font-size: 18pt; font-weight: bold; color: #F28C6F; qproperty-alignment: AlignCenter; }
+        #trainingNotificationLabel { font-size: 10pt; font-weight: bold; color: #F28C6F; }
+        QFrame#header, QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { border: 2px solid #F28C6F; border-radius: 5px; }
+        QFrame#sideMenu { background-color: #7A7A7A; }
     )");
 }
 
@@ -737,585 +491,4 @@ void MainWindow::onAIResponseReceived(QNetworkReply *reply)
 ChartWindow* MainWindow::getChartWindow() const
 {
     return chartWindow;
-}
-
-void MainWindow::updateEmbeddedCharts()
-{
-    if (!m_dbConnected) {
-        return;
-    }
-    
-    // Update charts based on which tab is currently visible
-    if (ui->mainStackedWidget->currentWidget() == ui->clientPage && 
-        ui->clientTabWidget->currentWidget() == ui->clientStatsTab) {
-        createClientCharts();
-    }
-    else if (ui->mainStackedWidget->currentWidget() == ui->trainingPage && 
-             ui->trainingTabWidget->currentWidget() == ui->trainingStatsTab) {
-        createTrainingCharts();
-    }
-    else if (ui->mainStackedWidget->currentWidget() == ui->meetingPage && 
-             ui->meetingTabWidget->currentWidget() == ui->meetingStatsTab) {
-        createMeetingCharts();
-    }
-}
-
-void MainWindow::createClientCharts()
-{
-    // Create and embed client charts
-    
-    // Sector Chart
-    QChart *sectorChart = new QChart();
-    sectorChart->setTitle("Client Distribution by Sector");
-    sectorChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    // Create a pie series for client sectors
-    QPieSeries *sectorSeries = new QPieSeries();
-    
-    // Get client data from database
-    QSqlQuery query;
-    if (query.exec("SELECT SECTOR, COUNT(*) FROM CLIENTS GROUP BY SECTOR")) {
-        while (query.next()) {
-            QString sector = query.value(0).toString();
-            if (sector.isEmpty() || query.isNull(0)) {
-                sector = "Not Specified";
-            }
-            int count = query.value(1).toInt();
-            if (count > 0) {
-                sectorSeries->append(sector, count);
-            }
-        }
-        
-        sectorChart->addSeries(sectorSeries);
-        
-        // Configure appearance
-        for (QPieSlice *slice : sectorSeries->slices()) {
-            slice->setLabel(QString("%1: %2").arg(slice->label()).arg(slice->value()));
-            slice->setLabelVisible(true);
-        }
-    }
-    
-    // Create chart view and add to widget
-    QChartView *sectorChartView = new QChartView(sectorChart);
-    sectorChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the client sector chart widget
-    QLayout *sectorLayout = ui->clientSectorChartWidget->layout();
-    if (!sectorLayout) {
-        sectorLayout = new QVBoxLayout(ui->clientSectorChartWidget);
-        ui->clientSectorChartWidget->setLayout(sectorLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = sectorLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    sectorLayout->addWidget(sectorChartView);
-    
-    // Time Chart (client acquisition timeline)
-    QChart *timeChart = new QChart();
-    timeChart->setTitle("Client Acquisition Timeline");
-    timeChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    QBarSeries *timeSeries = new QBarSeries();
-    QBarSet *timeSet = new QBarSet("Clients");
-    QStringList months;
-    
-    // Get client data by month
-    query.clear();
-    if (query.exec("SELECT strftime('%m', CONSULTATION_DATE) as MONTH, COUNT(*) FROM CLIENTS GROUP BY strftime('%m', CONSULTATION_DATE) ORDER BY MONTH")) {
-        QStringList monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-        
-        while (query.next()) {
-            QString monthNum = query.value(0).toString();
-            int count = query.value(1).toInt();
-            
-            // Convert month number to name
-            bool isNumeric;
-            int monthIndex = monthNum.toInt(&isNumeric);
-            QString monthName = isNumeric && monthIndex >= 1 && monthIndex <= 12 
-                ? monthNames[monthIndex - 1] 
-                : monthNum;
-            
-            *timeSet << count;
-            months << monthName;
-        }
-        
-        timeSeries->append(timeSet);
-        timeChart->addSeries(timeSeries);
-        
-        // Set up axes
-        QBarCategoryAxis *axisX = new QBarCategoryAxis();
-        axisX->append(months);
-        timeChart->addAxis(axisX, Qt::AlignBottom);
-        timeSeries->attachAxis(axisX);
-        
-        QValueAxis *axisY = new QValueAxis();
-        int maxValue = 0;
-        for (int i = 0; i < timeSet->count(); i++) {
-            maxValue = qMax(maxValue, (int)timeSet->at(i));
-        }
-        axisY->setRange(0, maxValue > 0 ? maxValue * 1.1 : 1);
-        axisY->setLabelFormat("%d");
-        timeChart->addAxis(axisY, Qt::AlignLeft);
-        timeSeries->attachAxis(axisY);
-    }
-    
-    // Create chart view and add to widget
-    QChartView *timeChartView = new QChartView(timeChart);
-    timeChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the client time chart widget
-    QLayout *timeLayout = ui->clientTimeChartWidget->layout();
-    if (!timeLayout) {
-        timeLayout = new QVBoxLayout(ui->clientTimeChartWidget);
-        ui->clientTimeChartWidget->setLayout(timeLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = timeLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    timeLayout->addWidget(timeChartView);
-    
-    // Consultant Chart
-    QChart *consultantChart = new QChart();
-    consultantChart->setTitle("Clients by Consultant");
-    consultantChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    QBarSeries *consultantSeries = new QBarSeries();
-    QBarSet *consultantSet = new QBarSet("Clients");
-    QStringList consultants;
-    
-    // Get client data by consultant
-    query.clear();
-    if (query.exec("SELECT e.FIRST_NAME || ' ' || e.LAST_NAME AS CONSULTANT_NAME, COUNT(*) "
-                  "FROM CLIENTS c "
-                  "LEFT JOIN EMPLOYEE e ON c.CONSULTANT_ID = e.ID "
-                  "GROUP BY e.FIRST_NAME, e.LAST_NAME")) {
-        
-        while (query.next()) {
-            QString consultant = query.value(0).toString();
-            if (consultant.isEmpty() || query.isNull(0)) {
-                consultant = "Not Assigned";
-            }
-            int count = query.value(1).toInt();
-            
-            *consultantSet << count;
-            consultants << consultant;
-        }
-        
-        consultantSeries->append(consultantSet);
-        consultantChart->addSeries(consultantSeries);
-        
-        // Set up axes
-        QBarCategoryAxis *axisX = new QBarCategoryAxis();
-        axisX->append(consultants);
-        consultantChart->addAxis(axisX, Qt::AlignBottom);
-        consultantSeries->attachAxis(axisX);
-        
-        QValueAxis *axisY = new QValueAxis();
-        int maxValue = 0;
-        for (int i = 0; i < consultantSet->count(); i++) {
-            maxValue = qMax(maxValue, (int)consultantSet->at(i));
-        }
-        axisY->setRange(0, maxValue > 0 ? maxValue * 1.1 : 1);
-        axisY->setLabelFormat("%d");
-        consultantChart->addAxis(axisY, Qt::AlignLeft);
-        consultantSeries->attachAxis(axisY);
-    }
-    
-    // Create chart view and add to widget
-    QChartView *consultantChartView = new QChartView(consultantChart);
-    consultantChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the client consultant chart widget
-    QLayout *consultantLayout = ui->clientConsultantChartWidget->layout();
-    if (!consultantLayout) {
-        consultantLayout = new QVBoxLayout(ui->clientConsultantChartWidget);
-        ui->clientConsultantChartWidget->setLayout(consultantLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = consultantLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    consultantLayout->addWidget(consultantChartView);
-}
-
-void MainWindow::createTrainingCharts()
-{
-    // Create and embed training charts
-    
-    // Type Chart
-    QChart *typeChart = new QChart();
-    typeChart->setTitle("Training Distribution by Type");
-    typeChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    QPieSeries *typeSeries = new QPieSeries();
-    
-    // Get training data from database
-    QSqlQuery query;
-    if (query.exec("SELECT FORMATION, COUNT(*) FROM FORMATIONS GROUP BY FORMATION")) {
-        while (query.next()) {
-            QString type = query.value(0).toString();
-            if (type.isEmpty() || query.isNull(0)) {
-                type = "Not Specified";
-            }
-            int count = query.value(1).toInt();
-            if (count > 0) {
-                typeSeries->append(type, count);
-            }
-        }
-        
-        typeChart->addSeries(typeSeries);
-        
-        // Configure appearance
-        for (QPieSlice *slice : typeSeries->slices()) {
-            slice->setLabel(QString("%1: %2").arg(slice->label()).arg(slice->value()));
-            slice->setLabelVisible(true);
-        }
-    }
-    
-    // Create chart view and add to widget
-    QChartView *typeChartView = new QChartView(typeChart);
-    typeChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the training type chart widget
-    QLayout *typeLayout = ui->trainingTypeChartWidget->layout();
-    if (!typeLayout) {
-        typeLayout = new QVBoxLayout(ui->trainingTypeChartWidget);
-        ui->trainingTypeChartWidget->setLayout(typeLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = typeLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    typeLayout->addWidget(typeChartView);
-    
-    // Price Chart
-    QChart *priceChart = new QChart();
-    priceChart->setTitle("Price Distribution");
-    priceChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    QBarSeries *priceSeries = new QBarSeries();
-    QBarSet *priceSet = new QBarSet("Trainings");
-    QStringList priceRanges;
-    
-    // Get training data by price range
-    query.clear();
-    if (query.exec("SELECT CASE "
-                  "WHEN PRIX <= 50 THEN 'Low (≤ 50)' "
-                  "WHEN PRIX <= 100 THEN 'Medium (51-100)' "
-                  "ELSE 'High (> 100)' END AS PRICE_RANGE, COUNT(*) "
-                  "FROM FORMATIONS GROUP BY CASE "
-                  "WHEN PRIX <= 50 THEN 'Low (≤ 50)' "
-                  "WHEN PRIX <= 100 THEN 'Medium (51-100)' "
-                  "ELSE 'High (> 100)' END")) {
-        
-        while (query.next()) {
-            QString range = query.value(0).toString();
-            int count = query.value(1).toInt();
-            
-            *priceSet << count;
-            priceRanges << range;
-        }
-        
-        priceSeries->append(priceSet);
-        priceChart->addSeries(priceSeries);
-        
-        // Set up axes
-        QBarCategoryAxis *axisX = new QBarCategoryAxis();
-        axisX->append(priceRanges);
-        priceChart->addAxis(axisX, Qt::AlignBottom);
-        priceSeries->attachAxis(axisX);
-        
-        QValueAxis *axisY = new QValueAxis();
-        int maxValue = 0;
-        for (int i = 0; i < priceSet->count(); i++) {
-            maxValue = qMax(maxValue, (int)priceSet->at(i));
-        }
-        axisY->setRange(0, maxValue > 0 ? maxValue * 1.1 : 1);
-        axisY->setLabelFormat("%d");
-        priceChart->addAxis(axisY, Qt::AlignLeft);
-        priceSeries->attachAxis(axisY);
-    }
-    
-    // Create chart view and add to widget
-    QChartView *priceChartView = new QChartView(priceChart);
-    priceChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the training price chart widget
-    QLayout *priceLayout = ui->trainingPriceChartWidget->layout();
-    if (!priceLayout) {
-        priceLayout = new QVBoxLayout(ui->trainingPriceChartWidget);
-        ui->trainingPriceChartWidget->setLayout(priceLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = priceLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    priceLayout->addWidget(priceChartView);
-    
-    // Trainer Chart
-    QChart *trainerChart = new QChart();
-    trainerChart->setTitle("Trainings by Trainer");
-    trainerChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    QBarSeries *trainerSeries = new QBarSeries();
-    QBarSet *trainerSet = new QBarSet("Trainings");
-    QStringList trainers;
-    
-    // Get training data by trainer
-    query.clear();
-    if (query.exec("SELECT TRAINER, COUNT(*) FROM FORMATIONS GROUP BY TRAINER")) {
-        while (query.next()) {
-            QString trainer = query.value(0).toString();
-            if (trainer.isEmpty() || query.isNull(0)) {
-                trainer = "Not Assigned";
-            }
-            int count = query.value(1).toInt();
-            
-            *trainerSet << count;
-            trainers << trainer;
-        }
-        
-        trainerSeries->append(trainerSet);
-        trainerChart->addSeries(trainerSeries);
-        
-        // Set up axes
-        QBarCategoryAxis *axisX = new QBarCategoryAxis();
-        axisX->append(trainers);
-        trainerChart->addAxis(axisX, Qt::AlignBottom);
-        trainerSeries->attachAxis(axisX);
-        
-        QValueAxis *axisY = new QValueAxis();
-        int maxValue = 0;
-        for (int i = 0; i < trainerSet->count(); i++) {
-            maxValue = qMax(maxValue, (int)trainerSet->at(i));
-        }
-        axisY->setRange(0, maxValue > 0 ? maxValue * 1.1 : 1);
-        axisY->setLabelFormat("%d");
-        trainerChart->addAxis(axisY, Qt::AlignLeft);
-        trainerSeries->attachAxis(axisY);
-    }
-    
-    // Create chart view and add to widget
-    QChartView *trainerChartView = new QChartView(trainerChart);
-    trainerChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the training trainer chart widget
-    QLayout *trainerLayout = ui->trainingTrainerChartWidget->layout();
-    if (!trainerLayout) {
-        trainerLayout = new QVBoxLayout(ui->trainingTrainerChartWidget);
-        ui->trainingTrainerChartWidget->setLayout(trainerLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = trainerLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    trainerLayout->addWidget(trainerChartView);
-}
-
-void MainWindow::createMeetingCharts()
-{
-    // Create and embed meeting charts
-    
-    // Agenda Chart
-    QChart *agendaChart = new QChart();
-    agendaChart->setTitle("Meeting Distribution by Agenda");
-    agendaChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    QPieSeries *agendaSeries = new QPieSeries();
-    
-    // Get meeting data from database
-    QSqlQuery query;
-    if (query.exec("SELECT AGENDA, COUNT(*) FROM MEETING GROUP BY AGENDA")) {
-        while (query.next()) {
-            QString agenda = query.value(0).toString();
-            if (agenda.isEmpty() || query.isNull(0)) {
-                agenda = "Not Specified";
-            }
-            // Truncate long agenda titles
-            if (agenda.length() > 20) {
-                agenda = agenda.left(17) + "...";
-            }
-            int count = query.value(1).toInt();
-            if (count > 0) {
-                agendaSeries->append(agenda, count);
-            }
-        }
-        
-        agendaChart->addSeries(agendaSeries);
-        
-        // Configure appearance
-        for (QPieSlice *slice : agendaSeries->slices()) {
-            slice->setLabel(QString("%1: %2").arg(slice->label()).arg(slice->value()));
-            slice->setLabelVisible(true);
-        }
-    }
-    
-    // Create chart view and add to widget
-    QChartView *agendaChartView = new QChartView(agendaChart);
-    agendaChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the meeting agenda chart widget
-    QLayout *agendaLayout = ui->meetingAgendaChartWidget->layout();
-    if (!agendaLayout) {
-        agendaLayout = new QVBoxLayout(ui->meetingAgendaChartWidget);
-        ui->meetingAgendaChartWidget->setLayout(agendaLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = agendaLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    agendaLayout->addWidget(agendaChartView);
-    
-    // Month Chart
-    QChart *monthChart = new QChart();
-    monthChart->setTitle("Meeting Distribution by Month");
-    monthChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    QBarSeries *monthSeries = new QBarSeries();
-    QBarSet *monthSet = new QBarSet("Meetings");
-    QStringList months;
-    
-    // Get meeting data by month
-    query.clear();
-    if (query.exec("SELECT strftime('%m', DATEM) as MONTH, COUNT(*) FROM MEETING GROUP BY strftime('%m', DATEM) ORDER BY MONTH")) {
-        QStringList monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-        
-        while (query.next()) {
-            QString monthNum = query.value(0).toString();
-            int count = query.value(1).toInt();
-            
-            // Convert month number to name
-            bool isNumeric;
-            int monthIndex = monthNum.toInt(&isNumeric);
-            QString monthName = isNumeric && monthIndex >= 1 && monthIndex <= 12 
-                ? monthNames[monthIndex - 1] 
-                : monthNum;
-            
-            *monthSet << count;
-            months << monthName;
-        }
-        
-        monthSeries->append(monthSet);
-        monthChart->addSeries(monthSeries);
-        
-        // Set up axes
-        QBarCategoryAxis *axisX = new QBarCategoryAxis();
-        axisX->append(months);
-        monthChart->addAxis(axisX, Qt::AlignBottom);
-        monthSeries->attachAxis(axisX);
-        
-        QValueAxis *axisY = new QValueAxis();
-        int maxValue = 0;
-        for (int i = 0; i < monthSet->count(); i++) {
-            maxValue = qMax(maxValue, (int)monthSet->at(i));
-        }
-        axisY->setRange(0, maxValue > 0 ? maxValue * 1.1 : 1);
-        axisY->setLabelFormat("%d");
-        monthChart->addAxis(axisY, Qt::AlignLeft);
-        monthSeries->attachAxis(axisY);
-    }
-    
-    // Create chart view and add to widget
-    QChartView *monthChartView = new QChartView(monthChart);
-    monthChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the meeting month chart widget
-    QLayout *monthLayout = ui->meetingMonthChartWidget->layout();
-    if (!monthLayout) {
-        monthLayout = new QVBoxLayout(ui->meetingMonthChartWidget);
-        ui->meetingMonthChartWidget->setLayout(monthLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = monthLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    monthLayout->addWidget(monthChartView);
-    
-    // Organizer Chart
-    QChart *organizerChart = new QChart();
-    organizerChart->setTitle("Meetings by Organizer");
-    organizerChart->setAnimationOptions(QChart::SeriesAnimations);
-    
-    QBarSeries *organizerSeries = new QBarSeries();
-    QBarSet *organizerSet = new QBarSet("Meetings");
-    QStringList organizers;
-    
-    // Get meeting data by organizer
-    query.clear();
-    if (query.exec("SELECT ORGANISER, COUNT(*) FROM MEETING GROUP BY ORGANISER")) {
-        while (query.next()) {
-            QString organizer = query.value(0).toString();
-            if (organizer.isEmpty() || query.isNull(0)) {
-                organizer = "Not Assigned";
-            }
-            int count = query.value(1).toInt();
-            
-            *organizerSet << count;
-            organizers << organizer;
-        }
-        
-        organizerSeries->append(organizerSet);
-        organizerChart->addSeries(organizerSeries);
-        
-        // Set up axes
-        QBarCategoryAxis *axisX = new QBarCategoryAxis();
-        axisX->append(organizers);
-        organizerChart->addAxis(axisX, Qt::AlignBottom);
-        organizerSeries->attachAxis(axisX);
-        
-        QValueAxis *axisY = new QValueAxis();
-        int maxValue = 0;
-        for (int i = 0; i < organizerSet->count(); i++) {
-            maxValue = qMax(maxValue, (int)organizerSet->at(i));
-        }
-        axisY->setRange(0, maxValue > 0 ? maxValue * 1.1 : 1);
-        axisY->setLabelFormat("%d");
-        organizerChart->addAxis(axisY, Qt::AlignLeft);
-        organizerSeries->attachAxis(axisY);
-    }
-    
-    // Create chart view and add to widget
-    QChartView *organizerChartView = new QChartView(organizerChart);
-    organizerChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Find the layout of the meeting organizer chart widget
-    QLayout *organizerLayout = ui->meetingOrganizerChartWidget->layout();
-    if (!organizerLayout) {
-        organizerLayout = new QVBoxLayout(ui->meetingOrganizerChartWidget);
-        ui->meetingOrganizerChartWidget->setLayout(organizerLayout);
-    } else {
-        // Clear any existing widgets in the layout
-        QLayoutItem *child;
-        while ((child = organizerLayout->takeAt(0)) != nullptr) {
-            delete child->widget();
-            delete child;
-        }
-    }
-    organizerLayout->addWidget(organizerChartView);
 }

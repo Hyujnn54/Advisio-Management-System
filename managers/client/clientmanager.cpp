@@ -144,21 +144,12 @@ void ClientManager::refresh()
 void ClientManager::showStatistics()
 {
     if (!m_dbConnected) {
-        QMessageBox::warning(nullptr, "Database Error", "Cannot show statistics: Database is not connected.");
         return;
     }
-    
-    // Create chart window if it doesn't exist, or show it if it already exists
     if (!chartWindow) {
         chartWindow = new ChartWindow(qobject_cast<QWidget*>(parent()));
     }
-    
-    // Show the chart window
     chartWindow->show();
-    
-    // Set focus to ensure window is in front
-    chartWindow->raise();
-    chartWindow->activateWindow();
 }
 
 void ClientManager::on_clientAddButton_clicked()

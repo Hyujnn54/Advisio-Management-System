@@ -9,14 +9,6 @@
 #include "ui/chartwindow/chartwindow.h"
 #include <QMainWindow>
 #include <QNetworkAccessManager>
-#include <QtCharts>
-#include <QChartView>
-#include <QPieSeries>
-#include <QPieSlice>
-#include <QBarSeries>
-#include <QBarSet>
-#include <QBarCategoryAxis>
-#include <QValueAxis>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -54,10 +46,6 @@ private:
     void appendChatMessage(const QString &message, bool isBot = false);
     meeting createMeetingFromInput(const QString &input);
     bool validateMeetingInput(const QStringList &parts, QString &errorMessage);
-    void updateEmbeddedCharts();
-    void createClientCharts();
-    void createTrainingCharts();
-    void createMeetingCharts();
 
     Ui::MainWindow *ui;
     bool m_dbConnected;
