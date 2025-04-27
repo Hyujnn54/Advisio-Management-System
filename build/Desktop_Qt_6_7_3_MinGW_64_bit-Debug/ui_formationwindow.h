@@ -444,10 +444,29 @@ public:
         waiting_room->setObjectName("waiting_room");
         setText = new QPlainTextEdit(waiting_room);
         setText->setObjectName("setText");
-        setText->setGeometry(QRect(170, 180, 104, 70));
+        setText->setGeometry(QRect(170, 180, 221, 91));
         wrr = new QPushButton(waiting_room);
         wrr->setObjectName("wrr");
         wrr->setGeometry(QRect(230, 290, 80, 18));
+        wrr->setStyleSheet(QString::fromUtf8("QPushButton {\n"
+"        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F44336, stop:1 #D32F2F);\n"
+"        color: white;\n"
+"        border: 2px solid #B71C1C;\n"
+"        border-radius: 8px;\n"
+"        padding: 6px;\n"
+"        font-weight: bold;\n"
+"        font-size: 12pt;\n"
+"        box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);\n"
+"      }\n"
+"      QPushButton:hover {\n"
+"        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #EF5350, stop:1 #E53935);\n"
+"        box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.4);\n"
+"      }\n"
+"      QPushButton:pressed {\n"
+"        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #B71C1C, stop:1 #9E1212);\n"
+"        border: 2px solid #8E0000;\n"
+"        box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.3);\n"
+"      }"));
         tabWidget->addTab(waiting_room, QString());
 
         verticalLayout_5->addWidget(tabWidget);
@@ -458,7 +477,7 @@ public:
         formationwindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(formationwindow);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1113, 21));
+        menubar->setGeometry(QRect(0, 0, 1113, 17));
         formationwindow->setMenuBar(menubar);
         statusbar = new QStatusBar(formationwindow);
         statusbar->setObjectName("statusbar");

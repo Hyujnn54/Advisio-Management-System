@@ -316,7 +316,14 @@ void FormationWindow::updateWaitingRoomCount()
     if (!db.isOpen()) {
         qDebug() << "Database not connected";
         ui->setText->setPlainText("Waiting Room: Database Error");
-        ui->setText->setStyleSheet("font-weight: bold; color: white; background-color: #D93025; border: 1px solid #D93025; border-radius: 4px; padding: 4px;");
+        ui->setText->setStyleSheet(
+            "QPlainTextEdit { "
+            "font-weight: bold; font-size: 14pt; color: white; "
+            "background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #D93025, stop:1 #B71C1C); "
+            "border: 2px solid #B71C1C; border-radius: 12px; padding: 12px; "
+            "box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3); "
+            "}"
+            );
         updateNotificationCount(1, "Database connection lost in updateWaitingRoomCount");
         return;
     }
@@ -331,7 +338,14 @@ void FormationWindow::updateWaitingRoomCount()
         qDebug() << "Failed to retrieve WR count for ID 1:" << query.lastError().text() << "Query:" << query.lastQuery();
         waitingCount = 0;
         ui->setText->setPlainText("Waiting Room: Query Error");
-        ui->setText->setStyleSheet("font-weight: bold; color: white; background-color: #D93025; border: 1px solid #D93025; border-radius: 4px; padding: 4px;");
+        ui->setText->setStyleSheet(
+            "QPlainTextEdit { "
+            "font-weight: bold; font-size: 14pt; color: white; "
+            "background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #D93025, stop:1 #B71C1C); "
+            "border: 2px solid #B71C1C; border-radius: 12px; padding: 12px; "
+            "box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3); "
+            "}"
+            );
         updateNotificationCount(1, "Failed to retrieve waiting room count: " + query.lastError().text());
         return;
     }
@@ -342,14 +356,40 @@ void FormationWindow::updateWaitingRoomCount()
                               QString("Waiting Room: %1 (MAX)").arg(waitingCount) :
                               QString("Waiting Room: %1").arg(waitingCount);
     ui->setText->setPlainText(displayText);
+
     if (waitingCount >= MAX_COUNT) {
-        ui->setText->setStyleSheet("font-weight: bold; color: white; background-color: #D93025; border: 1px solid #D93025; border-radius: 4px; padding: 4px;");
+        ui->setText->setStyleSheet(
+            "QPlainTextEdit { "
+            "font-weight: bold; font-size: 14pt; color: white; "
+            "background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #D93025, stop:1 #B71C1C); "
+            "border: 2px solid #B71C1C; border-radius: 12px; padding: 12px; "
+            "box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3); "
+            "}"
+            );
     } else if (waitingCount > 0) {
-        ui->setText->setStyleSheet("font-weight: bold; color: white; background-color: #FF9800; border: 1px solid #FF9800; border-radius: 4px; padding: 4px;");
+        ui->setText->setStyleSheet(
+            "QPlainTextEdit { "
+            "font-weight: bold; font-size: 14pt; color: white; "
+            "background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #FF9800, stop:1 #F57C00); "
+            "border: 2px solid #F57C00; border-radius: 12px; padding: 12px; "
+            "box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3); "
+            "}"
+            );
     } else {
         ui->setText->setStyleSheet(isDarkTheme ?
-                                       "font-weight: bold; color: #F0F0F0; background-color: #6A6A6A; border: 1px solid #F28C6F; border-radius: 4px; padding: 4px;" :
-                                       "font-weight: bold; color: #3A5DAE; background-color: #F5F7FA; border: 1px solid #3A5DAE; border-radius: 4px; padding: 4px;");
+                                       "QPlainTextEdit { "
+                                       "font-weight: bold; font-size: 14pt; color: #F0F0F0; "
+                                       "background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #7A7A7A, stop:1 #6A6A6A); "
+                                       "border: 2px solid #F28C6F; border-radius: 12px; padding: 12px; "
+                                       "box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3); "
+                                       "}" :
+                                       "QPlainTextEdit { "
+                                       "font-weight: bold; font-size: 14pt; color: #3A5DAE; "
+                                       "background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F5F7FA, stop:1 #E6ECF5); "
+                                       "border: 2px solid #3A5DAE; border-radius: 12px; padding: 12px; "
+                                       "box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3); "
+                                       "}"
+                                   );
     }
     qDebug() << "Updated UI with waiting room count:" << waitingCount;
 

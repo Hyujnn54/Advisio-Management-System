@@ -637,8 +637,8 @@ border-color: rgb(0, 0, 0);</string>
              <rect>
               <x>170</x>
               <y>180</y>
-              <width>104</width>
-              <height>70</height>
+              <width>221</width>
+              <height>91</height>
              </rect>
             </property>
             <property name="plainText">
@@ -653,6 +653,27 @@ border-color: rgb(0, 0, 0);</string>
               <width>80</width>
               <height>18</height>
              </rect>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F44336, stop:1 #D32F2F);
+        color: white;
+        border: 2px solid #B71C1C;
+        border-radius: 8px;
+        padding: 6px;
+        font-weight: bold;
+        font-size: 12pt;
+        box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+      }
+      QPushButton:hover {
+        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #EF5350, stop:1 #E53935);
+        box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.4);
+      }
+      QPushButton:pressed {
+        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #B71C1C, stop:1 #9E1212);
+        border: 2px solid #8E0000;
+        box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }</string>
             </property>
             <property name="text">
              <string>-</string>
@@ -673,7 +694,7 @@ border-color: rgb(0, 0, 0);</string>
      <x>0</x>
      <y>0</y>
      <width>1113</width>
-     <height>21</height>
+     <height>17</height>
     </rect>
    </property>
   </widget>
