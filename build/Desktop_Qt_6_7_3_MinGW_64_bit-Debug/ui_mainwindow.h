@@ -27,6 +27,7 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QRadioButton>
 #include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStackedWidget>
@@ -63,6 +64,7 @@ public:
     QPushButton *clientSectionButton;
     QPushButton *trainingSectionButton;
     QPushButton *meetingSectionButton;
+    QPushButton *employeeSectionButton;
     QPushButton *reportsButton;
     QPushButton *settingsButton;
     QPushButton *themeButton;
@@ -219,6 +221,62 @@ public:
     QPushButton *meetingChartRefreshButton;
     QChartView *meetingChartView;
     QLabel *meetingHoverDescriptionLabel;
+    QWidget *employeePage;
+    QVBoxLayout *employeePageLayout;
+    QTabWidget *employeeTabWidget;
+    QWidget *AddEmployee;
+    QGridLayout *gridLayout;
+    QLineEdit *hiddenId;
+    QLineEdit *lineEdit_salaire;
+    QDateEdit *dateEdit_hiring;
+    QLabel *label_8;
+    QLabel *label_3;
+    QLineEdit *lineEdit_email;
+    QDateEdit *dateEdit_birth;
+    QLabel *label;
+    QLineEdit *lineEdit_Prenom;
+    QLabel *label_9;
+    QLabel *label_5;
+    QLabel *label_4;
+    QPushButton *addButton;
+    QLabel *label_11;
+    QComboBox *comboBox;
+    QLabel *label_2;
+    QRadioButton *radioButton_H;
+    QLineEdit *lineEdit_Nom;
+    QLabel *label_6;
+    QLineEdit *lineEdit_CIN;
+    QLabel *label_7;
+    QLineEdit *lineEdit_phone;
+    QRadioButton *radioButton_F;
+    QLabel *label_image;
+    QHBoxLayout *imageLayout;
+    QLineEdit *imagePathLineEdit;
+    QPushButton *selectImageButton;
+    QLabel *label_role;
+    QComboBox *roleComboBox;
+    QWidget *listEmployee;
+    QVBoxLayout *verticalLayout_6;
+    QGroupBox *searchGroupBox;
+    QHBoxLayout *searchLayout;
+    QComboBox *searchCriteriaComboBox;
+    QLineEdit *searchInput;
+    QPushButton *resetSearchButton;
+    QTableView *tableView;
+    QHBoxLayout *horizontalLayout_4;
+    QSpacerItem *horizontalSpacer_2;
+    QPushButton *deleteBtn;
+    QPushButton *modifyBtn;
+    QPushButton *saveUpdateBtn;
+    QPushButton *downloadBtn;
+    QPushButton *generateQRCodeBtn;
+    QWidget *employeeStatsTab;
+    QVBoxLayout *verticalLayoutStats;
+    QWidget *chartsContainer;
+    QVBoxLayout *chartsLayout;
+    QHBoxLayout *buttonLayout;
+    QSpacerItem *horizontalSpacer2;
+    QPushButton *refreshStatsButton;
     QStatusBar *statusBar;
 
     void setupUi(QMainWindow *MainWindow)
@@ -339,6 +397,11 @@ public:
         meetingSectionButton->setObjectName("meetingSectionButton");
 
         verticalLayout_3->addWidget(meetingSectionButton);
+
+        employeeSectionButton = new QPushButton(frame_6);
+        employeeSectionButton->setObjectName("employeeSectionButton");
+
+        verticalLayout_3->addWidget(employeeSectionButton);
 
         reportsButton = new QPushButton(frame_6);
         reportsButton->setObjectName("reportsButton");
@@ -1124,6 +1187,270 @@ public:
         meetingPageLayout->addWidget(meetingTabWidget);
 
         mainStackedWidget->addWidget(meetingPage);
+        employeePage = new QWidget();
+        employeePage->setObjectName("employeePage");
+        employeePageLayout = new QVBoxLayout(employeePage);
+        employeePageLayout->setObjectName("employeePageLayout");
+        employeeTabWidget = new QTabWidget(employeePage);
+        employeeTabWidget->setObjectName("employeeTabWidget");
+        AddEmployee = new QWidget();
+        AddEmployee->setObjectName("AddEmployee");
+        gridLayout = new QGridLayout(AddEmployee);
+        gridLayout->setObjectName("gridLayout");
+        hiddenId = new QLineEdit(AddEmployee);
+        hiddenId->setObjectName("hiddenId");
+        hiddenId->setVisible(false);
+
+        gridLayout->addWidget(hiddenId, 5, 4, 1, 1);
+
+        lineEdit_salaire = new QLineEdit(AddEmployee);
+        lineEdit_salaire->setObjectName("lineEdit_salaire");
+
+        gridLayout->addWidget(lineEdit_salaire, 2, 3, 1, 1);
+
+        dateEdit_hiring = new QDateEdit(AddEmployee);
+        dateEdit_hiring->setObjectName("dateEdit_hiring");
+
+        gridLayout->addWidget(dateEdit_hiring, 3, 3, 1, 1);
+
+        label_8 = new QLabel(AddEmployee);
+        label_8->setObjectName("label_8");
+
+        gridLayout->addWidget(label_8, 2, 2, 1, 1);
+
+        label_3 = new QLabel(AddEmployee);
+        label_3->setObjectName("label_3");
+
+        gridLayout->addWidget(label_3, 2, 0, 1, 1);
+
+        lineEdit_email = new QLineEdit(AddEmployee);
+        lineEdit_email->setObjectName("lineEdit_email");
+
+        gridLayout->addWidget(lineEdit_email, 5, 1, 1, 1);
+
+        dateEdit_birth = new QDateEdit(AddEmployee);
+        dateEdit_birth->setObjectName("dateEdit_birth");
+
+        gridLayout->addWidget(dateEdit_birth, 3, 1, 1, 1);
+
+        label = new QLabel(AddEmployee);
+        label->setObjectName("label");
+
+        gridLayout->addWidget(label, 0, 0, 1, 1);
+
+        lineEdit_Prenom = new QLineEdit(AddEmployee);
+        lineEdit_Prenom->setObjectName("lineEdit_Prenom");
+
+        gridLayout->addWidget(lineEdit_Prenom, 2, 1, 1, 1);
+
+        label_9 = new QLabel(AddEmployee);
+        label_9->setObjectName("label_9");
+
+        gridLayout->addWidget(label_9, 3, 2, 1, 1);
+
+        label_5 = new QLabel(AddEmployee);
+        label_5->setObjectName("label_5");
+
+        gridLayout->addWidget(label_5, 4, 0, 1, 1);
+
+        label_4 = new QLabel(AddEmployee);
+        label_4->setObjectName("label_4");
+
+        gridLayout->addWidget(label_4, 3, 0, 1, 1);
+
+        addButton = new QPushButton(AddEmployee);
+        addButton->setObjectName("addButton");
+
+        gridLayout->addWidget(addButton, 9, 3, 1, 1);
+
+        label_11 = new QLabel(AddEmployee);
+        label_11->setObjectName("label_11");
+
+        gridLayout->addWidget(label_11, 4, 2, 1, 1);
+
+        comboBox = new QComboBox(AddEmployee);
+        comboBox->addItem(QString());
+        comboBox->addItem(QString());
+        comboBox->addItem(QString());
+        comboBox->setObjectName("comboBox");
+
+        gridLayout->addWidget(comboBox, 4, 3, 1, 1);
+
+        label_2 = new QLabel(AddEmployee);
+        label_2->setObjectName("label_2");
+
+        gridLayout->addWidget(label_2, 1, 0, 1, 1);
+
+        radioButton_H = new QRadioButton(AddEmployee);
+        radioButton_H->setObjectName("radioButton_H");
+
+        gridLayout->addWidget(radioButton_H, 0, 3, 1, 1);
+
+        lineEdit_Nom = new QLineEdit(AddEmployee);
+        lineEdit_Nom->setObjectName("lineEdit_Nom");
+
+        gridLayout->addWidget(lineEdit_Nom, 1, 1, 1, 1);
+
+        label_6 = new QLabel(AddEmployee);
+        label_6->setObjectName("label_6");
+
+        gridLayout->addWidget(label_6, 5, 0, 1, 1);
+
+        lineEdit_CIN = new QLineEdit(AddEmployee);
+        lineEdit_CIN->setObjectName("lineEdit_CIN");
+
+        gridLayout->addWidget(lineEdit_CIN, 0, 1, 1, 1);
+
+        label_7 = new QLabel(AddEmployee);
+        label_7->setObjectName("label_7");
+
+        gridLayout->addWidget(label_7, 0, 2, 1, 1);
+
+        lineEdit_phone = new QLineEdit(AddEmployee);
+        lineEdit_phone->setObjectName("lineEdit_phone");
+
+        gridLayout->addWidget(lineEdit_phone, 4, 1, 1, 1);
+
+        radioButton_F = new QRadioButton(AddEmployee);
+        radioButton_F->setObjectName("radioButton_F");
+
+        gridLayout->addWidget(radioButton_F, 1, 3, 1, 1);
+
+        label_image = new QLabel(AddEmployee);
+        label_image->setObjectName("label_image");
+
+        gridLayout->addWidget(label_image, 6, 0, 1, 1);
+
+        imageLayout = new QHBoxLayout();
+        imageLayout->setObjectName("imageLayout");
+        imagePathLineEdit = new QLineEdit(AddEmployee);
+        imagePathLineEdit->setObjectName("imagePathLineEdit");
+
+        imageLayout->addWidget(imagePathLineEdit);
+
+        selectImageButton = new QPushButton(AddEmployee);
+        selectImageButton->setObjectName("selectImageButton");
+
+        imageLayout->addWidget(selectImageButton);
+
+
+        gridLayout->addLayout(imageLayout, 6, 1, 1, 3);
+
+        label_role = new QLabel(AddEmployee);
+        label_role->setObjectName("label_role");
+
+        gridLayout->addWidget(label_role, 7, 0, 1, 1);
+
+        roleComboBox = new QComboBox(AddEmployee);
+        roleComboBox->addItem(QString());
+        roleComboBox->addItem(QString());
+        roleComboBox->addItem(QString());
+        roleComboBox->setObjectName("roleComboBox");
+
+        gridLayout->addWidget(roleComboBox, 7, 1, 1, 3);
+
+        employeeTabWidget->addTab(AddEmployee, QString());
+        listEmployee = new QWidget();
+        listEmployee->setObjectName("listEmployee");
+        verticalLayout_6 = new QVBoxLayout(listEmployee);
+        verticalLayout_6->setObjectName("verticalLayout_6");
+        searchGroupBox = new QGroupBox(listEmployee);
+        searchGroupBox->setObjectName("searchGroupBox");
+        searchLayout = new QHBoxLayout(searchGroupBox);
+        searchLayout->setObjectName("searchLayout");
+        searchCriteriaComboBox = new QComboBox(searchGroupBox);
+        searchCriteriaComboBox->addItem(QString());
+        searchCriteriaComboBox->addItem(QString());
+        searchCriteriaComboBox->addItem(QString());
+        searchCriteriaComboBox->setObjectName("searchCriteriaComboBox");
+
+        searchLayout->addWidget(searchCriteriaComboBox);
+
+        searchInput = new QLineEdit(searchGroupBox);
+        searchInput->setObjectName("searchInput");
+
+        searchLayout->addWidget(searchInput);
+
+        resetSearchButton = new QPushButton(searchGroupBox);
+        resetSearchButton->setObjectName("resetSearchButton");
+
+        searchLayout->addWidget(resetSearchButton);
+
+
+        verticalLayout_6->addWidget(searchGroupBox);
+
+        tableView = new QTableView(listEmployee);
+        tableView->setObjectName("tableView");
+        tableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+        tableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
+
+        verticalLayout_6->addWidget(tableView);
+
+        horizontalLayout_4 = new QHBoxLayout();
+        horizontalLayout_4->setObjectName("horizontalLayout_4");
+        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_4->addItem(horizontalSpacer_2);
+
+        deleteBtn = new QPushButton(listEmployee);
+        deleteBtn->setObjectName("deleteBtn");
+
+        horizontalLayout_4->addWidget(deleteBtn);
+
+        modifyBtn = new QPushButton(listEmployee);
+        modifyBtn->setObjectName("modifyBtn");
+
+        horizontalLayout_4->addWidget(modifyBtn);
+
+        saveUpdateBtn = new QPushButton(listEmployee);
+        saveUpdateBtn->setObjectName("saveUpdateBtn");
+
+        horizontalLayout_4->addWidget(saveUpdateBtn);
+
+        downloadBtn = new QPushButton(listEmployee);
+        downloadBtn->setObjectName("downloadBtn");
+
+        horizontalLayout_4->addWidget(downloadBtn);
+
+        generateQRCodeBtn = new QPushButton(listEmployee);
+        generateQRCodeBtn->setObjectName("generateQRCodeBtn");
+
+        horizontalLayout_4->addWidget(generateQRCodeBtn);
+
+
+        verticalLayout_6->addLayout(horizontalLayout_4);
+
+        employeeTabWidget->addTab(listEmployee, QString());
+        employeeStatsTab = new QWidget();
+        employeeStatsTab->setObjectName("employeeStatsTab");
+        verticalLayoutStats = new QVBoxLayout(employeeStatsTab);
+        verticalLayoutStats->setObjectName("verticalLayoutStats");
+        chartsContainer = new QWidget(employeeStatsTab);
+        chartsContainer->setObjectName("chartsContainer");
+        chartsLayout = new QVBoxLayout(chartsContainer);
+        chartsLayout->setObjectName("chartsLayout");
+
+        verticalLayoutStats->addWidget(chartsContainer);
+
+        buttonLayout = new QHBoxLayout();
+        buttonLayout->setObjectName("buttonLayout");
+        horizontalSpacer2 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        buttonLayout->addItem(horizontalSpacer2);
+
+        refreshStatsButton = new QPushButton(employeeStatsTab);
+        refreshStatsButton->setObjectName("refreshStatsButton");
+
+        buttonLayout->addWidget(refreshStatsButton);
+
+
+        verticalLayoutStats->addLayout(buttonLayout);
+
+        employeeTabWidget->addTab(employeeStatsTab, QString());
+
+        employeePageLayout->addWidget(employeeTabWidget);
+
+        mainStackedWidget->addWidget(employeePage);
 
         verticalLayout_5->addWidget(mainStackedWidget);
 
@@ -1144,6 +1471,7 @@ public:
         clientTabWidget->setCurrentIndex(2);
         trainingTabWidget->setCurrentIndex(2);
         meetingTabWidget->setCurrentIndex(1);
+        employeeTabWidget->setCurrentIndex(0);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -1158,6 +1486,7 @@ public:
         clientSectionButton->setText(QCoreApplication::translate("MainWindow", "Clients", nullptr));
         trainingSectionButton->setText(QCoreApplication::translate("MainWindow", "Training", nullptr));
         meetingSectionButton->setText(QCoreApplication::translate("MainWindow", "Meetings", nullptr));
+        employeeSectionButton->setText(QCoreApplication::translate("MainWindow", "Employee", nullptr));
         reportsButton->setText(QCoreApplication::translate("MainWindow", "Reports", nullptr));
         settingsButton->setText(QCoreApplication::translate("MainWindow", "Settings", nullptr));
         themeButton->setText(QCoreApplication::translate("MainWindow", "Toggle Theme", nullptr));
@@ -1295,6 +1624,48 @@ public:
         meetingChartRefreshButton->setText(QCoreApplication::translate("MainWindow", "Refresh", nullptr));
         meetingHoverDescriptionLabel->setText(QCoreApplication::translate("MainWindow", "Hover over a chart element to see details", nullptr));
         meetingTabWidget->setTabText(meetingTabWidget->indexOf(meetingStatisticsTab), QCoreApplication::translate("MainWindow", "Statistics", nullptr));
+        dateEdit_hiring->setDisplayFormat(QCoreApplication::translate("MainWindow", "d/M/yyyy", nullptr));
+        label_8->setText(QCoreApplication::translate("MainWindow", "Salary", nullptr));
+        label_3->setText(QCoreApplication::translate("MainWindow", "First Name", nullptr));
+        dateEdit_birth->setDisplayFormat(QCoreApplication::translate("MainWindow", "d/M/yyyy", nullptr));
+        label->setText(QCoreApplication::translate("MainWindow", "CIN", nullptr));
+        label_9->setText(QCoreApplication::translate("MainWindow", "Date of Hiring", nullptr));
+        label_5->setText(QCoreApplication::translate("MainWindow", "Phone Number", nullptr));
+        label_4->setText(QCoreApplication::translate("MainWindow", "Date of Birth", nullptr));
+        addButton->setText(QCoreApplication::translate("MainWindow", "Add Employee", nullptr));
+        label_11->setText(QCoreApplication::translate("MainWindow", "Specialty", nullptr));
+        comboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Informatique", nullptr));
+        comboBox->setItemText(1, QCoreApplication::translate("MainWindow", "Finance", nullptr));
+        comboBox->setItemText(2, QCoreApplication::translate("MainWindow", "Communication", nullptr));
+
+        label_2->setText(QCoreApplication::translate("MainWindow", "Last Name", nullptr));
+        radioButton_H->setText(QCoreApplication::translate("MainWindow", "Homme", nullptr));
+        label_6->setText(QCoreApplication::translate("MainWindow", "Email", nullptr));
+        label_7->setText(QCoreApplication::translate("MainWindow", "Gender", nullptr));
+        radioButton_F->setText(QCoreApplication::translate("MainWindow", "Femme", nullptr));
+        label_image->setText(QCoreApplication::translate("MainWindow", "Image Path:", nullptr));
+        selectImageButton->setText(QCoreApplication::translate("MainWindow", "Select Image", nullptr));
+        label_role->setText(QCoreApplication::translate("MainWindow", "Role:", nullptr));
+        roleComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Admin", nullptr));
+        roleComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "Employee", nullptr));
+        roleComboBox->setItemText(2, QCoreApplication::translate("MainWindow", "Manager", nullptr));
+
+        employeeTabWidget->setTabText(employeeTabWidget->indexOf(AddEmployee), QCoreApplication::translate("MainWindow", "Add Employee", nullptr));
+        searchGroupBox->setTitle(QCoreApplication::translate("MainWindow", "Search", nullptr));
+        searchCriteriaComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Full name", nullptr));
+        searchCriteriaComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "CIN", nullptr));
+        searchCriteriaComboBox->setItemText(2, QCoreApplication::translate("MainWindow", "Specialty", nullptr));
+
+        searchInput->setPlaceholderText(QCoreApplication::translate("MainWindow", "Type to search...", nullptr));
+        resetSearchButton->setText(QCoreApplication::translate("MainWindow", "Reset Search", nullptr));
+        deleteBtn->setText(QCoreApplication::translate("MainWindow", "Delete", nullptr));
+        modifyBtn->setText(QCoreApplication::translate("MainWindow", "Update", nullptr));
+        saveUpdateBtn->setText(QCoreApplication::translate("MainWindow", "Save Update", nullptr));
+        downloadBtn->setText(QCoreApplication::translate("MainWindow", "Download", nullptr));
+        generateQRCodeBtn->setText(QCoreApplication::translate("MainWindow", "Generate QR Code", nullptr));
+        employeeTabWidget->setTabText(employeeTabWidget->indexOf(listEmployee), QCoreApplication::translate("MainWindow", "Manage Employees", nullptr));
+        refreshStatsButton->setText(QCoreApplication::translate("MainWindow", "Refresh Statistics", nullptr));
+        employeeTabWidget->setTabText(employeeTabWidget->indexOf(employeeStatsTab), QCoreApplication::translate("MainWindow", "Statistics", nullptr));
     } // retranslateUi
 
 };

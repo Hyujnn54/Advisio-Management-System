@@ -5,12 +5,14 @@
 #include "managers/client/clientmanager.h"
 #include "managers/training/trainingmanager.h"
 #include "managers/meeting/meetingmanager.h"
+#include "managers/employee/employeemanager.h"
 #include "core/notificationmanager.h"
 #include <QMainWindow>
 #include <QNetworkAccessManager>
 #include <QtCharts/QChartView>
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QBarSeries>
+#include <QFileDialog>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -30,6 +32,7 @@ private slots:
     void on_clientSectionButton_clicked();
     void on_trainingSectionButton_clicked();
     void on_meetingSectionButton_clicked();
+    void on_employeeSectionButton_clicked();
     void on_statisticsButton_clicked();
     void toggleSidebar();
     void toggleTheme();
@@ -39,6 +42,17 @@ private slots:
     void on_chatClearButton_clicked();
     void processUserInput(const QString &input);
     void onAIResponseReceived(QNetworkReply *reply);
+    
+    // Employee slots
+    void on_employeeSearchChanged(const QString &text);
+    void on_resetSearchButton_clicked();
+    void on_addButton_clicked();
+    void on_deleteBtn_clicked();
+    void on_modifyBtn_clicked();
+    void on_downloadBtn_clicked();
+    void on_selectImageButton_clicked();
+    void on_generateQRCodeBtn_clicked();
+    bool validateEmployeeInput();
     
     // New chart handlers for each section
     void on_clientChartRefreshButton_clicked();
@@ -68,15 +82,18 @@ private:
     void setupClientChart();
     void setupTrainingChart();
     void setupMeetingChart();
+    void setupEmployeeChart();
     void updateClientChart();
     void updateTrainingChart();
     void updateMeetingChart();
+    void updateEmployeeChart();
 
     Ui::MainWindow *ui;
     bool m_dbConnected;
     ClientManager *clientManager;
     TrainingManager *trainingManager;
     MeetingManager *meetingManager;
+    EmployeeManager *employeeManager;
     NotificationManager *notificationManager;
     QNetworkAccessManager *networkManager;
 };

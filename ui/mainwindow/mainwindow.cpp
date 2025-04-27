@@ -2,6 +2,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "managers/meeting/meeting.h"
+#include "../../../updateemployeedialog.h"  // Correction du chemin d'inclusion
+#include "lib/qrcodegen/qrcodegen.hpp"  // Ajout de l'inclusion qrcodegen
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QNetworkReply>
@@ -26,6 +28,7 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     clientManager(new ClientManager(dbConnected, this)),
     trainingManager(new TrainingManager(dbConnected, this)),
     meetingManager(new MeetingManager(dbConnected, this)),
+    employeeManager(new EmployeeManager(this)),
     notificationManager(new NotificationManager(this)),
     networkManager(new QNetworkAccessManager(this))
 {
@@ -63,6 +66,7 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
         ui->clientSectionButton->setEnabled(false);
         ui->trainingSectionButton->setEnabled(false);
         ui->meetingSectionButton->setEnabled(false);
+        ui->employeeSectionButton->setEnabled(false);
         statusBar()->showMessage("Database not connected. Some features are disabled.");
     } else {
         clientManager->initialize(ui);
@@ -74,11 +78,13 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
         if (ui->clientDateConsultationsView) improveTableDisplay(ui->clientDateConsultationsView);
         if (ui->trainingTableView) improveTableDisplay(ui->trainingTableView);
         if (ui->meetingTableWidget) improveTableWidgetDisplay(ui->meetingTableWidget);
+        if (ui->tableView) improveTableDisplay(ui->tableView);
         
         // Initialize charts for each section
         setupClientChart();
         setupTrainingChart();
         setupMeetingChart();
+        setupEmployeeChart();
         
         on_meetingSectionButton_clicked();
     }
@@ -94,6 +100,7 @@ MainWindow::~MainWindow()
     delete clientManager;
     delete trainingManager;
     delete meetingManager;
+    delete employeeManager;
     delete notificationManager;
     delete networkManager;
     delete ui;
@@ -105,6 +112,7 @@ void MainWindow::setupUiConnections()
     connect(ui->clientSectionButton, &QPushButton::clicked, this, &MainWindow::on_clientSectionButton_clicked);
     connect(ui->trainingSectionButton, &QPushButton::clicked, this, &MainWindow::on_trainingSectionButton_clicked);
     connect(ui->meetingSectionButton, &QPushButton::clicked, this, &MainWindow::on_meetingSectionButton_clicked);
+    connect(ui->employeeSectionButton, &QPushButton::clicked, this, &MainWindow::on_employeeSectionButton_clicked);
     connect(ui->menuButton, &QPushButton::clicked, this, &MainWindow::toggleSidebar);
     connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
     connect(ui->meetingChatSendButton, &QPushButton::clicked, this, &MainWindow::on_chatSendButton_clicked);
@@ -146,6 +154,35 @@ void MainWindow::on_meetingSectionButton_clicked()
     improveTableWidgetDisplay(ui->meetingTableWidget);
 }
 
+void MainWindow::on_employeeSectionButton_clicked()
+{
+    ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
+    QSqlQueryModel* model = employeeManager->getAllEmployees();
+    ui->tableView->setModel(model);
+    
+    // Configure table columns width to show all content
+    ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    // Set fixed width for specific columns
+    ui->tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed); // ID
+    ui->tableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed); // CIN
+    ui->tableView->horizontalHeader()->setSectionResizeMode(7, QHeaderView::Fixed); // Gender
+    ui->tableView->horizontalHeader()->setSectionResizeMode(8, QHeaderView::Fixed); // Salary
+    
+    ui->tableView->setColumnWidth(0, 50);  // ID
+    ui->tableView->setColumnWidth(1, 100); // CIN
+    ui->tableView->setColumnWidth(7, 70);  // Gender
+    ui->tableView->setColumnWidth(8, 80);  // Salary
+    
+    // Connect search functionality
+    connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_employeeSearchChanged);
+    
+    // Sorting
+    ui->tableView->setSortingEnabled(true);
+    
+    // Apply improved table styling for better readability
+    improveTableDisplay(ui->tableView);
+}
+
 void MainWindow::on_statisticsButton_clicked()
 {
     if (!m_dbConnected) {
@@ -168,8 +205,12 @@ void MainWindow::on_statisticsButton_clicked()
         ui->meetingTabWidget->setCurrentIndex(ui->meetingTabWidget->indexOf(ui->meetingStatisticsTab));
         updateMeetingChart();
     } 
+    else if (currentPage == ui->employeePage) {
+        ui->employeeTabWidget->setCurrentIndex(ui->employeeTabWidget->indexOf(ui->employeeStatsTab));
+        updateEmployeeChart();
+    }
     else {
-        QMessageBox::information(this, "Statistics", "Please navigate to a section first (Clients, Training, or Meetings).");
+        QMessageBox::information(this, "Statistics", "Please navigate to a section first (Clients, Training, Meetings, or Employees).");
     }
 }
 
@@ -1133,6 +1174,41 @@ void MainWindow::setupMeetingChart()
     updateMeetingChart();
 }
 
+void MainWindow::setupEmployeeChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart if the chartsContainer exists in the employee stats tab
+    QVBoxLayout* chartsLayout = ui->chartsContainer ? 
+        qobject_cast<QVBoxLayout*>(ui->chartsContainer->layout()) : nullptr;
+    
+    if (chartsLayout) {
+        // Clear existing charts
+        while (QLayoutItem* item = chartsLayout->takeAt(0)) {
+            if (QWidget* widget = item->widget())
+                widget->deleteLater();
+            delete item;
+        }
+        
+        // Create a new chart view
+        QChartView* chartView = new QChartView();
+        chartView->setMinimumHeight(350);
+        chartsLayout->addWidget(chartView);
+        
+        // Create and set up the chart
+        QChart* chart = new QChart();
+        chart->setTitle("Employee Statistics");
+        chart->setAnimationOptions(QChart::SeriesAnimations);
+        chart->legend()->setVisible(true);
+        chart->legend()->setAlignment(Qt::AlignBottom);
+        chartView->setChart(chart);
+        chartView->setRenderHint(QPainter::Antialiasing);
+        
+        // Update with initial data
+        updateEmployeeChart();
+    }
+}
+
 void MainWindow::updateClientChart()
 {
     if (!m_dbConnected) return;
@@ -1538,6 +1614,41 @@ void MainWindow::updateMeetingChart()
     }
 }
 
+void MainWindow::updateEmployeeChart()
+{
+    if (!m_dbConnected) return;
+    
+    QVBoxLayout* chartsLayout = ui->chartsContainer ? 
+        qobject_cast<QVBoxLayout*>(ui->chartsContainer->layout()) : nullptr;
+    
+    if (!chartsLayout || chartsLayout->count() == 0) return;
+    
+    QChartView* chartView = qobject_cast<QChartView*>(chartsLayout->itemAt(0)->widget());
+    if (!chartView) return;
+    
+    QChart* chart = chartView->chart();
+    if (!chart) return;
+    
+    // Clear existing series
+    chart->removeAllSeries();
+    
+    // Create a pie series for employee specialties
+    QPieSeries* specialtySeries = new QPieSeries();
+    
+    QMap<QString, int> specialtyData = employeeManager->getEmployeeCountBySpecialty();
+    
+    // Add slices to the pie series
+    for (auto it = specialtyData.begin(); it != specialtyData.end(); ++it) {
+        QPieSlice* slice = specialtySeries->append(it.key(), it.value());
+        slice->setLabelVisible(true);
+        if (it.value() > 0) {
+            slice->setLabel(QString("%1: %2").arg(it.key()).arg(it.value()));
+        }
+    }
+    
+    chart->addSeries(specialtySeries);
+}
+
 // Add this new helper method to improve all table displays
 void MainWindow::improveTableDisplay(QTableView* tableView)
 {
@@ -1554,8 +1665,6 @@ void MainWindow::improveTableDisplay(QTableView* tableView)
     // Make sure headers are visible and readable
     tableView->horizontalHeader()->setVisible(true);
     tableView->horizontalHeader()->setFont(tableFont);
-    tableView->horizontalHeader()->setDefaultSectionSize(150);
-    tableView->horizontalHeader()->setMinimumSectionSize(100);
     
     // Set better cell padding
     tableView->setStyleSheet(
@@ -1581,13 +1690,52 @@ void MainWindow::improveTableDisplay(QTableView* tableView)
         "}"
     );
     
-    // Ensure reasonable column sizing
-    tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
-    tableView->horizontalHeader()->setStretchLastSection(true);
+    // Optimiser la largeur des colonnes spécifiquement pour la table des employés
+    if (tableView->model() && tableView->model()->columnCount() >= 14) {
+        // Vérifier si c'est la table des employés en vérifiant le nom des colonnes
+        if (tableView->model()->headerData(1, Qt::Horizontal).toString() == "CIN" &&
+            tableView->model()->headerData(2, Qt::Horizontal).toString() == "Last Name") {
+            
+            // Configurer la largeur des colonnes pour qu'elles s'adaptent au contenu
+            tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+            tableView->horizontalHeader()->setStretchLastSection(true);
+            
+            // Définir des largeurs optimales pour chaque colonne
+            tableView->setColumnWidth(0, 40);   // ID
+            tableView->setColumnWidth(1, 80);   // CIN
+            tableView->setColumnWidth(2, 120);  // Last Name
+            tableView->setColumnWidth(3, 120);  // First Name
+            tableView->setColumnWidth(4, 100);  // Date of Birth
+            tableView->setColumnWidth(5, 100);  // Phone
+            tableView->setColumnWidth(6, 150);  // Email
+            tableView->setColumnWidth(7, 70);   // Gender
+            tableView->setColumnWidth(8, 70);   // Salary
+            tableView->setColumnWidth(9, 100);  // Date of Hiring
+            tableView->setColumnWidth(10, 120); // Speciality
+            tableView->setColumnWidth(11, 80);  // Image
+            tableView->setColumnWidth(12, 80);  // Role
+            tableView->setColumnWidth(13, 80);  // RFID UID
+            
+            // Cachons la colonne Image qui contient des données BLOB
+            tableView->setColumnHidden(11, true);
+        } else {
+            // Configuration par défaut si ce n'est pas la table des employés
+            tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+            tableView->horizontalHeader()->setStretchLastSection(true);
+            tableView->horizontalHeader()->setDefaultSectionSize(150);
+            tableView->horizontalHeader()->setMinimumSectionSize(100);
+        }
+    } else {
+        // Configuration par défaut pour les autres tableaux
+        tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+        tableView->horizontalHeader()->setStretchLastSection(true);
+        tableView->horizontalHeader()->setDefaultSectionSize(150);
+        tableView->horizontalHeader()->setMinimumSectionSize(100);
+    }
     
-    // Give the table some minimum width to prevent it from being too cramped
+    // Donner au tableau une largeur minimale pour éviter qu'il ne soit trop à l'étroit
     int columnCount = tableView->model() ? tableView->model()->columnCount() : 6;
-    tableView->setMinimumWidth(columnCount * 150); // Minimum width based on columns
+    tableView->setMinimumWidth(columnCount * 120); // Largeur minimale basée sur les colonnes
 }
 
 // Similar method for QTableWidget
@@ -1639,4 +1787,314 @@ void MainWindow::improveTableWidgetDisplay(QTableWidget* tableWidget)
     
     // Give the table some minimum width to prevent it from being too cramped
     tableWidget->setMinimumWidth(tableWidget->columnCount() * 150); // Minimum width based on columns
+}
+
+void MainWindow::on_employeeSearchChanged(const QString &text)
+{
+    QString criteria = ui->searchCriteriaComboBox->currentText();
+    QSqlQueryModel* model = employeeManager->searchEmployees(criteria, text);
+    ui->tableView->setModel(model);
+    improveTableDisplay(ui->tableView);
+}
+
+void MainWindow::on_resetSearchButton_clicked()
+{
+    ui->searchInput->clear();
+    QSqlQueryModel* model = employeeManager->getAllEmployees();
+    ui->tableView->setModel(model);
+    improveTableDisplay(ui->tableView);
+}
+
+void MainWindow::on_addButton_clicked()
+{
+    // Validation des champs de saisie
+    if (!validateEmployeeInput()) {
+        return;
+    }
+    
+    QString cin = ui->lineEdit_CIN->text();
+    QString lastName = ui->lineEdit_Nom->text();
+    QString firstName = ui->lineEdit_Prenom->text();
+    QDate dateOfBirth = ui->dateEdit_birth->date();
+    QString phoneNumber = ui->lineEdit_phone->text();
+    QString email = ui->lineEdit_email->text();
+    QString gender = ui->radioButton_H->isChecked() ? "Homme" : "Femme";
+    int salary = ui->lineEdit_salaire->text().toInt();
+    QDate dateOfHire = ui->dateEdit_hiring->date();
+    QString field = ui->comboBox->currentText();
+    QString imagePath = ui->imagePathLineEdit->text();
+    QString role = ui->roleComboBox->currentText();
+
+    bool success = employeeManager->addEmployee(cin, lastName, firstName, dateOfBirth, phoneNumber, 
+                                               email, gender, salary, dateOfHire, field, imagePath, role);
+    
+    if (success) {
+        QMessageBox::information(this, "Success", "Employee added successfully!");
+        
+        // Clear fields after adding
+        ui->lineEdit_CIN->clear();
+        ui->lineEdit_Nom->clear();
+        ui->lineEdit_Prenom->clear();
+        ui->dateEdit_birth->setDate(QDate::currentDate());
+        ui->lineEdit_phone->clear();
+        ui->lineEdit_email->clear();
+        ui->radioButton_H->setChecked(true);
+        ui->lineEdit_salaire->clear();
+        ui->dateEdit_hiring->setDate(QDate::currentDate());
+        ui->imagePathLineEdit->clear();
+        
+        // Refresh the table
+        QSqlQueryModel* model = employeeManager->getAllEmployees();
+        ui->tableView->setModel(model);
+        improveTableDisplay(ui->tableView);
+        
+        // Add notification
+        notificationManager->addNotification("Employee Added", "New employee: " + firstName + " " + lastName, 
+                                           "Added by " + QString::number(QDateTime::currentDateTime().toSecsSinceEpoch()), -1);
+    } else {
+        QMessageBox::critical(this, "Error", "Failed to add employee. Check the fields and try again.");
+    }
+}
+
+void MainWindow::on_deleteBtn_clicked()
+{
+    QModelIndex currentIndex = ui->tableView->currentIndex();
+    if (!currentIndex.isValid()) {
+        QMessageBox::warning(this, "Error", "Please select an employee to delete.");
+        return;
+    }
+    
+    int row = currentIndex.row();
+    int employeeId = ui->tableView->model()->data(ui->tableView->model()->index(row, 0)).toInt();
+    QString employeeName = ui->tableView->model()->data(ui->tableView->model()->index(row, 2)).toString() + " " +
+                          ui->tableView->model()->data(ui->tableView->model()->index(row, 3)).toString();
+    
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "Confirm Delete", 
+        "Are you sure you want to delete employee " + employeeName + "?", 
+        QMessageBox::Yes | QMessageBox::No);
+        
+    if (reply == QMessageBox::Yes) {
+        bool success = employeeManager->deleteEmployee(employeeId);
+        if (success) {
+            QMessageBox::information(this, "Success", "Employee deleted successfully!");
+            
+            // Refresh the table
+            QSqlQueryModel* model = employeeManager->getAllEmployees();
+            ui->tableView->setModel(model);
+            improveTableDisplay(ui->tableView);
+            
+            // Add notification
+            notificationManager->addNotification("Employee Deleted", "Deleted: " + employeeName, 
+                                             "Deleted at " + QDateTime::currentDateTime().toString(), -1);
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to delete employee. Please try again.");
+        }
+    }
+}
+
+void MainWindow::on_modifyBtn_clicked()
+{
+    QModelIndex currentIndex = ui->tableView->currentIndex();
+    if (!currentIndex.isValid()) {
+        QMessageBox::warning(this, "Error", "Please select an employee to update.");
+        return;
+    }
+    
+    int row = currentIndex.row();
+    int employeeId = ui->tableView->model()->data(ui->tableView->model()->index(row, 0)).toInt();
+    
+    // Open update dialog with selected employee ID
+    UpdateEmployeeDialog updateDialog(employeeId, this);
+    if (updateDialog.exec() == QDialog::Accepted) {
+        // Refresh the table after update
+        QSqlQueryModel* model = employeeManager->getAllEmployees();
+        ui->tableView->setModel(model);
+        improveTableDisplay(ui->tableView);
+        
+        QString employeeName = ui->tableView->model()->data(ui->tableView->model()->index(row, 2)).toString() + " " +
+                              ui->tableView->model()->data(ui->tableView->model()->index(row, 3)).toString();
+                              
+        // Add notification
+        notificationManager->addNotification("Employee Updated", "Updated: " + employeeName, 
+                                         "Updated at " + QDateTime::currentDateTime().toString(), -1);
+    }
+}
+
+void MainWindow::on_downloadBtn_clicked()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, "Export Employee List", "", "CSV Files (*.csv);;Text Files (*.txt)");
+    
+    if (fileName.isEmpty()) {
+        return;
+    }
+    
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::critical(this, "Error", "Could not open file for writing.");
+        return;
+    }
+    
+    QTextStream out(&file);
+    
+    // Write header
+    QStringList headers;
+    QAbstractItemModel* model = ui->tableView->model();
+    for (int column = 0; column < model->columnCount(); ++column) {
+        headers << model->headerData(column, Qt::Horizontal).toString();
+    }
+    out << headers.join(",") << "\n";
+    
+    // Write data
+    for (int row = 0; row < model->rowCount(); ++row) {
+        QStringList rowData;
+        for (int column = 0; column < model->columnCount(); ++column) {
+            QString data = model->data(model->index(row, column)).toString();
+            // Escape commas by enclosing in quotes
+            if (data.contains(',')) {
+                data = "\"" + data + "\"";
+            }
+            rowData << data;
+        }
+        out << rowData.join(",") << "\n";
+    }
+    
+    file.close();
+    QMessageBox::information(this, "Export Successful", "Employee data exported successfully!");
+}
+
+void MainWindow::on_selectImageButton_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, "Select Employee Image", "", 
+                                                  "Image Files (*.png *.jpg *.jpeg *.bmp)");
+    if (!fileName.isEmpty()) {
+        ui->imagePathLineEdit->setText(fileName);
+    }
+}
+
+void MainWindow::on_generateQRCodeBtn_clicked()
+{
+    QModelIndex currentIndex = ui->tableView->currentIndex();
+    if (!currentIndex.isValid()) {
+        QMessageBox::warning(this, "Error", "Please select an employee.");
+        return;
+    }
+    
+    int row = currentIndex.row();
+    QString employeeId = ui->tableView->model()->data(ui->tableView->model()->index(row, 0)).toString();
+    QString employeeName = ui->tableView->model()->data(ui->tableView->model()->index(row, 2)).toString() + " " +
+                          ui->tableView->model()->data(ui->tableView->model()->index(row, 3)).toString();
+    QString employeeCIN = ui->tableView->model()->data(ui->tableView->model()->index(row, 1)).toString();
+    
+    // Create QR Code content
+    QString qrContent = "ID: " + employeeId + "\n"
+                       + "Name: " + employeeName + "\n"
+                       + "CIN: " + employeeCIN;
+    
+    // Generate QR code using the qrcodegen library
+    qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(qrContent.toUtf8().constData(), qrcodegen::QrCode::Ecc::MEDIUM);
+    
+    // Convert to QImage
+    const int qrSize = qr.getSize();
+    const int scale = 10;  // Scale factor for better visibility
+    QImage image(qrSize * scale, qrSize * scale, QImage::Format_RGB32);
+    image.fill(Qt::white);
+    
+    QPainter painter(&image);
+    painter.setPen(Qt::black);
+    painter.setBrush(Qt::black);
+    
+    for (int y = 0; y < qrSize; ++y) {
+        for (int x = 0; x < qrSize; ++x) {
+            if (qr.getModule(x, y)) {
+                painter.fillRect(x * scale, y * scale, scale, scale, Qt::black);
+            }
+        }
+    }
+    
+    // Save QR code image
+    QString saveFileName = QFileDialog::getSaveFileName(this, "Save QR Code", 
+                                                     "employee_" + employeeId + "_qr.png", 
+                                                     "PNG Files (*.png)");
+    if (!saveFileName.isEmpty()) {
+        if (image.save(saveFileName)) {
+            QMessageBox::information(this, "Success", "QR Code saved successfully!");
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to save QR Code image.");
+        }
+    }
+}
+
+bool MainWindow::validateEmployeeInput()
+{
+    // CIN validation: Should be 8 digits
+    QString cin = ui->lineEdit_CIN->text();
+    QRegularExpression cinRegex("^\\d{8}$");
+    if (!cinRegex.match(cin).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "CIN must be exactly 8 digits.");
+        return false;
+    }
+    
+    // Name validation: Should not be empty and contain only letters
+    QString lastName = ui->lineEdit_Nom->text();
+    QString firstName = ui->lineEdit_Prenom->text();
+    QRegularExpression nameRegex("^[A-Za-z\\s]+$");
+    if (lastName.isEmpty() || !nameRegex.match(lastName).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Last name should contain only letters.");
+        return false;
+    }
+    if (firstName.isEmpty() || !nameRegex.match(firstName).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "First name should contain only letters.");
+        return false;
+    }
+    
+    // Phone validation: Should be a valid phone number
+    QString phone = ui->lineEdit_phone->text();
+    QRegularExpression phoneRegex("^\\d{8}$");
+    if (!phoneRegex.match(phone).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Phone number must be 8 digits.");
+        return false;
+    }
+    
+    // Email validation
+    QString email = ui->lineEdit_email->text();
+    QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    if (!emailRegex.match(email).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid email address.");
+        return false;
+    }
+    
+    // Salary validation: Should be a positive number
+    QString salaryText = ui->lineEdit_salaire->text();
+    bool ok;
+    int salary = salaryText.toInt(&ok);
+    if (!ok || salary <= 0) {
+        QMessageBox::warning(this, "Input Error", "Salary must be a positive number.");
+        return false;
+    }
+    
+    // Date validations
+    QDate birthDate = ui->dateEdit_birth->date();
+    QDate hiringDate = ui->dateEdit_hiring->date();
+    QDate currentDate = QDate::currentDate();
+    
+    // Birth date should be in the past and reasonable (at least 18 years old)
+    if (birthDate > currentDate.addYears(-18)) {
+        QMessageBox::warning(this, "Input Error", "Employee must be at least 18 years old.");
+        return false;
+    }
+    
+    // Hiring date should not be before birth date + 18 years
+    QDate minHiringDate = birthDate.addYears(18);
+    if (hiringDate < minHiringDate) {
+        QMessageBox::warning(this, "Input Error", "Hiring date cannot be before employee turned 18.");
+        return false;
+    }
+    
+    // Hiring date should not be in the future
+    if (hiringDate > currentDate) {
+        QMessageBox::warning(this, "Input Error", "Hiring date cannot be in the future.");
+        return false;
+    }
+    
+    return true;
 }

@@ -1,0 +1,41 @@
+#ifndef EMPLOYEEMANAGER_H
+#define EMPLOYEEMANAGER_H
+
+#include <QObject>
+#include <QSqlQueryModel>
+#include "employee.h"
+
+class EmployeeManager : public QObject
+{
+    Q_OBJECT
+public:
+    explicit EmployeeManager(QObject *parent = nullptr);
+    ~EmployeeManager();
+
+    // Méthodes de base CRUD
+    bool addEmployee(const QString& cin, const QString& lastName, const QString& firstName, 
+                    const QDate& dateOfBirth, const QString& phoneNumber, const QString& email, 
+                    const QString& gender, int salary, const QDate& dateOfHire, 
+                    const QString& field, const QString& imagePath, const QString& role);
+    
+    bool updateEmployee(int id, const QString& cin, const QString& lastName, const QString& firstName, 
+                      const QDate& dateOfBirth, const QString& phoneNumber, const QString& email, 
+                      const QString& gender, int salary, const QDate& dateOfHire, 
+                      const QString& field, const QString& imagePath, const QString& role);
+    
+    bool deleteEmployee(int id);
+    
+    // Méthodes de recherche et d'affichage
+    QSqlQueryModel* getAllEmployees();
+    QSqlQueryModel* searchEmployees(const QString& criteria, const QString& searchText);
+    QSqlQueryModel* sortEmployees(int column, Qt::SortOrder order);
+    
+    // Statistiques
+    QMap<QString, int> getEmployeeCountByRole();
+    QMap<QString, int> getEmployeeCountBySpecialty();
+
+private:
+    Employee *employee;
+};
+
+#endif // EMPLOYEEMANAGER_H

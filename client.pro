@@ -12,6 +12,7 @@ INCLUDEPATH += "$$PWD/core" \
                "$$PWD/managers/client" \
                "$$PWD/managers/training" \
                "$$PWD/managers/meeting" \
+               "$$PWD/managers/employee" \
                "$$PWD/ui/mainwindow" \
                "$$PWD/ui/chartwindow" \
                "$$PWD/dialog/updateclientdialog" \
@@ -30,12 +31,15 @@ HEADERS += \
     managers/training/trainingmanager.h \
     managers/meeting/meeting.h \
     managers/meeting/meetingmanager.h \
+    managers/employee/employee.h \
+    managers/employee/employeemanager.h \
     ui/chartwindow/chartwindow.h \
     ui/mainwindow/mainwindow.h \
     dialog/updateclientdialog/updateclientdialog.h \
     dialog/updatetrainingdialog/updatetrainingdialog.h \
     dialog/updatemeeting/updatemeeting.h \
-    lib/qrcodegen/qrcodegen.hpp
+    lib/qrcodegen/qrcodegen.hpp \
+    updateemployeedialog.h
 
 SOURCES += \
     core/connection.cpp \
@@ -49,19 +53,23 @@ SOURCES += \
     managers/training/trainingmanager.cpp \
     managers/meeting/meeting.cpp \
     managers/meeting/meetingmanager.cpp \
+    managers/employee/employee.cpp \
+    managers/employee/employeemanager.cpp \
     ui/chartwindow/chartwindow.cpp \
     ui/mainwindow/mainwindow.cpp \
     dialog/updateclientdialog/updateclientdialog.cpp \
     dialog/updatetrainingdialog/updatetrainingdialog.cpp \
     dialog/updatemeeting/updatemeeting.cpp \
-    lib/qrcodegen/qrcodegen.cpp
+    lib/qrcodegen/qrcodegen.cpp \
+    updateemployeedialog.cpp
 
 FORMS += \
     ui/chartwindow/ChartWindow.ui \
     ui/mainwindow/mainwindow.ui \
     dialog/updateclientdialog/updateclientdialog.ui \
     dialog/updatetrainingdialog/updatetrainingdialog.ui \
-    dialog/updatemeeting/updatemeeting.ui
+    dialog/updatemeeting/updatemeeting.ui \
+    UpdateEmployeeDialog.ui
 
 RESOURCES += img.qrc
 

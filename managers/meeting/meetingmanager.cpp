@@ -150,7 +150,7 @@ void MeetingManager::handleUpdateButtonClick()
         m.setParticipant(query.value("PARTICIPANT").toString());
         m.setAgenda(query.value("AGENDA").toString());
         m.setDuration(query.value("DURATION").toInt());
-        m.setDatem(query.value("DATEM").toDateTime());
+        m.setDatem(query.value("MEETING_DATE").toDateTime());
         m.setEmployeeId(query.value("EMPLOYEE_ID").isNull() ? QVariant() : query.value("EMPLOYEE_ID"));
         m.setClientId(query.value("CLIENT_ID").isNull() ? QVariant() : query.value("CLIENT_ID"));
         m.setResourceId(query.value("RESSOURCE_ID").isNull() ? QVariant() : query.value("RESSOURCE_ID"));
@@ -526,15 +526,15 @@ void MeetingManager::refreshTableWidget()
     QSqlQuery query;
     query.prepare("SELECT ID, TITLE, ORGANISER, PARTICIPANT, AGENDA, DURATION, DATEM FROM AHMED.MEETING ORDER BY ID");
     if (!query.exec()) {
-        QMessageBox::warning(nullptr, "Database Error", 
-            "Failed to load meetings: " + query.lastError().text());
+        QMessageBox::warning(nullptr, "Database Error",
+                             "Failed to load meetings: " + query.lastError().text());
         return;
     }
 
     int row = 0;
     while (query.next()) {
         ui->meetingTableWidget->insertRow(row);
-        
+
         QTableWidgetItem *idItem = new QTableWidgetItem(query.value("ID").toString());
         QTableWidgetItem *titleItem = new QTableWidgetItem(query.value("TITLE").toString());
         QTableWidgetItem *organiserItem = new QTableWidgetItem(query.value("ORGANISER").toString());
@@ -542,12 +542,12 @@ void MeetingManager::refreshTableWidget()
         QTableWidgetItem *agendaItem = new QTableWidgetItem(query.value("AGENDA").toString());
         QTableWidgetItem *durationItem = new QTableWidgetItem(query.value("DURATION").toString());
         QTableWidgetItem *dateItem = new QTableWidgetItem(query.value("DATEM").toDateTime().toString("yyyy-MM-dd HH:mm"));
-        
+
         // Store the original data for sorting
         idItem->setData(Qt::UserRole, query.value("ID").toInt());
         durationItem->setData(Qt::UserRole, query.value("DURATION").toInt());
         dateItem->setData(Qt::UserRole, query.value("DATEM").toDateTime());
-        
+
         ui->meetingTableWidget->setItem(row, 0, idItem);
         ui->meetingTableWidget->setItem(row, 1, titleItem);
         ui->meetingTableWidget->setItem(row, 2, organiserItem);
@@ -555,13 +555,13 @@ void MeetingManager::refreshTableWidget()
         ui->meetingTableWidget->setItem(row, 4, agendaItem);
         ui->meetingTableWidget->setItem(row, 5, durationItem);
         ui->meetingTableWidget->setItem(row, 6, dateItem);
-        
+
         row++;
     }
-    
+
     // Enable sorting
     ui->meetingTableWidget->setSortingEnabled(true);
-    
+
     // Set custom sort role to handle different data types
     ui->meetingTableWidget->horizontalHeader()->setSortIndicatorShown(true);
 }
@@ -588,7 +588,7 @@ QMap<QString, int> MeetingManager::getStatisticsByCategory(const QString &catego
     } else if (category == "Agenda") {
         column = "AGENDA";
     } else if (category == "Date") {
-        column = "TRUNC(DATEM)";
+        column = "TRUNC(MEETING_DATE)";
     } else {
         qDebug() << "Unsupported filter category for meetings:" << category;
         return stats;
