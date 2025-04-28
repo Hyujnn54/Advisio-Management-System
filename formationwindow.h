@@ -27,6 +27,7 @@ public:
     FormationWindow(QWidget *parent = nullptr);
     ~FormationWindow();
 
+
 private slots:
     void on_addButtonclicked();
     void toggleTheme();
@@ -42,6 +43,7 @@ private slots:
     void updateWaitingRoomCount();
     void readArduinoData(); // New slot to read Arduino data
     void on_wrr_clicked(); // New slot for wrr button
+    void on_viewWaitingRoomButton_clicked();
 
 private:
     Ui::formationwindow *ui;
@@ -66,8 +68,14 @@ private:
     Arduino *arduino; // Arduino instance
     QTimer *arduinoTimer; // Timer for polling Arduino
     void setupArduino(); // Initialize Arduino connection
-    void updateMeetingWR(int count); // Update WR in MEETING table
+     // Update WR in MEETING table
     QString arduinoDataBuffer;
+    bool updateMeetingWR(int count);
+    QLabel *clockLabel;  // Added
+    QTimer *clockTimer;  // Added
+
+signals:
+    void waitingRoomCountChanged(int count);
 
 };
 

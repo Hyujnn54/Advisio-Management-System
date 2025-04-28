@@ -5,7 +5,9 @@ debug/formations.o
 debug/main.o
 debug/formationwindow.o
 debug/updatetrainingdialog.o
+debug/waitingroomdialog.o
 debug/qrc_img.o
 debug/moc_arduino.o
 debug/moc_formationwindow.o
 debug/moc_updatetrainingdialog.o
+debug/moc_waitingroomdialog.o

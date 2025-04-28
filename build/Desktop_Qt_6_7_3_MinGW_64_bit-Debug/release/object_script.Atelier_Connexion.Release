@@ -5,7 +5,9 @@ release/formations.o
 release/main.o
 release/formationwindow.o
 release/updatetrainingdialog.o
+release/waitingroomdialog.o
 release/qrc_img.o
 release/moc_arduino.o
 release/moc_formationwindow.o
 release/moc_updatetrainingdialog.o
+release/moc_waitingroomdialog.o

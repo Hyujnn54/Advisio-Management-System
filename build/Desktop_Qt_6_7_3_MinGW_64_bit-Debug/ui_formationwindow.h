@@ -101,6 +101,7 @@ public:
     QWidget *waiting_room;
     QPlainTextEdit *setText;
     QPushButton *wrr;
+    QPushButton *viewWaitingRoomButton;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -444,29 +445,62 @@ public:
         waiting_room->setObjectName("waiting_room");
         setText = new QPlainTextEdit(waiting_room);
         setText->setObjectName("setText");
-        setText->setGeometry(QRect(170, 180, 221, 91));
+        setText->setGeometry(QRect(70, 170, 221, 91));
+        setText->setStyleSheet(QString::fromUtf8("QFrame#waitingRoomFrame {\n"
+"              background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(230, 236, 245, 0.9), stop:1 rgba(211, 220, 230, 0.9));\n"
+"              background-image: url(:/imgs/waiting_room_bg.png);\n"
+"              background-position: center;\n"
+"              background-repeat: no-repeat;\n"
+"              border: 3px solid #3A5DAE;\n"
+"              border-radius: 20px;\n"
+"              box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.4), inset 2px 2px 5px rgba(255, 255, 255, 0.2);\n"
+"            }\n"
+"font-size: 22pt;\n"
+"                  font-weight: bold;\n"
+"                  color: #3A5DAE;\n"
+"                  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);\n"
+"                  padding: 5px;\n"
+"font-size: 20pt;\n"
+"                  font-weight: bold;\n"
+"                  color: #3A5DAE;\n"
+"                  background-color: rgba(255, 255, 255, 0.8);\n"
+"                  border: 2px solid #3A5DAE;\n"
+"                  border-radius: 10px;\n"
+"                  "
+                        "padding: 10px;\n"
+"                  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);"));
         wrr = new QPushButton(waiting_room);
         wrr->setObjectName("wrr");
-        wrr->setGeometry(QRect(230, 290, 80, 18));
-        wrr->setStyleSheet(QString::fromUtf8("QPushButton {\n"
-"        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F44336, stop:1 #D32F2F);\n"
-"        color: white;\n"
-"        border: 2px solid #B71C1C;\n"
-"        border-radius: 8px;\n"
-"        padding: 6px;\n"
-"        font-weight: bold;\n"
-"        font-size: 12pt;\n"
-"        box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);\n"
-"      }\n"
-"      QPushButton:hover {\n"
-"        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #EF5350, stop:1 #E53935);\n"
-"        box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.4);\n"
-"      }\n"
-"      QPushButton:pressed {\n"
-"        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #B71C1C, stop:1 #9E1212);\n"
-"        border: 2px solid #8E0000;\n"
-"        box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.3);\n"
-"      }"));
+        wrr->setGeometry(QRect(210, 280, 81, 16));
+        wrr->setStyleSheet(QString::fromUtf8("QPushButton#wrr {\n"
+"                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F44336, stop:1 #D32F2F);\n"
+"                    color: white;\n"
+"                    border: 2px solid #B71C1C;\n"
+"                    border-radius: 15px;\n"
+"                    padding: 10px 20px;\n"
+"                    font-size: 16pt;\n"
+"                    font-weight: bold;\n"
+"                    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.4);\n"
+"                  }\n"
+"                  QPushButton#wrr:hover {\n"
+"                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #EF5350, stop:1 #E53935);\n"
+"                    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.5);\n"
+"                  }\n"
+"                  QPushButton#wrr:pressed {\n"
+"                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #B71C1C, stop:1 #9E1212);\n"
+"                    border: 2px solid #8E0000;\n"
+"                    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0"
+                        ".4);\n"
+"                  }\n"
+"                  QPushButton#wrr:disabled {\n"
+"                    background-color: #B0B0B0;\n"
+"                    border: 2px solid #808080;\n"
+"                    color: #E0E0E0;\n"
+"                    box-shadow: none;\n"
+"                  }"));
+        viewWaitingRoomButton = new QPushButton(waiting_room);
+        viewWaitingRoomButton->setObjectName("viewWaitingRoomButton");
+        viewWaitingRoomButton->setGeometry(QRect(30, 320, 91, 21));
         tabWidget->addTab(waiting_room, QString());
 
         verticalLayout_5->addWidget(tabWidget);
@@ -532,6 +566,7 @@ public:
         tabWidget->setTabText(tabWidget->indexOf(widget), QCoreApplication::translate("formationwindow", "Statistics", nullptr));
         setText->setPlainText(QString());
         wrr->setText(QCoreApplication::translate("formationwindow", "-", nullptr));
+        viewWaitingRoomButton->setText(QCoreApplication::translate("formationwindow", "View Waiting Room", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(waiting_room), QCoreApplication::translate("formationwindow", "Waiting room", nullptr));
     } // retranslateUi
 

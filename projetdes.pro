@@ -1,12 +1,12 @@
-QT += core gui sql printsupport charts network serialport
+QT += core gui sql printsupport charts network serialport widgets
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = Atelier_Connexion
 TEMPLATE = app
-
+QT += multimedia
 DEFINES += QT_DEPRECATED_WARNINGS
-CONFIG += c++17  # Updated to C++17 (optional, can keep c++11 if preferred)
-# CONFIG += console  # Comment out or remove unless you need console output
+CONFIG += c++17
 
 SOURCES += \
     arduino.cpp \
@@ -15,7 +15,8 @@ SOURCES += \
     formations.cpp \
     main.cpp \
     formationwindow.cpp \
-    updatetrainingdialog.cpp
+    updatetrainingdialog.cpp \
+    waitingroomdialog.cpp
 
 HEADERS += \
     arduino.h \
@@ -23,10 +24,14 @@ HEADERS += \
     customsqlquerymodel.h \
     formations.h \
     formationwindow.h \
-    updatetrainingdialog.h
+    updatetrainingdialog.h \
+    waitingroomdialog.h
 
 FORMS += \
     formationwindow.ui
 
 RESOURCES += \
     img.qrc
+
+DISTFILES += \
+    remove_person_icon.png

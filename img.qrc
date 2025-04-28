@@ -2,6 +2,12 @@
     <qresource prefix="/imgs">
         <file>file.ico</file>
         <file>delete.ico</file>
-        <file>../../../Downloads/6372226-removebg-preview.png</file>
+        <file>chair_red.png</file>
+        <file>room.jpg</file>
+        <file>chair_green.png</file>
+        <file>clock_icon.png</file>
+        <file>waiting_room_icon.webp</file>
     </qresource>
+    <qresource prefix="/a"/>
+    <qresource prefix="/"/>
 </RCC>

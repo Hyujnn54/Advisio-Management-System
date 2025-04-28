@@ -574,7 +574,7 @@ border-color: rgb(0, 0, 0);</string>
                  <string>update</string>
                 </property>
                 <property name="icon">
-                 <iconset resource="img.qrc">
+                 <iconset>
                   <normaloff>:/imgs/Downloads/6372226-removebg-preview.png</normaloff>:/imgs/Downloads/6372226-removebg-preview.png</iconset>
                 </property>
                 <property name="iconSize">
@@ -635,11 +635,35 @@ border-color: rgb(0, 0, 0);</string>
            <widget class="QPlainTextEdit" name="setText">
             <property name="geometry">
              <rect>
-              <x>170</x>
-              <y>180</y>
+              <x>70</x>
+              <y>170</y>
               <width>221</width>
               <height>91</height>
              </rect>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QFrame#waitingRoomFrame {
+              background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(230, 236, 245, 0.9), stop:1 rgba(211, 220, 230, 0.9));
+              background-image: url(:/imgs/waiting_room_bg.png);
+              background-position: center;
+              background-repeat: no-repeat;
+              border: 3px solid #3A5DAE;
+              border-radius: 20px;
+              box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.4), inset 2px 2px 5px rgba(255, 255, 255, 0.2);
+            }
+font-size: 22pt;
+                  font-weight: bold;
+                  color: #3A5DAE;
+                  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+                  padding: 5px;
+font-size: 20pt;
+                  font-weight: bold;
+                  color: #3A5DAE;
+                  background-color: rgba(255, 255, 255, 0.8);
+                  border: 2px solid #3A5DAE;
+                  border-radius: 10px;
+                  padding: 10px;
+                  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);</string>
             </property>
             <property name="plainText">
              <string/>
@@ -648,35 +672,54 @@ border-color: rgb(0, 0, 0);</string>
            <widget class="QPushButton" name="wrr">
             <property name="geometry">
              <rect>
-              <x>230</x>
-              <y>290</y>
-              <width>80</width>
-              <height>18</height>
+              <x>210</x>
+              <y>280</y>
+              <width>81</width>
+              <height>16</height>
              </rect>
             </property>
             <property name="styleSheet">
-             <string notr="true">QPushButton {
-        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F44336, stop:1 #D32F2F);
-        color: white;
-        border: 2px solid #B71C1C;
-        border-radius: 8px;
-        padding: 6px;
-        font-weight: bold;
-        font-size: 12pt;
-        box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
-      }
-      QPushButton:hover {
-        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #EF5350, stop:1 #E53935);
-        box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.4);
-      }
-      QPushButton:pressed {
-        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #B71C1C, stop:1 #9E1212);
-        border: 2px solid #8E0000;
-        box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.3);
-      }</string>
+             <string notr="true">QPushButton#wrr {
+                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F44336, stop:1 #D32F2F);
+                    color: white;
+                    border: 2px solid #B71C1C;
+                    border-radius: 15px;
+                    padding: 10px 20px;
+                    font-size: 16pt;
+                    font-weight: bold;
+                    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.4);
+                  }
+                  QPushButton#wrr:hover {
+                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #EF5350, stop:1 #E53935);
+                    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.5);
+                  }
+                  QPushButton#wrr:pressed {
+                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #B71C1C, stop:1 #9E1212);
+                    border: 2px solid #8E0000;
+                    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.4);
+                  }
+                  QPushButton#wrr:disabled {
+                    background-color: #B0B0B0;
+                    border: 2px solid #808080;
+                    color: #E0E0E0;
+                    box-shadow: none;
+                  }</string>
             </property>
             <property name="text">
              <string>-</string>
+            </property>
+           </widget>
+           <widget class="QPushButton" name="viewWaitingRoomButton">
+            <property name="geometry">
+             <rect>
+              <x>30</x>
+              <y>320</y>
+              <width>91</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>View Waiting Room</string>
             </property>
            </widget>
           </widget>
