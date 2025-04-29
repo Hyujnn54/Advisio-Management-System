@@ -102,6 +102,7 @@ public:
     QPlainTextEdit *setText;
     QPushButton *wrr;
     QPushButton *viewWaitingRoomButton;
+    QPushButton *ref;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -445,7 +446,7 @@ public:
         waiting_room->setObjectName("waiting_room");
         setText = new QPlainTextEdit(waiting_room);
         setText->setObjectName("setText");
-        setText->setGeometry(QRect(70, 170, 221, 91));
+        setText->setGeometry(QRect(830, 10, 51, 71));
         setText->setStyleSheet(QString::fromUtf8("QFrame#waitingRoomFrame {\n"
 "              background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(230, 236, 245, 0.9), stop:1 rgba(211, 220, 230, 0.9));\n"
 "              background-image: url(:/imgs/waiting_room_bg.png);\n"
@@ -471,7 +472,7 @@ public:
 "                  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);"));
         wrr = new QPushButton(waiting_room);
         wrr->setObjectName("wrr");
-        wrr->setGeometry(QRect(210, 280, 81, 16));
+        wrr->setGeometry(QRect(830, 90, 51, 20));
         wrr->setStyleSheet(QString::fromUtf8("QPushButton#wrr {\n"
 "                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F44336, stop:1 #D32F2F);\n"
 "                    color: white;\n"
@@ -500,7 +501,10 @@ public:
 "                  }"));
         viewWaitingRoomButton = new QPushButton(waiting_room);
         viewWaitingRoomButton->setObjectName("viewWaitingRoomButton");
-        viewWaitingRoomButton->setGeometry(QRect(30, 320, 91, 21));
+        viewWaitingRoomButton->setGeometry(QRect(320, 200, 221, 31));
+        ref = new QPushButton(waiting_room);
+        ref->setObjectName("ref");
+        ref->setGeometry(QRect(820, 490, 80, 18));
         tabWidget->addTab(waiting_room, QString());
 
         verticalLayout_5->addWidget(tabWidget);
@@ -567,6 +571,7 @@ public:
         setText->setPlainText(QString());
         wrr->setText(QCoreApplication::translate("formationwindow", "-", nullptr));
         viewWaitingRoomButton->setText(QCoreApplication::translate("formationwindow", "View Waiting Room", nullptr));
+        ref->setText(QCoreApplication::translate("formationwindow", "refresh", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(waiting_room), QCoreApplication::translate("formationwindow", "Waiting room", nullptr));
     } // retranslateUi
 

@@ -37,7 +37,8 @@ FormationWindow::FormationWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::formationwindow), isDarkTheme(false),
     tableModel(nullptr), proxyModel(new QSortFilterProxyModel(this)),
     notificationCount(0), arduino(nullptr), arduinoTimer(new QTimer(this)),
-    arduinoDataBuffer(""), clockLabel(nullptr), clockTimer(new QTimer(this))
+    arduinoDataBuffer(""), clockLabel(nullptr), clockTimer(new QTimer(this)),
+    waitingRoomDialog(nullptr)
 {
     ui->setupUi(this);
     applyLightTheme();
@@ -133,6 +134,14 @@ FormationWindow::~FormationWindow()
         arduino->closeArduino();
         delete arduino;
     }
+
+    // Clean up waiting room dialog if it exists
+    if (waitingRoomDialog) {
+        waitingRoomDialog->disconnect();
+        delete waitingRoomDialog;
+        waitingRoomDialog = nullptr;
+    }
+
     delete tableModel;
     delete ui;
 }
@@ -343,8 +352,8 @@ void FormationWindow::updateWaitingRoomCount()
     // Update UI
     const int MAX_COUNT = 5;
     QString displayText = waitingCount >= MAX_COUNT ?
-                              QString("Waiting Room: %1 (MAX)").arg(waitingCount) :
-                              QString("Waiting Room: %1").arg(waitingCount);
+                              QString("%1").arg(waitingCount) :
+                              QString("%1").arg(waitingCount);
     ui->setText->setPlainText(displayText);
 
     if (waitingCount >= MAX_COUNT) {
@@ -402,6 +411,20 @@ void FormationWindow::updateWaitingRoomCount()
 
 void FormationWindow::on_viewWaitingRoomButton_clicked()
 {
+    // If dialog already exists, just show it
+    if (waitingRoomDialog && waitingRoomDialog->isVisible()) {
+        waitingRoomDialog->activateWindow();
+        waitingRoomDialog->raise();
+        return;
+    }
+
+    // Clean up any existing dialog
+    if (waitingRoomDialog) {
+        waitingRoomDialog->disconnect();
+        delete waitingRoomDialog;
+        waitingRoomDialog = nullptr;
+    }
+
     int waitingCount = 0;
     QSqlDatabase db = QSqlDatabase::database();
     if (db.isOpen()) {
@@ -418,9 +441,22 @@ void FormationWindow::on_viewWaitingRoomButton_clicked()
         return;
     }
 
-    WaitingRoomDialog dialog(waitingCount, isDarkTheme, this);
-    dialog.exec();
+    // Create a new dialog
+    waitingRoomDialog = new WaitingRoomDialog(waitingCount, isDarkTheme, this);
+
+    // Connect finished signal to handle cleanup
+    connect(waitingRoomDialog, &QDialog::finished, this, [this]() {
+        qDebug() << "Dialog finished signal received";
+        // Don't delete here, just disconnect signals
+        if (waitingRoomDialog) {
+            waitingRoomDialog->disconnect();
+        }
+    });
+
+    // Show the dialog
+    waitingRoomDialog->show();
 }
+
 void FormationWindow::on_wrr_clicked()
 {
     qDebug() << "wrr button clicked";
@@ -448,8 +484,33 @@ void FormationWindow::on_wrr_clicked()
     }
 
     int newCount = currentCount - 1;
-    updateMeetingWR(newCount); // Update database
-    updateWaitingRoomCount(); // Refresh UI and send WR count to Arduino
+
+    // Block signals temporarily to prevent recursive updates
+    blockSignals(true);
+
+    if (updateMeetingWR(newCount)) {
+        updateWaitingRoomCount(); // Refresh UI and send WR count to Arduino
+
+        // Update LED state after decreasing waiting room count
+        if (arduino && arduino->getSerial()->isOpen()) {
+            if (newCount < 5) {
+                QString ledCommand = "GREENLED:ON\n";
+                if (arduino->writeToArduino(ledCommand.toUtf8())) {
+                    qDebug() << "Sent command to turn ON green LED after WR decrease";
+                } else {
+                    qDebug() << "Failed to send green LED ON command to Arduino after WR decrease";
+                }
+            }
+        }
+
+        qDebug() << "Waiting room count updated to:" << newCount;
+    } else {
+        qDebug() << "Failed to update waiting room count in database";
+        QMessageBox::critical(this, "Error", "Failed to update waiting room count in database.");
+    }
+
+    // Unblock signals
+    blockSignals(false);
 }
 
 void FormationWindow::on_refreshStatsButton_clicked()

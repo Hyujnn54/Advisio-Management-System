@@ -15,6 +15,8 @@
 #include <QNetworkReply>
 #include <QTimer> // For periodic polling
 
+class WaitingRoomDialog; // Forward declaration
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class formationwindow; }
 QT_END_NAMESPACE
@@ -26,7 +28,9 @@ class FormationWindow : public QMainWindow
 public:
     FormationWindow(QWidget *parent = nullptr);
     ~FormationWindow();
-
+    bool updateMeetingWR(int count);
+    void updateWaitingRoomCount(); // Made public so dialog can call it directly
+    Arduino *arduino; // Made public so dialog can access it
 
 private slots:
     void on_addButtonclicked();
@@ -40,7 +44,6 @@ private slots:
     void onNotificationLabelClicked();
     void on_refreshStatsButton_clicked();
     void onSmsRequestFinished(QNetworkReply *reply);
-    void updateWaitingRoomCount();
     void readArduinoData(); // New slot to read Arduino data
     void on_wrr_clicked(); // New slot for wrr button
     void on_viewWaitingRoomButton_clicked();
@@ -65,18 +68,16 @@ private:
     double totalCost;
     double avgCost;
     void updateStatistics();
-    Arduino *arduino; // Arduino instance
-    QTimer *arduinoTimer; // Timer for polling Arduino
     void setupArduino(); // Initialize Arduino connection
-     // Update WR in MEETING table
     QString arduinoDataBuffer;
-    bool updateMeetingWR(int count);
+    QSerialPort *serialPort;
     QLabel *clockLabel;  // Added
     QTimer *clockTimer;  // Added
+    QTimer *arduinoTimer; // Timer for polling Arduino
+    WaitingRoomDialog *waitingRoomDialog; // Store dialog instance
 
 signals:
     void waitingRoomCountChanged(int count);
-
 };
 
 #endif // FORMATIONWINDOW_H

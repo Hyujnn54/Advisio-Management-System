@@ -55,7 +55,6 @@ constexpr auto qt_meta_stringdata_CLASSFormationWindowENDCLASS = QtMocHelpers::s
     "onSmsRequestFinished",
     "QNetworkReply*",
     "reply",
-    "updateWaitingRoomCount",
     "readArduinoData",
     "on_wrr_clicked",
     "on_viewWaitingRoomButton_clicked"
@@ -71,7 +70,7 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSFormationWindowENDCLASS[] = {
       12,       // revision
        0,       // classname
        0,    0, // classinfo
-      16,   14, // methods
+      15,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -79,24 +78,23 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSFormationWindowENDCLASS[] = {
        1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    1,  110,    2, 0x06,    1 /* Public */,
+       1,    1,  104,    2, 0x06,    1 /* Public */,
 
  // slots: name, argc, parameters, tag, flags, initial metatype offsets
-       4,    0,  113,    2, 0x08,    3 /* Private */,
-       5,    0,  114,    2, 0x08,    4 /* Private */,
-       6,    0,  115,    2, 0x08,    5 /* Private */,
-       7,    0,  116,    2, 0x08,    6 /* Private */,
-       8,    0,  117,    2, 0x08,    7 /* Private */,
-       9,    1,  118,    2, 0x08,    8 /* Private */,
-      11,    0,  121,    2, 0x08,   10 /* Private */,
-      12,    0,  122,    2, 0x08,   11 /* Private */,
-      13,    0,  123,    2, 0x08,   12 /* Private */,
-      14,    0,  124,    2, 0x08,   13 /* Private */,
-      15,    1,  125,    2, 0x08,   14 /* Private */,
-      18,    0,  128,    2, 0x08,   16 /* Private */,
-      19,    0,  129,    2, 0x08,   17 /* Private */,
-      20,    0,  130,    2, 0x08,   18 /* Private */,
-      21,    0,  131,    2, 0x08,   19 /* Private */,
+       4,    0,  107,    2, 0x08,    3 /* Private */,
+       5,    0,  108,    2, 0x08,    4 /* Private */,
+       6,    0,  109,    2, 0x08,    5 /* Private */,
+       7,    0,  110,    2, 0x08,    6 /* Private */,
+       8,    0,  111,    2, 0x08,    7 /* Private */,
+       9,    1,  112,    2, 0x08,    8 /* Private */,
+      11,    0,  115,    2, 0x08,   10 /* Private */,
+      12,    0,  116,    2, 0x08,   11 /* Private */,
+      13,    0,  117,    2, 0x08,   12 /* Private */,
+      14,    0,  118,    2, 0x08,   13 /* Private */,
+      15,    1,  119,    2, 0x08,   14 /* Private */,
+      18,    0,  122,    2, 0x08,   16 /* Private */,
+      19,    0,  123,    2, 0x08,   17 /* Private */,
+      20,    0,  124,    2, 0x08,   18 /* Private */,
 
  // signals: parameters
     QMetaType::Void, QMetaType::Int,    3,
@@ -113,7 +111,6 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSFormationWindowENDCLASS[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void, 0x80000000 | 16,   17,
-    QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -157,8 +154,6 @@ Q_CONSTINIT const QMetaObject FormationWindow::staticMetaObject = { {
         // method 'onSmsRequestFinished'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<QNetworkReply *, std::false_type>,
-        // method 'updateWaitingRoomCount'
-        QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'readArduinoData'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'on_wrr_clicked'
@@ -187,10 +182,9 @@ void FormationWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int 
         case 9: _t->onNotificationLabelClicked(); break;
         case 10: _t->on_refreshStatsButton_clicked(); break;
         case 11: _t->onSmsRequestFinished((*reinterpret_cast< std::add_pointer_t<QNetworkReply*>>(_a[1]))); break;
-        case 12: _t->updateWaitingRoomCount(); break;
-        case 13: _t->readArduinoData(); break;
-        case 14: _t->on_wrr_clicked(); break;
-        case 15: _t->on_viewWaitingRoomButton_clicked(); break;
+        case 12: _t->readArduinoData(); break;
+        case 13: _t->on_wrr_clicked(); break;
+        case 14: _t->on_viewWaitingRoomButton_clicked(); break;
         default: ;
         }
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
@@ -235,13 +229,13 @@ int FormationWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 16)
+        if (_id < 15)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 16;
+        _id -= 15;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 16)
+        if (_id < 15)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 16;
+        _id -= 15;
     }
     return _id;
 }
