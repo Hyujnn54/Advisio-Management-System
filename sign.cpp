@@ -56,8 +56,8 @@ void sign::handleLogin()
     if (query.exec() && query.next()) {
         loggedInRole = query.value("ROLE").toString(); // Store the role
         QMessageBox::information(this, "Login Successful", "Welcome!");
-        // Create MainWindow without passing 'this' as parent to avoid immediate deletion
-        MainWindow *mainWindow = new MainWindow(nullptr); // Use nullptr as parent
+        // Create MainWindow with proper parameters
+        MainWindow *mainWindow = new MainWindow(true, nullptr); // Correction: passer true comme premier paramètre
         mainWindow->setLoggedInRole(loggedInRole); // Pass role to MainWindow
         mainWindow->show();
         // Hide sign window instead of closing to keep the application running
@@ -204,7 +204,7 @@ void sign::faceId()
             loggedInRole = query.value("ROLE").toString(); // Store the role
             qDebug() << "Logging in - CIN:" << cin << "Email:" << email << "Role:" << loggedInRole;
             QMessageBox::information(this, "Face ID Successful", "Welcome!");
-            MainWindow *mainWindow = new MainWindow(nullptr); // Use nullptr as parent
+            MainWindow *mainWindow = new MainWindow(true, nullptr); // Correction: passer true comme premier paramètre
             mainWindow->setLoggedInRole(loggedInRole); // Pass role to MainWindow
             mainWindow->show();
             this->hide(); // Use hide() to match handleLogin()

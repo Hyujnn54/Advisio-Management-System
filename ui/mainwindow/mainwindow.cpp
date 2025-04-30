@@ -2,7 +2,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "managers/meeting/meeting.h"
-#include "updateemployeedialog.h"  // Correction du chemin d'inclusion
+#include "dialog/updateemployee/updateemployeedialog.h"  // Correction du chemin d'inclusion
 #include "lib/qrcodegen/qrcodegen.hpp"  // Ajout de l'inclusion qrcodegen
 #include <QMessageBox>
 #include <QRegularExpression>
@@ -2280,4 +2280,37 @@ bool MainWindow::validateEmployeeInput()
     }
     
     return true;
+}
+
+void MainWindow::setLoggedInRole(const QString &role)
+{
+    m_loggedInRole = role;
+    
+    // Configuration des droits d'accès en fonction du rôle
+    if (role.toLower() == "admin") {
+        // Accès complet pour les administrateurs
+        ui->employeeSectionButton->setEnabled(true);
+        ui->clientSectionButton->setEnabled(true);
+        ui->trainingSectionButton->setEnabled(true);
+        ui->meetingSectionButton->setEnabled(true);
+        statusBar()->showMessage("Connecté en tant qu'administrateur - Accès complet", 5000);
+    } 
+    else if (role.toLower() == "manager") {
+        // Accès restreint pour les managers
+        ui->employeeSectionButton->setEnabled(true);
+        ui->clientSectionButton->setEnabled(true);
+        ui->trainingSectionButton->setEnabled(true);
+        ui->meetingSectionButton->setEnabled(true);
+        statusBar()->showMessage("Connecté en tant que manager", 5000);
+    } 
+    else {
+        // Accès limité pour les autres employés
+        ui->employeeSectionButton->setEnabled(false);
+        ui->clientSectionButton->setEnabled(true);
+        ui->trainingSectionButton->setEnabled(true);
+        ui->meetingSectionButton->setEnabled(true);
+        statusBar()->showMessage("Connecté en tant qu'employé - Accès limité", 5000);
+    }
+    
+    qDebug() << "Rôle utilisateur défini:" << role;
 }

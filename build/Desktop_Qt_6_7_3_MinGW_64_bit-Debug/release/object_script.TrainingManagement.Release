@@ -18,6 +18,7 @@ release/updatetrainingdialog.o
 release/updatemeeting.o
 release/updateemployeedialog.o
 release/qrcodegen.o
+release/sign.o
 release/qrc_img.o
 release/moc_emailsender.o
 release/moc_notificationmanager.o
@@ -31,3 +32,4 @@ release/moc_updateclientdialog.o
 release/moc_updatetrainingdialog.o
 release/moc_updatemeeting.o
 release/moc_updateemployeedialog.o
+release/moc_sign.o

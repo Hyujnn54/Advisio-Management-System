@@ -2,7 +2,7 @@
 #define UPDATEEMPLOYEEDIALOG_H
 
 #include <QDialog>
-#include "employee.h"
+#include "managers/employee/Employee.h"  // Correction du chemin d'inclusion
 
 namespace Ui {
 class UpdateEmployeeDialog;

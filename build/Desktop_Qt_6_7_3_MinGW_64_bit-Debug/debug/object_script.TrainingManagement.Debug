@@ -18,6 +18,7 @@ debug/updatetrainingdialog.o
 debug/updatemeeting.o
 debug/updateemployeedialog.o
 debug/qrcodegen.o
+debug/sign.o
 debug/qrc_img.o
 debug/moc_emailsender.o
 debug/moc_notificationmanager.o
@@ -31,3 +32,4 @@ debug/moc_updateclientdialog.o
 debug/moc_updatetrainingdialog.o
 debug/moc_updatemeeting.o
 debug/moc_updateemployeedialog.o
+debug/moc_sign.o

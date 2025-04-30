@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "connection.h"
+#include "../sign.h" // Inclure l'en-tête de la fenêtre de connexion
 #include <QApplication>
 #include <QMessageBox>
 #include <QSqlDatabase>
@@ -17,7 +18,6 @@ int main(int argc, char *argv[])
     QFont::insertSubstitution("MS Serif", "Segoe UI");
     QFont::insertSubstitution("Modern", "Segoe UI");
 
-
     QApplication a(argc, argv);
 
     // Check available drivers
@@ -32,7 +32,10 @@ int main(int argc, char *argv[])
         // Continue running the application instead of exiting
     }
 
-    MainWindow w(dbConnected); // Pass the connection status to MainWindow
-    w.show();
+    // Créer et afficher l'écran de connexion au lieu de la fenêtre principale
+    sign loginWindow;
+    loginWindow.show();
+    
+    // Exécuter l'application - la fenêtre principale sera créée après une connexion réussie
     return a.exec();
 }

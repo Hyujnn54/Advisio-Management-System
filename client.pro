@@ -40,7 +40,8 @@ HEADERS += \
     dialog/updatetrainingdialog/updatetrainingdialog.h \
     dialog/updatemeeting/updatemeeting.h \
     dialog/updateemployee/updateemployeedialog.h \
-    lib/qrcodegen/qrcodegen.hpp
+    lib/qrcodegen/qrcodegen.hpp \
+    sign.h
 
 SOURCES += \
     core/connection.cpp \
@@ -62,7 +63,8 @@ SOURCES += \
     dialog/updatetrainingdialog/updatetrainingdialog.cpp \
     dialog/updatemeeting/updatemeeting.cpp \
     dialog/updateemployee/updateemployeedialog.cpp \
-    lib/qrcodegen/qrcodegen.cpp
+    lib/qrcodegen/qrcodegen.cpp \
+    sign.cpp
 
 FORMS += \
     ui/chartwindow/ChartWindow.ui \
@@ -71,6 +73,16 @@ FORMS += \
     dialog/updatetrainingdialog/updatetrainingdialog.ui \
     dialog/updatemeeting/updatemeeting.ui \
     dialog/updateemployee/UpdateEmployeeDialog.ui
+INCLUDEPATH += C:/opencv/build/install/include
+
+LIBS += -LC:/opencv/build/lib \
+            -lopencv_core480 \
+            -lopencv_imgproc480 \
+            -lopencv_imgcodecs480 \
+            -lopencv_highgui480 \
+            -lopencv_videoio480 \
+            -lopencv_objdetect480 \
+            -lopencv_face480 \
 
 RESOURCES += img.qrc
 

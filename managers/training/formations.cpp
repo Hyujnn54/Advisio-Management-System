@@ -161,11 +161,14 @@ QSqlQueryModel *formations::searchByType(const QString &type)
     QSqlQuery query(db);
     query.prepare("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM AHMED.FORMATIONS WHERE FORMATION = :formation");
     query.bindValue(":formation", type);
-    if (!query.exec())
-    {
+    
+    // Exécuter la requête et définir le modèle
+    if (query.exec()) {
+        model->setQuery(std::move(query)); // Utiliser std::move pour éviter la copie
+    } else {
         qDebug() << "SQL Error in searchByType:" << query.lastError().text();
+        model->setQuery(QSqlQuery()); // Utiliser un constructeur par défaut au lieu de QSqlQuery(db)
     }
-    model->setQuery(query.exec() ? query : QSqlQuery(db));
     return model;
 }
 
@@ -176,11 +179,14 @@ QSqlQueryModel *formations::searchByTrainer(const QString &trainer)
     QSqlQuery query(db);
     query.prepare("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM AHMED.FORMATIONS WHERE TRAINER = :trainer");
     query.bindValue(":trainer", trainer);
-    if (!query.exec())
-    {
+    
+    // Exécuter la requête et définir le modèle
+    if (query.exec()) {
+        model->setQuery(std::move(query)); // Utiliser std::move pour éviter la copie
+    } else {
         qDebug() << "SQL Error in searchByTrainer:" << query.lastError().text();
+        model->setQuery(QSqlQuery()); // Utiliser un constructeur par défaut
     }
-    model->setQuery(query.exec() ? query : QSqlQuery(db));
     return model;
 }
 
@@ -191,11 +197,14 @@ QSqlQueryModel *formations::getTrainingsForDate(const QDate &date)
     QSqlQuery query(db);
     query.prepare("SELECT IDFORM, FORMATION, DESCRIPTION, TRAINER, DATEF, TIME, PRIX FROM AHMED.FORMATIONS WHERE DATEF = :datef");
     query.bindValue(":datef", date);
-    if (!query.exec())
-    {
+    
+    // Exécuter la requête et définir le modèle
+    if (query.exec()) {
+        model->setQuery(std::move(query)); // Utiliser std::move pour éviter la copie
+    } else {
         qDebug() << "SQL Error in getTrainingsForDate:" << query.lastError().text();
+        model->setQuery(QSqlQuery()); // Utiliser un constructeur par défaut
     }
-    model->setQuery(query.exec() ? query : QSqlQuery(db));
     return model;
 }
 

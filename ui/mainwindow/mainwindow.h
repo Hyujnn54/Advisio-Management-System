@@ -27,6 +27,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(bool dbConnected, QWidget *parent = nullptr);
     ~MainWindow();
+    void setLoggedInRole(const QString &role); // Méthode pour définir le rôle de l'utilisateur connecté
 
 private slots:
     void on_clientSectionButton_clicked();
@@ -98,6 +99,7 @@ private:
 
     Ui::MainWindow *ui;
     bool m_dbConnected;
+    QString m_loggedInRole; // Rôle de l'utilisateur connecté
     ClientManager *clientManager;
     TrainingManager *trainingManager;
     MeetingManager *meetingManager;
