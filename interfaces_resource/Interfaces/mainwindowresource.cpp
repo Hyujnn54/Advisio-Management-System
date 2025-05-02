@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+/*#include "mainwindow.h"
 #include "qtimer.h"
 #include "ui_mainwindow.h"
 #include <QMessageBox>
@@ -32,6 +32,46 @@
 #include <QFileDialog>
 #include <QDate>
 #include <QDebug>
+#include <QCameraViewfinder>
+#include <opencv2/opencv.hpp>
+#include <opencv2/features2d.hpp>*/
+
+#include "mainwindow.h"
+#include "qtimer.h"
+#include "ui_mainwindow.h"
+#include <QMessageBox>
+#include <QDate>
+#include "resource.h"
+#include <QComboBox>
+#include <QRadioButton>
+#include <QLineEdit>
+#include <QDateEdit>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
+#include <QString>
+#include <QDate>
+#include <QSqlDatabase>
+#include <QVariant>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QSqlRecord>
+#include <QSqlQueryModel>
+#include <QSqlTableModel>
+#include <QTableWidget>
+#include <QTableView>
+#include <QInputDialog>
+#include <QBuffer>
+#include <QFileDialog>
+#include <QPixmap>
+#include <QFile>
+#include <QPrinter>
+#include <QPainter>
+#include <QFileDialog>
+#include <QDate>
+#include <QDebug>
+#include <QImage>
+#include <QSerialPortInfo>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -48,11 +88,15 @@ MainWindow::MainWindow(QWidget *parent)
     , employeeName("DefaultEmployee") // Default employee name, you might want to set this dynamically
     , networkManager(new QNetworkAccessManager(this)) // Initialize network manager
     , pieSeries(new QPieSeries(this))
-   , barSeries(new QBarSeries(this))
-
+    , barSeries(new QBarSeries(this))
 
 {
     ui->setupUi(this);
+
+
+
+//connect(ui->btnLookForResource, &QPushButton::clicked, this, &MainWindow::on_btnLookForResource_clicked);
+
 
     QWidget *statisticsTab = ui->tabWidget->widget(3); // Statistics tab
 
@@ -115,14 +159,32 @@ MainWindow::MainWindow(QWidget *parent)
         refreshTableWidget();
     updatePieChart();
         updateStackedBarChart();
-   //connect(ui->confirmFormButton, &QPushButton::clicked, this, &MainWindow::on_confirmFormButton_clicked);
+
+
 }
 
 MainWindow::~MainWindow()
 {
-    delete networkManager; // Clean up
+
+    delete networkManager;
     delete searchTimer;
     delete ui;
+}
+
+
+
+
+/*void MainWindow::on_btnLookForResource_clicked()
+{
+    SearchDialog dialog(this);
+    dialog.exec();
+}*/
+void MainWindow::on_btnLookForResource_clicked() {
+    qDebug() << "Look for Resource button clicked";
+    SearchDialog searchDialog(this);
+    if (searchDialog.exec() == QDialog::Accepted) {
+        refreshTableWidget(); // Refresh table after dialog closes
+    }
 }
 
 
@@ -578,156 +640,7 @@ void MainWindow::on_cancelFormButton_clicked()
 #include <QDate>
 #include <QDebug>
 
-///9BAL MA NBADEL EL HISTORY
-/*void MainWindow::on_confirmFormButton_clicked()
-{
-    // Retrieve values from the form
-    QString name = ui->nameLineEdit->text().trimmed(); // Remove leading/trailing whitespace
-    QString type = ui->typeComboBox->currentText().trimmed();
-    QString brand = ui->brandLineEdit->text().trimmed();
-    bool ok;
-    int quantity = ui->quantityLineEdit->text().toInt(&ok);
-    QDate purchase_date = ui->purchaseDateEdit->date();
-    QDate currentDate = QDate::currentDate(); // Current date: March 09, 2025
-   // purchase_date.toString("yyyy-MM-dd")
 
-
-    if (name.isEmpty() || type.isEmpty() || brand.isEmpty() || !ok) {
-        QMessageBox::warning(this, "Input Error", "All fields (Name, Type, Brand, Quantity) must be filled correctly.");
-        return;
-    }
-
-
-    auto startsWithUpper = [](const QString& str) {
-        return !str.isEmpty() && str[0].isUpper();
-    };
-    if (!startsWithUpper(name) || !startsWithUpper(type) || !startsWithUpper(brand)) {
-        QMessageBox::warning(this, "Input Error", "Name, Type, and Brand must start with an uppercase letter.");
-        return;
-    }
-
-
-    if (!ok || quantity <= 0) {
-        QMessageBox::warning(this, "Input Error", "Quantity must be a positive number greater than zero.");
-        return;
-    }
-
-
-    if (purchase_date > currentDate) {
-        QMessageBox::warning(this, "Input Error", "Purchase date cannot be in the future.");
-        return;
-    }
-
-
-    if (imageData.isEmpty()) {
-        QMessageBox::warning(this, "Input Error", "Please select an image.");
-        return;
-    }
-
-
-    Resource resource;
-    resource.setName(name);
-    resource.setType(type);
-    resource.setBrand(brand);
-    resource.setQuantity(quantity);
-    resource.setPurchaseDate(purchase_date);
-    resource.setImage(imageData);
-
-
-    if (resource.addResource()) {
-        qDebug() << "Resource added successfully!";
-        QMessageBox::information(this, "Success", "Resource added successfully!");
-
-
-        ui->nameLineEdit->clear();
-        ui->typeComboBox->setCurrentIndex(0);
-        ui->brandLineEdit->clear();
-        ui->quantityLineEdit->clear();
-        ui->purchaseDateEdit->setDate(QDate::currentDate());
-        imageData.clear();
-        ui->lblImagePreview->clear();
-
-        refreshTableWidget();
-    } else {
-        qDebug() << "Failed to add resource:" << QSqlQuery().lastError().text();
-        QMessageBox::warning(this, "Error", "Failed to add resource: " + QSqlQuery().lastError().text());
-    }
-}
-*/
-
-///9BAL MA NZID EL IMAGE IDENTIFIER
-/*
-void MainWindow::on_confirmFormButton_clicked()
-{
-    // Retrieve values from the form
-    QString name = ui->nameLineEdit->text().trimmed(); // Remove leading/trailing whitespace
-    QString type = ui->typeComboBox->currentText().trimmed();
-    QString brand = ui->brandLineEdit->text().trimmed();
-    bool ok;
-    int quantity = ui->quantityLineEdit->text().toInt(&ok);
-    QDate purchase_date = ui->purchaseDateEdit->date();
-    QDate currentDate = QDate::currentDate(); // Current date: April 09, 2025 (as per system date)
-
-    // Validation checks
-    if (name.isEmpty() || type.isEmpty() || brand.isEmpty() || !ok) {
-        QMessageBox::warning(this, "Input Error", "All fields (Name, Type, Brand, Quantity) must be filled correctly.");
-        return;
-    }
-
-    auto startsWithUpper = [](const QString& str) {
-        return !str.isEmpty() && str[0].isUpper();
-    };
-    if (!startsWithUpper(name) || !startsWithUpper(type) || !startsWithUpper(brand)) {
-        QMessageBox::warning(this, "Input Error", "Name, Type, and Brand must start with an uppercase letter.");
-        return;
-    }
-
-    if (!ok || quantity <= 0) {
-        QMessageBox::warning(this, "Input Error", "Quantity must be a positive number greater than zero.");
-        return;
-    }
-
-    if (purchase_date > currentDate) {
-        QMessageBox::warning(this, "Input Error", "Purchase date cannot be in the future.");
-        return;
-    }
-
-    if (imageData.isEmpty()) {
-        QMessageBox::warning(this, "Input Error", "Please select an image.");
-        return;
-    }
-
-    // Create Resource object and set values
-    Resource resource;
-    resource.setName(name);
-    resource.setType(type);
-    resource.setBrand(brand);
-    resource.setQuantity(quantity);
-    resource.setPurchaseDate(purchase_date);
-    resource.setImage(imageData);
-
-    // Add resource with employeeName (from member variable)
-    if (resource.addResource(employeeName)) {
-        qDebug() << "Resource added successfully by " << employeeName;
-        QMessageBox::information(this, "Success", "Resource added successfully!");
-
-        // Clear the form
-        ui->nameLineEdit->clear();
-        ui->typeComboBox->setCurrentIndex(0);
-        ui->brandLineEdit->clear();
-        ui->quantityLineEdit->clear();
-        ui->purchaseDateEdit->setDate(QDate::currentDate());
-        imageData.clear();
-        ui->lblImagePreview->clear();
-
-        // Refresh the table
-        refreshTableWidget();
-    } else {
-        qDebug() << "Failed to add resource:" << QSqlQuery().lastError().text();
-        QMessageBox::warning(this, "Error", "Failed to add resource: " + QSqlQuery().lastError().text());
-    }
-}
-*/
 
 void MainWindow::on_confirmFormButton_clicked()
 {
@@ -886,6 +799,7 @@ void MainWindow::on_imageAnalysisFinished(QNetworkReply *reply)
 }
 
 
+
 void MainWindow::initializeSynonyms()
 {
     objectSynonyms["pen"] = {"pen", "ballpoint pen", "ink pen", "writing instrument", "gel pen", "pencil", "ink", "writing"};
@@ -999,99 +913,7 @@ void MainWindow::refreshTableWidget(const QString &filter) {
 
 
 
-///9BAL MA NZID EL SORTING
-/*void MainWindow::refreshTableWidget(const QString &filter) {
-    Resource R;
-    QSqlQueryModel* model = new QSqlQueryModel();
 
-    // Create a QSqlQuery object for executing the query
-    QSqlQuery query;
-
-    // Construct the SQL query with a filter if provided
-    QString queryString = "SELECT RESOURCE_ID, NAME, TYPE, BRAND, QUANTITY, PURCHASE_DATE, IMAGE FROM RESOURCES";
-
-    // Add filter if provided
-    if (!filter.isEmpty()) {
-        queryString += " WHERE UPPER(NAME) LIKE :nameFilter"
-                       " OR UPPER(TYPE) LIKE :typeFilter"
-                       " OR UPPER(BRAND) LIKE :brandFilter"
-                       " OR CAST(RESOURCE_ID AS VARCHAR(10)) LIKE :idFilter"
-                       " OR CAST(QUANTITY AS VARCHAR(10)) LIKE :quantityFilter"
-                       " OR TO_CHAR(PURCHASE_DATE, 'YYYY-MM-DD') LIKE :dateFilter";
-    }
-
-
-
-    // Prepare the query
-    query.prepare(queryString);
-
-    // Bind the filter value if a filter is provided
-    if (!filter.isEmpty()) {
-        QString upperLikeFilter = "%" + filter.toUpper() + "%";
-        QString likeFilter = "%" + filter + "%";
-        query.bindValue(":nameFilter", upperLikeFilter);
-        query.bindValue(":typeFilter", upperLikeFilter);
-        query.bindValue(":brandFilter", upperLikeFilter);
-        query.bindValue(":idFilter", likeFilter);
-        query.bindValue(":quantityFilter", likeFilter);
-        query.bindValue(":dateFilter", likeFilter);
-    }
-
-    // Execute the query
-    if (!query.exec()) {
-        qDebug() << "Error executing query:" << query.lastError().text();
-    }
-
-    // Set the query result to the model
-    model->setQuery(query);
-
-    if (model->lastError().isValid()) {
-        qDebug() << "SQL Error when displaying resources:" << model->lastError().text();
-    }
-
-    // Set up the tableWidget with data from the model
-    ui->tableWidget->setRowCount(0); // Clear existing rows
-    ui->tableWidget->setColumnCount(7); // Match the number of columns (ID, Name, Type, Brand, Quantity, Purchase Date, Image)
-    QStringList headers;
-    headers << "ID" << "Name" << "Type" << "Brand" << "Quantity" << "Purchase Date" << "Image";
-    ui->tableWidget->setHorizontalHeaderLabels(headers);
-
-    // Copy data from model to tableWidget
-    for (int row = 0; row < model->rowCount(); ++row) {
-        ui->tableWidget->insertRow(row);
-
-        for (int col = 0; col < model->columnCount(); ++col) {
-            QTableWidgetItem* item = new QTableWidgetItem();
-            if (col == 5) { // Purchase Date column (index 5)
-                QDate date = model->data(model->index(row, col)).toDate();
-                if (date.isValid()) {
-                    item->setText(date.toString("yyyy-MM-dd"));
-                } else {
-                    item->setText("Invalid Date");
-                }
-            } else if (col == 6) { // Image column (index 6)
-                QByteArray imageData = model->data(model->index(row, col)).toByteArray();
-                if (!imageData.isEmpty()) {
-                    QPixmap pixmap;
-                    pixmap.loadFromData(imageData);
-                    if (!pixmap.isNull()) {
-                        item->setData(Qt::DecorationRole, pixmap.scaled(100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-                    } else {
-                        item->setText("Image Load Failed");
-                    }
-                } else {
-                    item->setText("No Image");
-                }
-            } else {
-                item->setText(model->data(model->index(row, col)).toString());
-            }
-            ui->tableWidget->setItem(row, col, item);
-        }
-    }
-
-    ui->tableWidget->setColumnWidth(6, 120); // Adjust width for the image column
-    delete model;
-}*/
 
 
 
@@ -1119,29 +941,7 @@ void MainWindow::on_searchTimeout() {
     ui->searchLineEdit->setFocus();
 }
 
-///S7I7A 9BAL MA NZID EL HISTORY
-/*void MainWindow::() {
-    // Get the selected row
-    int row = ui->tableWidget->currentRow();
-    if (row < 0) {
-        QMessageBox::warning(this, "Error", "Please select a meeting to delete.");
-        return;
-    }
 
-    // Get the ID of the selected meeting
-    int resource_id = ui->tableWidget->item(row, 0)->text().toInt();
-
-    // Delete the meeting from the database
-    Resource R;
-    if (R.delet(resource_id)) {
-        QMessageBox::information(this, "Success", "Resource deleted successfully.");
-
-        // Refresh the table to remove the deleted meeting
-        refreshTableWidget();
-    } else {
-        QMessageBox::warning(this, "Error", "Failed to delete Resource. Check the database connection.");
-    }
-}*/
 
 void MainWindow::handleDeleteButtonClick() {
     // Get the selected row
@@ -1169,199 +969,7 @@ void MainWindow::handleDeleteButtonClick() {
 }
 
 
-//UPDATE S7I7A 9BAL MA NZID EL HISOTRY
-/*void MainWindow::on_updateButton_clicked()
-{
-    qDebug() << "on_updateButton_clicked called. Current row:" << ui->tableWidget->currentRow();
 
-    // Get the selected row
-    int row = ui->tableWidget->currentRow();
-    if (row < 0) {
-        QMessageBox::warning(this, "Selection Error", "Please select a row to update.");
-        qDebug() << "No row selected, exiting.";
-        return;
-    }
-
-    qDebug() << "Selected row:" << row << "with ID:" << ui->tableWidget->item(row, 0)->text();
-
-    // Disconnect the button to prevent multiple clicks during the process
-    disconnect(ui->updateButton, &QPushButton::clicked, this, &MainWindow::on_updateButton_clicked);
-
-    // Create a dialog
-    QDialog dialog(this);
-    dialog.setWindowTitle("Update Resource");
-
-    // Set up the layout
-    QVBoxLayout *layout = new QVBoxLayout(&dialog);
-
-    // Create form fields
-    QLabel *nameLabel = new QLabel("Name:");
-    QLineEdit *nameEdit = new QLineEdit();
-    QLabel *typeLabel = new QLabel("Type:");
-    QComboBox *typeCombo = new QComboBox();
-    typeCombo->addItems(QStringList() << "Electronics" << "Cleaning Supplies" << "Kitchen Supplies" << "Stationery");
-    QLabel *brandLabel = new QLabel("Brand:");
-    QLineEdit *brandEdit = new QLineEdit();
-    QLabel *quantityLabel = new QLabel("Quantity:");
-    QLineEdit *quantityEdit = new QLineEdit();
-    QLabel *purchaseDateLabel = new QLabel("Purchase Date:");
-    QDateEdit *purchaseDateEdit = new QDateEdit();
-    purchaseDateEdit->setDisplayFormat("yyyy-MM-dd");
-    purchaseDateEdit->setCalendarPopup(true);
-
-    // Add image selection fields
-    QLabel *imageLabel = new QLabel("Image:");
-    QPushButton *selectImageButton = new QPushButton("Select Image");
-    QLabel *imagePreview = new QLabel();
-    imagePreview->setFixedSize(100, 100); // Adjust size as needed
-    imagePreview->setScaledContents(true);
-
-    // Local variable to store the selected image data
-    QByteArray updatedImageData;
-
-    // Pre-fill with selected row data
-    selectedResourceId = ui->tableWidget->item(row, 0)->text().toInt();
-    nameEdit->setText(ui->tableWidget->item(row, 1)->text());
-    typeCombo->setCurrentText(ui->tableWidget->item(row, 2)->text());
-    brandEdit->setText(ui->tableWidget->item(row, 3)->text());
-    quantityEdit->setText(ui->tableWidget->item(row, 4)->text());
-    purchaseDateEdit->setDate(QDate::fromString(ui->tableWidget->item(row, 5)->text(), "yyyy-MM-dd"));
-
-    // Connect the image selection button
-    connect(selectImageButton, &QPushButton::clicked, &dialog, [&]() {
-        QString filePath = QFileDialog::getOpenFileName(&dialog, "Select an Image", "", "Images (*.png *.jpg *.jpeg *.bmp)");
-        if (!filePath.isEmpty()) {
-            QPixmap image;
-            if (!image.load(filePath)) {
-                QMessageBox::warning(&dialog, "Image Load Error", "Failed to load the image. Please select a valid image file.");
-                qDebug() << "Failed to load image into QPixmap:" << filePath;
-                return;
-            }
-
-            imagePreview->setPixmap(image.scaled(imagePreview->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-
-            QFile file(filePath);
-            if (file.open(QIODevice::ReadOnly)) {
-                updatedImageData = file.readAll();
-                file.close();
-
-                if (updatedImageData.isEmpty()) {
-                    QMessageBox::warning(&dialog, "Image Error", "The selected image file is empty or could not be read.");
-                    qDebug() << "Image data is empty after reading:" << filePath;
-                    imagePreview->clear();
-                    updatedImageData.clear();
-                    return;
-                }
-
-                qDebug() << "Updated image loaded successfully, size:" << updatedImageData.size() << "bytes";
-            } else {
-                QMessageBox::warning(&dialog, "File Error", "Failed to open the image file: " + file.errorString());
-                qDebug() << "Failed to open image file:" << file.errorString();
-                imagePreview->clear();
-                return;
-            }
-        } else {
-            qDebug() << "No image selected for update.";
-        }
-    });
-
-    // Add fields to layout
-    layout->addWidget(nameLabel);
-    layout->addWidget(nameEdit);
-    layout->addWidget(typeLabel);
-    layout->addWidget(typeCombo);
-    layout->addWidget(brandLabel);
-    layout->addWidget(brandEdit);
-    layout->addWidget(quantityLabel);
-    layout->addWidget(quantityEdit);
-    layout->addWidget(purchaseDateLabel);
-    layout->addWidget(purchaseDateEdit);
-    layout->addWidget(imageLabel);
-    layout->addWidget(selectImageButton);
-    layout->addWidget(imagePreview);
-
-    // Add OK and Cancel buttons
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    layout->addWidget(buttonBox);
-
-    // Connect buttons with validation
-    connect(buttonBox, &QDialogButtonBox::accepted, &dialog, [&]() {
-        // Retrieve values from the form
-        QString name = nameEdit->text().trimmed();
-        QString type = typeCombo->currentText().trimmed();
-        QString brand = brandEdit->text().trimmed();
-        bool ok;
-        int quantity = quantityEdit->text().toInt(&ok);
-        QDate purchase_date = purchaseDateEdit->date();
-        QDate currentDate = QDate::currentDate(); // Current date: March 09, 2025
-
-        // Validation checks
-        // 1. Check if any field is empty
-        if (name.isEmpty() || type.isEmpty() || brand.isEmpty() || !ok) {
-            QMessageBox::warning(&dialog, "Input Error", "All fields (Name, Type, Brand, Quantity) must be filled correctly.");
-            return;
-        }
-
-        // 2. Check if fields start with uppercase
-        auto startsWithUpper = [](const QString& str) {
-            return !str.isEmpty() && str[0].isUpper();
-        };
-        if (!startsWithUpper(name) || !startsWithUpper(type) || !startsWithUpper(brand)) {
-            QMessageBox::warning(&dialog, "Input Error", "Name, Type, and Brand must start with an uppercase letter.");
-            return;
-        }
-
-        // 3. Check quantity: must be > 0
-        if (!ok || quantity <= 0) {
-            QMessageBox::warning(&dialog, "Input Error", "Quantity must be a positive number greater than zero.");
-            return;
-        }
-
-        // 4. Check purchase date: must not be in the future
-        if (purchase_date > currentDate) {
-            QMessageBox::warning(&dialog, "Input Error", "Purchase date cannot be in the future.");
-            return;
-        }
-
-        // 5. Check if an image is selected
-        if (updatedImageData.isEmpty()) {
-            QMessageBox::warning(&dialog, "Input Error", "Please select an image.");
-            return;
-        }
-
-        // If all validations pass, update the resource
-        Resource resource;
-        resource.setResourceId(selectedResourceId);
-        resource.setName(name);
-        resource.setType(type);
-        resource.setBrand(brand);
-        resource.setQuantity(quantity);
-        resource.setPurchaseDate(purchase_date);
-        resource.setImage(updatedImageData); // Set the updated image data
-
-        if (resource.updateResource()) {
-            qDebug() << "Resource updated successfully!";
-            refreshTableWidget();
-            QMessageBox::information(this, "Success", "Resource updated successfully.");
-            dialog.accept();
-        } else {
-            qDebug() << "Failed to update resource:" << QSqlQuery().lastError().text();
-            QMessageBox::warning(this, "Update Error", "Failed to update resource: " + QSqlQuery().lastError().text());
-        }
-    });
-    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-
-    qDebug() << "Showing dialog...";
-    dialog.exec();
-    qDebug() << "Dialog closed. Current row after exec:" << ui->tableWidget->currentRow();
-    qDebug() << "Selected Resource ID after exec:" << selectedResourceId;
-
-    // Reconnect the button after the dialog closes
-    connect(ui->updateButton, &QPushButton::clicked, this, &MainWindow::on_updateButton_clicked);
-    selectedResourceId = -1;
-    qDebug() << "Reset selectedResourceId to -1. Current row after reset:" << ui->tableWidget->currentRow();
-}
-*/
 
 
 void MainWindow::on_updateButton_clicked()
@@ -1910,3 +1518,6 @@ void MainWindow::toggleSidebar() {
     // Toggle visibility
     ui->sideMenu->setVisible(!isVisible);
 }
+
+
+

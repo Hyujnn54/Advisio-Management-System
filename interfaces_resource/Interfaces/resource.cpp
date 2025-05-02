@@ -15,6 +15,7 @@ Resource::Resource( QString& name, QString& type, QString& brand, int& quantity,
     :  name(name), type(type), brand(brand), quantity(quantity), purchase_date(purchase_date), image(image) {}
 
 
+
 int Resource::getResourceId() const { return resource_id; }
 QString Resource::getName() const { return name; }
 QString Resource::getType() const { return type; }
@@ -24,6 +25,7 @@ QDate Resource::getPurchaseDate() const { return purchase_date; }
 QByteArray Resource::getImage() const { return image; }
 
 
+
 void Resource::setResourceId(const int id) { resource_id = id; }
 void Resource::setName(const QString& name) { this->name = name; }
 void Resource::setType(const QString& type) { this->type = type; }
@@ -31,6 +33,7 @@ void Resource::setBrand(const QString& brand) { this->brand = brand; }
 void Resource::setQuantity(const int& quantity) { this->quantity = quantity; }
 void Resource::setPurchaseDate(const QDate& purchaseDate) { this->purchase_date = purchaseDate; }
 void Resource::setImage(const QByteArray& image) { this->image = image; }
+
 
 
 
@@ -49,55 +52,7 @@ void Resource::logAction(const QString& action, const QString& employeeName) {
     }
 }
 
-/// S7I7A 9BAL MA NZID EL HISTORY
-/*bool Resource::addResource() {
-    QSqlQuery query;
 
-    qDebug() << "Adding resource with values: ";
-    qDebug() << "Name: " << name;
-    qDebug() << "Type: " << type;
-    qDebug() << "Brand: " << brand;
-    qDebug() << "Quantity: " << quantity;
-    qDebug() << "Purchase Date: " << purchase_date.toString("yyyy-MM-dd");
-    qDebug() << "Image Size: " << image.size();
-
-    // Step 1: Insert with EMPTY_BLOB() and retrieve RESOURCE_ID using RETURNING
-    query.prepare("INSERT INTO RESOURCES (NAME, TYPE, BRAND, QUANTITY, PURCHASE_DATE, IMAGE) "
-                  "VALUES (:name, :type, :brand, :quantity, TO_DATE(:purchase_date, 'YYYY-MM-DD'), EMPTY_BLOB()) "
-                  "RETURNING RESOURCE_ID INTO :id");
-
-    query.bindValue(":name", name);
-    query.bindValue(":type", type);
-    query.bindValue(":brand", brand);
-    query.bindValue(":quantity", quantity);
-    query.bindValue(":purchase_date", purchase_date.toString("yyyy-MM-dd"));
-    query.bindValue(":id", 0, QSql::Out); // Bind as an output parameter
-
-    if (query.exec()) {
-        int id = query.boundValue(":id").toInt();
-        qDebug() << "Inserted resource ID:" << id;
-
-        // Step 2: Update the IMAGE column with the actual data if an image is provided
-        if (id > 0 && !image.isEmpty()) {
-            QSqlQuery updateQuery;
-            updateQuery.prepare("UPDATE RESOURCES SET IMAGE = :image WHERE RESOURCE_ID = :id");
-            updateQuery.bindValue(":image", image);
-            updateQuery.bindValue(":id", id);
-
-            if (!updateQuery.exec()) {
-                qDebug() << "Failed to update image: " << updateQuery.lastError().text();
-                return false;
-            }
-            qDebug() << "Image updated successfully for resource ID:" << id;
-        }
-
-        qDebug() << "Resource added successfully!";
-        return true;
-    } else {
-        qDebug() << "Error adding resource: " << query.lastError().text();
-        return false;
-    }
-}*/
 
 bool Resource::addResource(const QString& employeeName) {
     QSqlQuery query;
@@ -165,54 +120,6 @@ QSqlQueryModel* Resource::afficher()
     return model;
 }
 
-/// S7I7A 9BAL MA NZID EL HISTORY
-/*
-bool Resource::delet(int resource_id)
-{
-    QSqlQuery query;
-    query.prepare("DELETE FROM RESOURCES WHERE RESOURCE_ID = :resource_id");
-    query.bindValue(":resource_id", resource_id);
-
-    bool success = query.exec();
-
-    if (!success) {
-        qDebug() << "SQL Error when deleting a resource:" << query.lastError().text();
-    }
-
-    return success;
-}
-
-
-bool Resource::updateResource()
-{
-    if (resource_id <= 0) {
-        qDebug() << "Error: resource_id is not set for update.";
-        return false;
-    }
-
-    QSqlQuery query;
-    query.prepare("UPDATE RESOURCES SET NAME = :name, TYPE = :type, BRAND = :brand, "
-                  "QUANTITY = :quantity, PURCHASE_DATE = TO_DATE(:purchase_date, 'YYYY-MM-DD'), "
-                  "IMAGE = :image WHERE RESOURCE_ID = :resource_id");
-
-    query.bindValue(":name", name);
-    query.bindValue(":type", type);
-    query.bindValue(":brand", brand);
-    query.bindValue(":quantity", quantity);
-    query.bindValue(":purchase_date", purchase_date.toString("yyyy-MM-dd"));
-    query.bindValue(":image", image);
-    query.bindValue(":resource_id", resource_id);
-
-    bool success = query.exec();
-
-    if (success) {
-        qDebug() << "Resource updated successfully!";
-    } else {
-        qDebug() << "Error updating resource: " << query.lastError().text();
-    }
-
-    return success;
-}*/
 
 
 

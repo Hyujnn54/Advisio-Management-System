@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include "resource.h"
+#include "searchdialog.h"
 #include <QFileDialog>
 #include <QPixmap>
 #include <QTimer>
@@ -24,6 +25,10 @@
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QChart>
 #include <QtCharts>
+#include <QtCore>
+#include <QtGui>
+#include <QSerialPort>
+
 
 
 
@@ -61,20 +66,14 @@ private slots:
     void on_downloadHistoryButton_clicked(); // New slot
     void on_clearHistoryButton_clicked();
     void on_imageAnalysisFinished(QNetworkReply *reply);
-
-
+    void on_btnLookForResource_clicked();
 
 
 
 
 private:
     Ui::MainWindow *ui;
-     /*int selectedResourceId;
-    QByteArray imageData;
-    void applyDarkTheme();
-    void applyLightTheme();
-    bool isDarkTheme;
-    QWidget *sidebarWidget;*/
+
     int selectedResourceId;
     QByteArray imageData;
     void applyDarkTheme();
@@ -100,6 +99,10 @@ private:
 
      QBarSeries *barSeries;
      void updateStackedBarChart();
+
+
+
+
 
 };
 #endif // MAINWINDOW_H

@@ -19,7 +19,7 @@ private:
     QByteArray image;
 
     // New private method for logging
-    void logAction(const QString& action, const QString& employeeName);
+    //void logAction(const QString& action, const QString& employeeName);
 
 public:
 
@@ -34,6 +34,7 @@ public:
     QDate getPurchaseDate() const;
     QByteArray getImage()const;
 
+
     void setResourceId(int id);
     void setName(const QString& name);
     void setType(const QString& type);
@@ -41,6 +42,7 @@ public:
     void setQuantity(const int& quantity);
     void setPurchaseDate(const QDate& purchaseDate);
     void setImage(const QByteArray& image);
+
 
     /*bool addResource();
     QSqlQueryModel* afficher();
@@ -50,6 +52,8 @@ public:
     QSqlQueryModel* afficher();
     bool delet(int resource_id, const QString& employeeName = "Unknown"); // Modified
     bool updateResource(const QString& employeeName = "Unknown"); // Modified
+
+   void logAction(const QString& action, const QString& employeeName);
 
 };
 

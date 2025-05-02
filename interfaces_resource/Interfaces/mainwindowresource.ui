@@ -344,7 +344,7 @@
           <item>
            <widget class="QTabWidget" name="tabWidget">
             <property name="currentIndex">
-             <number>2</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="ClientForm">
              <property name="contextMenuPolicy">
@@ -354,34 +354,20 @@
               <string>Add Resources</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_2">
-              <item row="3" column="2">
-               <widget class="QLineEdit" name="quantityLineEdit"/>
-              </item>
-              <item row="5" column="0">
-               <widget class="QPushButton" name="btnSelectImage">
-                <property name="text">
-                 <string>Select Image</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_email">
-                <property name="text">
-                 <string>Quantity</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_sector">
-                <property name="text">
-                 <string>Type</string>
-                </property>
-               </widget>
-              </item>
               <item row="2" column="0">
                <widget class="QLabel" name="label_contact">
                 <property name="text">
                  <string>Brand</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QLineEdit" name="quantityLineEdit"/>
+              </item>
+              <item row="6" column="2">
+               <widget class="QPushButton" name="confirmFormButton">
+                <property name="text">
+                 <string>Add Resource</string>
                 </property>
                </widget>
               </item>
@@ -392,18 +378,39 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="brandLineEdit"/>
+              <item row="0" column="3" rowspan="7">
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
-              <item row="6" column="2">
-               <widget class="QPushButton" name="confirmFormButton">
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_email">
                 <property name="text">
-                 <string>Add Resource</string>
+                 <string>Quantity</string>
                 </property>
                </widget>
               </item>
-              <item row="0" column="2">
-               <widget class="QLineEdit" name="nameLineEdit"/>
+              <item row="7" column="2">
+               <widget class="QPushButton" name="cancelFormButton">
+                <property name="text">
+                 <string>Cancel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_name">
+                <property name="text">
+                 <string>Name:</string>
+                </property>
+               </widget>
               </item>
               <item row="1" column="2">
                <widget class="QComboBox" name="typeComboBox">
@@ -429,37 +436,30 @@
                 </item>
                </widget>
               </item>
+              <item row="0" column="2">
+               <widget class="QLineEdit" name="nameLineEdit"/>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_sector">
+                <property name="text">
+                 <string>Type</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QPushButton" name="btnSelectImage">
+                <property name="text">
+                 <string>Select Image</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLineEdit" name="brandLineEdit"/>
+              </item>
               <item row="4" column="0">
                <widget class="QLabel" name="label_date">
                 <property name="text">
                  <string>Purchase Date</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_name">
-                <property name="text">
-                 <string>Name:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3" rowspan="7">
-               <spacer name="horizontalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="7" column="2">
-               <widget class="QPushButton" name="cancelFormButton">
-                <property name="text">
-                 <string>Cancel</string>
                 </property>
                </widget>
               </item>
@@ -558,6 +558,13 @@
                  <widget class="QPushButton" name="clearHistoryButton">
                   <property name="text">
                    <string>Clear History</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnLookForResource">
+                  <property name="text">
+                   <string>Look For Resource</string>
                   </property>
                  </widget>
                 </item>
