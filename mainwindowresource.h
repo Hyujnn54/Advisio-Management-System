@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include "resource.h"
-#include "searchdialog.h"
+#include "ui/search/searchdialog.h"
 #include <QFileDialog>
 #include <QPixmap>
 #include <QTimer>

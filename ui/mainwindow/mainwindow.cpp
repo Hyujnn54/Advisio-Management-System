@@ -24,6 +24,7 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QDoubleValidator>
+#include "ui/search/searchdialog.h"
 
 MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     : QMainWindow(parent),
@@ -2870,54 +2871,13 @@ void MainWindow::on_clearHistoryButton_clicked()
 
 void MainWindow::on_btnLookForResource_clicked()
 {
-    QTableWidget *tableWidget = ui->tableWidget;
-    if (!tableWidget) return;
-    
-    // Get selected row
-    QList<QTableWidgetItem*> selectedItems = tableWidget->selectedItems();
-    if (selectedItems.isEmpty()) {
-        selectedResourceId = -1;
-        return;
-    }
-    
-    // Get resource ID from first column of selected row
-    int row = selectedItems.first()->row();
-    QTableWidgetItem *idItem = tableWidget->item(row, 0);
-    
-    if (!idItem) return;
-    
-    // Get the resource ID
-    selectedResourceId = idItem->text().toInt();
-    
-    // Get resource data to populate the form
-    QString name = tableWidget->item(row, 1)->text();
-    QString type = tableWidget->item(row, 2)->text();
-    QString brand = tableWidget->item(row, 3)->text();
-    int quantity = tableWidget->item(row, 4)->text().toInt();
-    QDate purchaseDate = QDate::fromString(tableWidget->item(row, 5)->text(), "yyyy-MM-dd");
-    
-    // Update form with selected resource
-    ui->nameLineEdit->setText(name);
-    
-    // Find and set the type in comboBox
-    int typeIndex = ui->typeComboBox->findText(type);
-    if (typeIndex >= 0) {
-        ui->typeComboBox->setCurrentIndex(typeIndex);
-    } else {
-        ui->typeComboBox->setCurrentText(type);
-    }
-    
-    ui->brandLineEdit->setText(brand);
-    ui->quantityLineEdit->setText(QString::number(quantity));
-    ui->purchaseDateEdit->setDate(purchaseDate);
-    
-    // Show image if available
-    QLabel *imageLabel = qobject_cast<QLabel*>(tableWidget->cellWidget(row, 6));
-    if (imageLabel && !imageLabel->pixmap().isNull()) {
-        ui->lblImagePreview->setPixmap(imageLabel->pixmap());
-    } else {
-        ui->lblImagePreview->clear();
-    }
+    // Open the SearchDialog and refresh the resource table if a resource was updated
+    SearchDialog searchDialog(this);
+    connect(&searchDialog, &SearchDialog::resourceUpdated, this, [this]() {
+        resourceManager->updateTable(ui->tableWidget);
+        updateResourceChart();
+    });
+    searchDialog.exec();
 }
 
 void MainWindow::setLoggedInRole(const QString &role)

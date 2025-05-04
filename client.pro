@@ -1,5 +1,5 @@
 # client.pro
-QT += core gui sql printsupport network charts
+QT += core gui sql printsupport network charts serialport
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = TrainingManagement
@@ -21,7 +21,8 @@ INCLUDEPATH += "$$PWD/core" \
                "$$PWD/dialog/updatemeeting" \
                "$$PWD/dialog/updateemployee" \
                "$$PWD/dialog/updateresourcesdialog" \
-               "$$PWD/lib/qrcodegen"
+               "$$PWD/lib/qrcodegen" \
+               "$$PWD/ui/search"
 
 HEADERS += \
     core/connection.h \
@@ -46,7 +47,8 @@ HEADERS += \
     dialog/updateemployee/updateemployeedialog.h \
     dialog/updateresourcesdialog/updateresourcesdialog.h \
     lib/qrcodegen/qrcodegen.hpp \
-    sign.h
+    sign.h \
+    ui/search/searchdialog.h
 
 SOURCES += \
     core/connection.cpp \
@@ -72,7 +74,8 @@ SOURCES += \
     dialog/updateemployee/updateemployeedialog.cpp \
     dialog/updateresourcesdialog/updateresourcesdialog.cpp \
     lib/qrcodegen/qrcodegen.cpp \
-    sign.cpp
+    sign.cpp \
+    ui/search/searchdialog.cpp
 
 FORMS += \
     ui/chartwindow/ChartWindow.ui \
@@ -82,7 +85,8 @@ FORMS += \
     dialog/updatemeeting/updatemeeting.ui \
     dialog/updateemployee/UpdateEmployeeDialog.ui \
     dialog/updateresourcesdialog/updateresourcesdialog.ui \
-    sign.ui
+    sign.ui \
+    ui/search/searchdialog.ui
 
 # Commented out OpenCV includes and libraries
 # INCLUDEPATH += C:/opencv/build/install/include

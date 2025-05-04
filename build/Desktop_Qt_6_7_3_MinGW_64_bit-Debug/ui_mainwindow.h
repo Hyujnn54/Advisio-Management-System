@@ -1807,7 +1807,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        mainStackedWidget->setCurrentIndex(2);
+        mainStackedWidget->setCurrentIndex(4);
         clientTabWidget->setCurrentIndex(1);
         trainingTabWidget->setCurrentIndex(2);
         meetingTabWidget->setCurrentIndex(3);

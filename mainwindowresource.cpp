@@ -95,7 +95,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 
-//connect(ui->btnLookForResource, &QPushButton::clicked, this, &MainWindow::on_btnLookForResource_clicked);
+    connect(ui->btnLookForResource, &QPushButton::clicked, this, &MainWindow::on_btnLookForResource_clicked);
 
 
     QWidget *statisticsTab = ui->tabWidget->widget(3); // Statistics tab
@@ -181,6 +181,7 @@ MainWindow::~MainWindow()
 }*/
 void MainWindow::on_btnLookForResource_clicked() {
     qDebug() << "Look for Resource button clicked";
+    QMessageBox::information(this, "Debug", "Look for Resource button clicked");
     SearchDialog searchDialog(this);
     if (searchDialog.exec() == QDialog::Accepted) {
         refreshTableWidget(); // Refresh table after dialog closes
@@ -1516,7 +1517,6 @@ void MainWindow::toggleSidebar() {
     bool isVisible = ui->sideMenu->isVisible();
 
     // Toggle visibility
-    ui->sideMenu->setVisible(!isVisible);
 }
 
 
