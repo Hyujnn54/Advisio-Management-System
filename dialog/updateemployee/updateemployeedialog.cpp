@@ -72,8 +72,10 @@ void UpdateEmployeeDialog::loadEmployeeData()
                 ui->imageLabel->setPixmap(scaledPixmap);
                 ui->imageLabel->setScaledContents(true);
             } else {
-                ui->imageLabel->setText("(Image introuvable)");
+                ui->imageLabel->setText("No Image");
             }
+        } else {
+            ui->imageLabel->setText("No Image");
         }
         
         // Role
@@ -99,7 +101,8 @@ void UpdateEmployeeDialog::on_selectImageButton_clicked()
             ui->imageLabel->setScaledContents(true);
             m_imagePath = fileName;
         } else {
-            QMessageBox::warning(this, tr("Erreur"), tr("Impossible de charger l'image."));
+            ui->imageLabel->setText("No Image");
+            m_imagePath.clear();
         }
     }
 }

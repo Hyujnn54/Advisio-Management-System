@@ -25,6 +25,32 @@
 #include <QRegularExpressionValidator>
 #include <QDoubleValidator>
 #include "ui/search/searchdialog.h"
+#include <QStyledItemDelegate>
+#include <QPainter>
+#include <QSqlRecord>
+
+// Inline delegate for image thumbnail in the employee table
+class InlineImageDelegate : public QStyledItemDelegate {
+public:
+    InlineImageDelegate(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override {
+        if (index.column() == 11) { // Image column
+            QByteArray imageData = index.model()->data(index, Qt::DisplayRole).toByteArray();
+            QImage image;
+            if (image.loadFromData(imageData)) {
+                QPixmap pixmap = QPixmap::fromImage(image);
+                QPixmap scaled = pixmap.scaled(option.rect.size() - QSize(8,8), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                int x = option.rect.x() + (option.rect.width() - scaled.width()) / 2;
+                int y = option.rect.y() + (option.rect.height() - scaled.height()) / 2;
+                painter->drawPixmap(x, y, scaled);
+            } else {
+                painter->drawText(option.rect, Qt::AlignCenter, "No Image");
+            }
+        } else {
+            QStyledItemDelegate::paint(painter, option, index);
+        }
+    }
+};
 
 MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     : QMainWindow(parent),
@@ -123,7 +149,7 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
         if (ui->clientDateConsultationsView) improveTableDisplay(ui->clientDateConsultationsView);
         if (ui->trainingTableView) improveTableDisplay(ui->trainingTableView);
         if (ui->meetingTableWidget) improveTableWidgetDisplay(ui->meetingTableWidget);
-        if (ui->tableView) improveTableDisplay(ui->tableView);
+        if (ui->employeeTableWidget) improveTableWidgetDisplay(ui->employeeTableWidget);
         
         // Initialize charts for each section
         setupClientChart();
@@ -334,73 +360,29 @@ void MainWindow::on_employeeSectionButton_clicked()
 {
     qDebug() << "employeeSectionButton clicked - handler activated";
     ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
-    QSqlQueryModel* model = employeeManager->getAllEmployees();
-
-    // Vérifier si le modèle est valide avant de l'assigner au tableView
-    if (model) {
-        ui->tableView->setModel(model);
-
-        // Enable sorting
-        ui->tableView->setSortingEnabled(true);
-        
-        // Enable horizontal scroll bar to see all columns
-        ui->tableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-        
-        // Configure headers to be clickable for sorting
-        ui->tableView->horizontalHeader()->setSortIndicatorShown(true);
-        ui->tableView->horizontalHeader()->setSectionsClickable(true);
-        
-        // Connect the header click to sorting function
-        connect(ui->tableView->horizontalHeader(), &QHeaderView::sectionClicked, this, [this](int logicalIndex) {
-            Qt::SortOrder order = ui->tableView->horizontalHeader()->sortIndicatorOrder();
-            QSqlQueryModel* sortedModel = employeeManager->sortEmployees(logicalIndex, order);
-            if (sortedModel) {
-                ui->tableView->setModel(sortedModel);
-                
-                // Restore visual settings after model change
-                ui->tableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-                ui->tableView->horizontalHeader()->setSortIndicatorShown(true);
-                improveTableDisplay(ui->tableView);
-            }
-        });
-
-        // Configuration pour afficher toutes les colonnes correctement
-        ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-        ui->tableView->horizontalHeader()->setStretchLastSection(true);
-
-        // Définir des largeurs optimales pour chaque colonne
-        ui->tableView->setColumnWidth(0, 50);   // ID
-        ui->tableView->setColumnWidth(1, 100);  // CIN
-        ui->tableView->setColumnWidth(2, 120);  // Last Name
-        ui->tableView->setColumnWidth(3, 120);  // First Name
-        ui->tableView->setColumnWidth(4, 100);  // Date of Birth
-        ui->tableView->setColumnWidth(5, 100);  // Phone
-        ui->tableView->setColumnWidth(6, 180);  // Email
-        ui->tableView->setColumnWidth(7, 80);   // Gender
-        ui->tableView->setColumnWidth(8, 80);   // Salary
-        ui->tableView->setColumnWidth(9, 100);  // Date of Hiring
-        ui->tableView->setColumnWidth(10, 120); // Speciality
-        ui->tableView->setColumnWidth(11, 80);  // Image
-        ui->tableView->setColumnWidth(12, 80);  // Role
-        ui->tableView->setColumnWidth(13, 80);  // RFID UID
-
-        // Assurez-vous que toutes les colonnes sont visibles
-        for (int i = 0; i < model->columnCount(); i++) {
-            ui->tableView->setColumnHidden(i, false);
+    // Fetch employee data from the database
+    QList<QList<QVariant>> employees;
+    QSqlQuery query("SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY, IMAGE, ROLE, RFID_UID FROM EMPLOYEE");
+    while (query.next()) {
+        QList<QVariant> row;
+        for (int i = 0; i < query.record().count(); ++i) {
+            row << query.value(i);
         }
-
-        // Connect search functionality
-        connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_employeeSearchChanged);
-
-        // Apply improved table styling for better readability
-        improveTableDisplay(ui->tableView);
-    } else {
-        // Afficher un message d'erreur à l'utilisateur
-        QMessageBox::critical(this, "Erreur", "Impossible de charger les données des employés. Vérifiez la connexion à la base de données.");
-
-        // Nettoyer le tableView pour éviter d'afficher d'anciennes données
-        ui->tableView->setModel(nullptr);
+        employees << row;
     }
+    // Set up headers if needed
+    QTableWidget* table = ui->employeeTableWidget;
+    table->clear();
+    table->setColumnCount(14);
+    QStringList headers = {"ID", "CIN", "Last Name", "First Name", "Date of Birth", "Phone", "Email", "Gender", "Salary", "Date of Hiring", "Speciality", "Image", "Role", "RFID UID"};
+    table->setHorizontalHeaderLabels(headers);
+    // Populate the table
+    populateEmployeeTable(employees);
+    // Enable sorting and improve display
+    table->setSortingEnabled(true);
+    improveTableWidgetDisplay(table);
+    // Connect search functionality
+    connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_employeeSearchChanged);
 }
 
 void MainWindow::on_statisticsButton_clicked()
@@ -508,7 +490,7 @@ void MainWindow::applyLightTheme()
         QWidget { 
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F8FF, stop:1 #C4D7ED); 
             color: #333333; 
-            font-family: Arial, sans-serif; /* Modification: utilisation d'une police plus universelle */
+            font-family: 'Arial', 'Tahoma', 'Segoe UI', 'sans-serif';
         }
         QPushButton { 
             background-color: #3A5DAE; 
@@ -758,7 +740,7 @@ void MainWindow::applyDarkTheme()
         QWidget { 
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3A3A3A, stop:1 #2A2A2A); 
             color: #E0E0E0; 
-            font-family: 'Segoe UI', Arial, sans-serif; 
+            font-family: 'Arial', 'Tahoma', 'Segoe UI', 'sans-serif'; 
         }
         QPushButton { 
             background-color: #666666; 
@@ -1353,9 +1335,9 @@ void MainWindow::setupClientChart()
     // Set the chart on the ChartView
     ui->clientChartView->setChart(chart);
     ui->clientChartView->setRenderHint(QPainter::Antialiasing);
-    
-    // Enable chart hover effects
     ui->clientChartView->setRubberBand(QChartView::RectangleRubberBand);
+    ui->clientChartView->setMouseTracking(true);
+    ui->clientChartView->setEnabled(true);
     
     // Update with initial data
     updateClientChart();
@@ -1375,6 +1357,9 @@ void MainWindow::setupTrainingChart()
     // Set the chart on the ChartView
     ui->trainingChartView->setChart(chart);
     ui->trainingChartView->setRenderHint(QPainter::Antialiasing);
+    ui->trainingChartView->setRubberBand(QChartView::RectangleRubberBand);
+    ui->trainingChartView->setMouseTracking(true);
+    ui->trainingChartView->setEnabled(true);
     
     // Enable chart hover effects
     ui->trainingChartView->setRubberBand(QChartView::RectangleRubberBand);
@@ -1397,6 +1382,9 @@ void MainWindow::setupMeetingChart()
     // Set the chart on the ChartView
     ui->meetingChartView->setChart(chart);
     ui->meetingChartView->setRenderHint(QPainter::Antialiasing);
+    ui->meetingChartView->setRubberBand(QChartView::RectangleRubberBand);
+    ui->meetingChartView->setMouseTracking(true);
+    ui->meetingChartView->setEnabled(true);
     
     // Enable chart hover effects
     ui->meetingChartView->setRubberBand(QChartView::RectangleRubberBand);
@@ -1420,10 +1408,9 @@ void MainWindow::setupEmployeeChart()
     if (ui->employeeChartView) {
         ui->employeeChartView->setChart(chart);
         ui->employeeChartView->setRenderHint(QPainter::Antialiasing);
-        
-        // Enable chart hover effects
         ui->employeeChartView->setRubberBand(QChartView::RectangleRubberBand);
-        
+        ui->employeeChartView->setMouseTracking(true);
+        ui->employeeChartView->setEnabled(true);
         // Update with initial data
         updateEmployeeChart();
     }
@@ -1479,21 +1466,12 @@ void MainWindow::updateClientChart()
             for (auto it = data.begin(); it != data.end(); ++it) {
                 QPieSlice *slice = series->append(it.key(), it.value());
                 slice->setLabelVisible(true);
-                slice->setLabel(QString("%1: %2%").arg(it.key()).arg(100 * slice->percentage(), 0, 'f', 1));
-                
-                // Connect slice signals for hover effects
                 connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    slice->setExploded(hovered);
+                    slice->setLabelVisible(true);
                     if (hovered) {
-                        slice->setExploded(true);
-                        ui->clientHoverDescriptionLabel->setText(
-                            QString("%1: %2 clients (%3%)").arg(
-                                slice->label(), 
-                                QString::number(slice->value()),
-                                QString::number(100 * slice->percentage(), 'f', 1)
-                            )
-                        );
+                        ui->clientHoverDescriptionLabel->setText(slice->label());
                     } else {
-                        slice->setExploded(false);
                         ui->clientHoverDescriptionLabel->setText("Hover over a chart element to see details");
                     }
                 });
@@ -1627,21 +1605,12 @@ void MainWindow::updateTrainingChart()
             for (auto it = data.begin(); it != data.end(); ++it) {
                 QPieSlice *slice = series->append(it.key(), it.value());
                 slice->setLabelVisible(true);
-                slice->setLabel(QString("%1: %2%").arg(it.key()).arg(100 * slice->percentage(), 0, 'f', 1));
-                
-                // Connect slice signals for hover effects
                 connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    slice->setExploded(hovered);
+                    slice->setLabelVisible(true);
                     if (hovered) {
-                        slice->setExploded(true);
-                        ui->trainingHoverDescriptionLabel->setText(
-                            QString("%1: %2 trainings (%3%)").arg(
-                                slice->label(), 
-                                QString::number(slice->value()),
-                                QString::number(100 * slice->percentage(), 'f', 1)
-                            )
-                        );
+                        ui->trainingHoverDescriptionLabel->setText(slice->label());
                     } else {
-                        slice->setExploded(false);
                         ui->trainingHoverDescriptionLabel->setText("Hover over a chart element to see details");
                     }
                 });
@@ -1767,35 +1736,20 @@ void MainWindow::updateMeetingChart()
         // Create appropriate chart based on selection
         if (chartType == "Pie Chart") {
             QPieSeries *series = new QPieSeries();
-
-            // Get data from database through meeting manager
             QMap<QString, int> data = meetingManager->getStatisticsByCategory(filter);
-
-            // Add slices to the pie series
             for (auto it = data.begin(); it != data.end(); ++it) {
                 QPieSlice *slice = series->append(it.key(), it.value());
                 slice->setLabelVisible(true);
-                slice->setLabel(QString("%1: %2%").arg(it.key()).arg(100 * slice->percentage(), 0, 'f', 1));
-
-                // Connect slice signals for hover effects
                 connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    slice->setExploded(hovered);
+                    slice->setLabelVisible(true);
                     if (hovered) {
-                        slice->setExploded(true);
-                        ui->meetingHoverDescriptionLabel->setText(
-                            QString("%1: %2 meetings (%3%)").arg(
-                                slice->label(),
-                                QString::number(slice->value()),
-                                QString::number(100 * slice->percentage(), 'f', 1)
-                                )
-                            );
+                        ui->meetingHoverDescriptionLabel->setText(slice->label());
                     } else {
-                        slice->setExploded(false);
                         ui->meetingHoverDescriptionLabel->setText("Hover over a chart element to see details");
                     }
                 });
             }
-
-            // Only show percentages if there are multiple categories
             int total = 0;
             for (auto v : data.values()) total += v;
             for (int i = 0; i < series->count(); ++i) {
@@ -1807,7 +1761,6 @@ void MainWindow::updateMeetingChart()
                     slice->setLabel(slice->label());
                 }
             }
-
             chart->addSeries(series);
         } else if (chartType == "Bar Chart") {
             QBarSeries *series = new QBarSeries();
@@ -1932,19 +1885,6 @@ void MainWindow::updateEmployeeChart()
                         ui->employeeHoverDescriptionLabel->setText("Hover over a chart element to see details");
                     }
                 });
-                // Animate each slice appearing
-                QPropertyAnimation *animation = new QPropertyAnimation(slice, "startAngle");
-                animation->setDuration(500);
-                animation->setStartValue(0);
-                animation->setEndValue(slice->startAngle());
-                animation->setEasingCurve(QEasingCurve::OutBack);
-                animation->start(QAbstractAnimation::DeleteWhenStopped);
-                QPropertyAnimation *angleAnimation = new QPropertyAnimation(slice, "angleSpan");
-                angleAnimation->setDuration(500);
-                angleAnimation->setStartValue(0);
-                angleAnimation->setEndValue(slice->angleSpan());
-                angleAnimation->setEasingCurve(QEasingCurve::OutBack);
-                angleAnimation->start(QAbstractAnimation::DeleteWhenStopped);
             }
             chart->addSeries(series);
         } else if (chartType == "Bar Chart") {
@@ -2057,19 +1997,6 @@ void MainWindow::updateResourceChart()
                         ui->resourceHoverLabel->setText("Hover over a chart element to see details");
                     }
                 });
-                // Animate each slice appearing
-                QPropertyAnimation *animation = new QPropertyAnimation(slice, "startAngle");
-                animation->setDuration(500);
-                animation->setStartValue(0);
-                animation->setEndValue(slice->startAngle());
-                animation->setEasingCurve(QEasingCurve::OutBack);
-                animation->start(QAbstractAnimation::DeleteWhenStopped);
-                QPropertyAnimation *angleAnimation = new QPropertyAnimation(slice, "angleSpan");
-                angleAnimation->setDuration(500);
-                angleAnimation->setStartValue(0);
-                angleAnimation->setEndValue(slice->angleSpan());
-                angleAnimation->setEasingCurve(QEasingCurve::OutBack);
-                angleAnimation->start(QAbstractAnimation::DeleteWhenStopped);
             }
             chart->addSeries(series);
         } else if (chartType == "Bar Chart") {
@@ -2181,18 +2108,29 @@ void MainWindow::improveTableWidgetDisplay(QTableWidget* tableWidget)
 
 void MainWindow::on_employeeSearchChanged(const QString &text)
 {
-    QString criteria = ui->searchCriteriaComboBox->currentText();
-    QSqlQueryModel* model = employeeManager->searchEmployees(criteria, text);
-    ui->tableView->setModel(model);
-    improveTableDisplay(ui->tableView);
+    // Implement search for QTableWidget
+    // For now, just filter rows by name, CIN, or specialty
+    QTableWidget* table = ui->employeeTableWidget;
+    for (int row = 0; row < table->rowCount(); ++row) {
+        bool match = false;
+        for (int col = 0; col < table->columnCount(); ++col) {
+            QTableWidgetItem* item = table->item(row, col);
+            if (item && item->text().contains(text, Qt::CaseInsensitive)) {
+                match = true;
+                break;
+            }
+        }
+        table->setRowHidden(row, !match);
+    }
 }
 
 void MainWindow::on_resetSearchButton_clicked()
 {
     ui->searchInput->clear();
-    QSqlQueryModel* model = employeeManager->getAllEmployees();
-    ui->tableView->setModel(model);
-    improveTableDisplay(ui->tableView);
+    QTableWidget* table = ui->employeeTableWidget;
+    for (int row = 0; row < table->rowCount(); ++row) {
+        table->setRowHidden(row, false);
+    }
 }
 
 void MainWindow::on_addButton_clicked()
@@ -2201,7 +2139,6 @@ void MainWindow::on_addButton_clicked()
     if (!validateEmployeeInput()) {
         return;
     }
-    
     QString cin = ui->lineEdit_CIN->text();
     QString lastName = ui->lineEdit_Nom->text();
     QString firstName = ui->lineEdit_Prenom->text();
@@ -2234,9 +2171,7 @@ void MainWindow::on_addButton_clicked()
         ui->imagePathLineEdit->clear();
         
         // Refresh the table
-        QSqlQueryModel* model = employeeManager->getAllEmployees();
-        ui->tableView->setModel(model);
-        improveTableDisplay(ui->tableView);
+        on_employeeSectionButton_clicked();
         
         // Add notification
         notificationManager->addNotification("Employee Added", "New employee: " + firstName + " " + lastName, 
@@ -2248,32 +2183,22 @@ void MainWindow::on_addButton_clicked()
 
 void MainWindow::on_deleteBtn_clicked()
 {
-    QModelIndex currentIndex = ui->tableView->currentIndex();
-    if (!currentIndex.isValid()) {
+    QTableWidget* table = ui->employeeTableWidget;
+    int row = table->currentRow();
+    if (row < 0) {
         QMessageBox::warning(this, "Error", "Please select an employee to delete.");
         return;
     }
-    
-    int row = currentIndex.row();
-    int employeeId = ui->tableView->model()->data(ui->tableView->model()->index(row, 0)).toInt();
-    QString employeeName = ui->tableView->model()->data(ui->tableView->model()->index(row, 2)).toString() + " " +
-                          ui->tableView->model()->data(ui->tableView->model()->index(row, 3)).toString();
-    
+    int employeeId = table->item(row, 0)->text().toInt();
+    QString employeeName = table->item(row, 2)->text() + " " + table->item(row, 3)->text();
     QMessageBox::StandardButton reply = QMessageBox::question(this, "Confirm Delete", 
         "Are you sure you want to delete employee " + employeeName + "?", 
         QMessageBox::Yes | QMessageBox::No);
-        
     if (reply == QMessageBox::Yes) {
         bool success = employeeManager->deleteEmployee(employeeId);
         if (success) {
             QMessageBox::information(this, "Success", "Employee deleted successfully!");
-            
-            // Refresh the table
-            QSqlQueryModel* model = employeeManager->getAllEmployees();
-            ui->tableView->setModel(model);
-            improveTableDisplay(ui->tableView);
-            
-            // Add notification
+            on_employeeSectionButton_clicked();
             notificationManager->addNotification("Employee Deleted", "Deleted: " + employeeName, 
                                              "Deleted at " + QDateTime::currentDateTime().toString(), -1);
         } else {
@@ -2284,27 +2209,17 @@ void MainWindow::on_deleteBtn_clicked()
 
 void MainWindow::on_modifyBtn_clicked()
 {
-    QModelIndex currentIndex = ui->tableView->currentIndex();
-    if (!currentIndex.isValid()) {
+    QTableWidget* table = ui->employeeTableWidget;
+    int row = table->currentRow();
+    if (row < 0) {
         QMessageBox::warning(this, "Error", "Please select an employee to update.");
         return;
     }
-    
-    int row = currentIndex.row();
-    int employeeId = ui->tableView->model()->data(ui->tableView->model()->index(row, 0)).toInt();
-    
-    // Open update dialog with selected employee ID
+    int employeeId = table->item(row, 0)->text().toInt();
     UpdateEmployeeDialog updateDialog(employeeId, this);
     if (updateDialog.exec() == QDialog::Accepted) {
-        // Refresh the table after update
-        QSqlQueryModel* model = employeeManager->getAllEmployees();
-        ui->tableView->setModel(model);
-        improveTableDisplay(ui->tableView);
-        
-        QString employeeName = ui->tableView->model()->data(ui->tableView->model()->index(row, 2)).toString() + " " +
-                              ui->tableView->model()->data(ui->tableView->model()->index(row, 3)).toString();
-                              
-        // Add notification
+        on_employeeSectionButton_clicked();
+        QString employeeName = table->item(row, 2)->text() + " " + table->item(row, 3)->text();
         notificationManager->addNotification("Employee Updated", "Updated: " + employeeName, 
                                          "Updated at " + QDateTime::currentDateTime().toString(), -1);
     }
@@ -2333,14 +2248,11 @@ void MainWindow::on_downloadBtn_clicked()
     painter.drawText(20, 50, "Employee List");
     painter.setFont(headerFont);
     painter.drawText(20, 90, QString("Generated on %1").arg(QDate::currentDate().toString("yyyy-MM-dd")));
-    QAbstractItemModel* model = ui->tableView->model();
-    if (!model) {
-        QMessageBox::warning(this, "Export Error", "No employee data to export.");
-        return;
-    }
+    QTableWidget* table = ui->employeeTableWidget;
     QStringList headers;
-    for (int column = 0; column < model->columnCount(); ++column) {
-        headers << model->headerData(column, Qt::Horizontal).toString();
+    for (int column = 0; column < table->columnCount(); ++column) {
+        QTableWidgetItem* item = table->horizontalHeaderItem(column);
+        headers << (item ? item->text() : "");
     }
     QVector<qreal> columnWidths;
     int colCount = headers.size();
@@ -2361,7 +2273,7 @@ void MainWindow::on_downloadBtn_clicked()
     }
     y += rowHeight;
     painter.setFont(regularFont);
-    int rowCount = model->rowCount();
+    int rowCount = table->rowCount();
     if (rowCount == 0) {
         QRect noDataRect(20, y, tableWidth, rowHeight);
         painter.drawRect(noDataRect);
@@ -2381,7 +2293,8 @@ void MainWindow::on_downloadBtn_clicked()
             int colWidth = tableWidth * columnWidths[col];
             QRect cellRect(x, y, colWidth, rowHeight);
             painter.drawRect(cellRect);
-            QString text = model->data(model->index(row, col)).toString();
+            QTableWidgetItem* item = table->item(row, col);
+            QString text = item ? item->text() : "";
             painter.drawText(cellRect.adjusted(8, 8, -8, -8), Qt::AlignVCenter | Qt::AlignLeft, text);
             x += colWidth;
         }
@@ -2420,36 +2333,24 @@ void MainWindow::on_selectImageButton_clicked()
 
 void MainWindow::on_generateQRCodeBtn_clicked()
 {
-    QModelIndex currentIndex = ui->tableView->currentIndex();
-    if (!currentIndex.isValid()) {
+    QTableWidget* table = ui->employeeTableWidget;
+    int row = table->currentRow();
+    if (row < 0) {
         QMessageBox::warning(this, "Error", "Please select an employee.");
         return;
     }
-    
-    int row = currentIndex.row();
-    QString employeeId = ui->tableView->model()->data(ui->tableView->model()->index(row, 0)).toString();
-    QString employeeName = ui->tableView->model()->data(ui->tableView->model()->index(row, 2)).toString() + " " +
-                          ui->tableView->model()->data(ui->tableView->model()->index(row, 3)).toString();
-    QString employeeCIN = ui->tableView->model()->data(ui->tableView->model()->index(row, 1)).toString();
-    
-    // Create QR Code content
-    QString qrContent = "ID: " + employeeId + "\n"
-                       + "Name: " + employeeName + "\n"
-                       + "CIN: " + employeeCIN;
-    
-    // Generate QR code using the qrcodegen library
+    QString employeeId = table->item(row, 0)->text();
+    QString employeeName = table->item(row, 2)->text() + " " + table->item(row, 3)->text();
+    QString employeeCIN = table->item(row, 1)->text();
+    QString qrContent = "ID: " + employeeId + "\n" + "Name: " + employeeName + "\n" + "CIN: " + employeeCIN;
     qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(qrContent.toUtf8().constData(), qrcodegen::QrCode::Ecc::MEDIUM);
-    
-    // Convert to QImage
     const int qrSize = qr.getSize();
-    const int scale = 10;  // Scale factor for better visibility
+    const int scale = 10;
     QImage image(qrSize * scale, qrSize * scale, QImage::Format_RGB32);
     image.fill(Qt::white);
-    
     QPainter painter(&image);
     painter.setPen(Qt::black);
     painter.setBrush(Qt::black);
-    
     for (int y = 0; y < qrSize; ++y) {
         for (int x = 0; x < qrSize; ++x) {
             if (qr.getModule(x, y)) {
@@ -2457,8 +2358,6 @@ void MainWindow::on_generateQRCodeBtn_clicked()
             }
         }
     }
-    
-    // Save QR code image
     QString saveFileName = QFileDialog::getSaveFileName(this, "Save QR Code", 
                                                      "employee_" + employeeId + "_qr.png", 
                                                      "PNG Files (*.png)");
@@ -2606,13 +2505,8 @@ void MainWindow::on_confirmFormButton_clicked()
     QString brand = ui->brandLineEdit->text().trimmed();
     QString quantityText = ui->quantityLineEdit->text().trimmed();
     QDate purchaseDate = ui->purchaseDateEdit->date();
-    
-    // Check required fields
-    if (name.isEmpty() || type.isEmpty() || brand.isEmpty() || quantityText.isEmpty()) {
-        QMessageBox::warning(this, "Validation Error", "Please fill in all required fields.");
-        return;
-    }
-    
+    QByteArray imageData = this->imageData;
+
     // Convert quantity to int
     bool ok;
     int quantity = quantityText.toInt(&ok);
@@ -2620,19 +2514,18 @@ void MainWindow::on_confirmFormButton_clicked()
         QMessageBox::warning(this, "Validation Error", "Please enter a valid quantity (positive number).");
         return;
     }
-    
+
     // Check purchase date is not in the future
     if (purchaseDate > QDate::currentDate()) {
         QMessageBox::warning(this, "Validation Error", "Purchase date cannot be in the future.");
         return;
     }
-    
+
     // Add resource
     bool success = resourceManager->addResource(name, type, brand, quantity, purchaseDate, imageData);
-    
+
     if (success) {
         QMessageBox::information(this, "Success", "Resource added successfully");
-        
         // Clear form
         ui->nameLineEdit->clear();
         ui->typeComboBox->setCurrentIndex(0);
@@ -2640,14 +2533,11 @@ void MainWindow::on_confirmFormButton_clicked()
         ui->quantityLineEdit->setText("1");
         ui->purchaseDateEdit->setDate(QDate::currentDate());
         ui->lblImagePreview->clear();
-        imageData.clear();
-        
+        this->imageData.clear();
         // Refresh table
         resourceManager->updateTable(ui->tableWidget);
-        
         // Update statistics
         updateResourceChart();
-        
         // Add notification
         notificationManager->addNotification(
             "Resource Added", 
@@ -3023,4 +2913,39 @@ void MainWindow::on_resourceTableSelectionChanged() {
     } else {
         selectedResourceId = -1;
     }
+}
+
+// Helper: Set up employee table row with image logic like resource table
+void MainWindow::setEmployeeTableRow(QTableWidget* table, int row, const QList<QVariant>& employeeData) {
+    for (int col = 0; col < employeeData.size(); ++col) {
+        if (col == 11) { // Image column
+            QLabel* imageLabel = new QLabel();
+            imageLabel->setAlignment(Qt::AlignCenter);
+            QByteArray imageData = employeeData[col].toByteArray();
+            if (!imageData.isEmpty()) {
+                QPixmap pixmap;
+                if (pixmap.loadFromData(imageData)) {
+                    QPixmap scaled = pixmap.scaled(100, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                    imageLabel->setPixmap(scaled);
+                } else {
+                    imageLabel->setText("No Image");
+                }
+            } else {
+                imageLabel->setText("No Image");
+            }
+            table->setCellWidget(row, col, imageLabel);
+        } else {
+            table->setItem(row, col, new QTableWidgetItem(employeeData[col].toString()));
+        }
+    }
+}
+
+// Call this after fetching employees to fill the table
+void MainWindow::populateEmployeeTable(const QList<QList<QVariant>>& employees) {
+    QTableWidget* table = ui->employeeTableWidget;
+    table->setRowCount(employees.size());
+    for (int row = 0; row < employees.size(); ++row) {
+        setEmployeeTableRow(table, row, employees[row]);
+    }
+    improveTableWidgetDisplay(table);
 }

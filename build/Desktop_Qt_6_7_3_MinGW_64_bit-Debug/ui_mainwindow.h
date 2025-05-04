@@ -261,7 +261,7 @@ public:
     QComboBox *searchCriteriaComboBox;
     QLineEdit *searchInput;
     QPushButton *resetSearchButton;
-    QTableView *tableView;
+    QTableWidget *employeeTableWidget;
     QHBoxLayout *horizontalLayout_4;
     QSpacerItem *horizontalSpacer_2;
     QPushButton *deleteBtn;
@@ -1428,12 +1428,12 @@ public:
 
         verticalLayout_6->addWidget(searchGroupBox);
 
-        tableView = new QTableView(listEmployee);
-        tableView->setObjectName("tableView");
-        tableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
-        tableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
+        employeeTableWidget = new QTableWidget(listEmployee);
+        employeeTableWidget->setObjectName("employeeTableWidget");
+        employeeTableWidget->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+        employeeTableWidget->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
 
-        verticalLayout_6->addWidget(tableView);
+        verticalLayout_6->addWidget(employeeTableWidget);
 
         horizontalLayout_4 = new QHBoxLayout();
         horizontalLayout_4->setObjectName("horizontalLayout_4");

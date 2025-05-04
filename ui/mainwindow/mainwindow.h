@@ -123,6 +123,10 @@ private:
     void updateEmployeeChart();
     void updateResourceChart();
 
+    // --- Employee table helpers (for QTableWidget image logic) ---
+    void setEmployeeTableRow(QTableWidget* table, int row, const QList<QVariant>& employeeData);
+    void populateEmployeeTable(const QList<QList<QVariant>>& employees);
+
     Ui::MainWindow *ui;
     bool m_dbConnected;
     QString m_loggedInRole; // Rôle de l'utilisateur connecté
