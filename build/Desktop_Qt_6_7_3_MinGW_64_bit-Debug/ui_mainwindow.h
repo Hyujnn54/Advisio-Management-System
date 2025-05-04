@@ -66,7 +66,6 @@ public:
     QPushButton *meetingSectionButton;
     QPushButton *employeeSectionButton;
     QPushButton *resourceSectionButton;
-    QPushButton *settingsButton;
     QPushButton *themeButton;
     QFrame *frame_4;
     QVBoxLayout *verticalLayout_5;
@@ -462,11 +461,6 @@ public:
         resourceSectionButton->setObjectName("resourceSectionButton");
 
         verticalLayout_3->addWidget(resourceSectionButton);
-
-        settingsButton = new QPushButton(frame_6);
-        settingsButton->setObjectName("settingsButton");
-
-        verticalLayout_3->addWidget(settingsButton);
 
         themeButton = new QPushButton(frame_6);
         themeButton->setObjectName("themeButton");
@@ -1835,7 +1829,6 @@ public:
         meetingSectionButton->setText(QCoreApplication::translate("MainWindow", "Meetings", nullptr));
         employeeSectionButton->setText(QCoreApplication::translate("MainWindow", "Employee", nullptr));
         resourceSectionButton->setText(QCoreApplication::translate("MainWindow", "Resource", nullptr));
-        settingsButton->setText(QCoreApplication::translate("MainWindow", "Settings", nullptr));
         themeButton->setText(QCoreApplication::translate("MainWindow", "Toggle Theme", nullptr));
         clientConsultantComboBox->setPlaceholderText(QCoreApplication::translate("MainWindow", "Select Consultant...", nullptr));
         clientContactLabel->setText(QCoreApplication::translate("MainWindow", "Contact Info:", nullptr));

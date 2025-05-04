@@ -358,6 +358,13 @@ void MainWindow::setupConnections()
     connect(ui->employeeChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::updateStatistics);
     connect(ui->employeeChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::updateStatistics);
     connect(ui->employeeToggleLegendCheckBox, &QCheckBox::toggled, this, &MainWindow::updateStatistics);
+    // Connect sidebar Employee button to show employee tab (assumes QTabWidget named tabWidget, employee tab index 0)
+    connect(ui->employeeMenuButton, &QPushButton::clicked, this, [this]() {
+        ui->tabWidget->setCurrentIndex(0); // Adjust index if needed
+    });
+    connect(ui->employeeSectionButton, &QPushButton::clicked, this, [this]() {
+        ui->tabWidget->setCurrentIndex(0); // Adjust index if needed
+    });
 }
 void MainWindow::updateStatistics()
 {
@@ -1184,31 +1191,36 @@ void MainWindow::on_downloadBtnClicked()
             <style>
                 body {
                     font-family: 'Segoe UI', sans-serif;
-                    background-color: #f7f7f7;
-                    padding: 20px;
-                    color: #333;
+                    background-color: #fff;
+                    padding: 0;
+                    margin: 0;
+                    color: #222;
+                    font-size: 32pt;
                 }
                 .cv-container {
-                    background-color: #ffffff;
-                    padding: 20px;
-                    border-radius: 10px;
-                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                    width: 100%;
+                    background-color: #fff;
+                    padding: 0;
+                    margin: 0;
+                    width: 100vw;
                 }
                 .section {
-                    margin-top: 20px;
+                    margin-top: 100px;
                 }
                 .section h2 {
                     color: #2c5282;
-                    border-bottom: 1px solid #ccc;
-                    padding-bottom: 5px;
+                    border-bottom: 4px solid #ccc;
+                    padding-bottom: 40px;
+                    font-size: 48pt;
+                    margin-bottom: 60px;
                 }
                 .info-item {
-                    margin: 6px 0;
+                    margin: 64px 0;
+                    font-size: 32pt;
                 }
                 .info-item strong {
                     display: inline-block;
-                    width: 140px;
+                    width: 400px;
+                    font-size: 32pt;
                 }
             </style>
         </head>
@@ -1249,8 +1261,8 @@ void MainWindow::on_downloadBtnClicked()
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(fileName);
     printer.setPageSize(QPageSize(QPageSize::A4));
-    printer.setPageMargins(QMarginsF(15, 15, 15, 15));
-
+    printer.setPageMargins(QMarginsF(2, 2, 2, 2)); // Minimal margins
+    doc.setPageSize(QSizeF(printer.pageRect().size()));
     doc.print(&printer);
     QMessageBox::information(this, "Success", "Employee information exported as PDF!");
 }

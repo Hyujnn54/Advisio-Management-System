@@ -325,131 +325,101 @@ bool ResourceManager::exportToPdf(const QString &filePath)
 {
     QPdfWriter pdfWriter(filePath);
     pdfWriter.setPageSize(QPageSize(QPageSize::A4));
-    pdfWriter.setPageMargins(QMarginsF(30, 30, 30, 30));
-    
+    pdfWriter.setPageMargins(QMarginsF(50, 50, 50, 50)); // Increased margins
     QPainter painter(&pdfWriter);
     painter.setPen(Qt::black);
-    
-    // Configure font
     QFont titleFont = painter.font();
-    titleFont.setPointSize(18);
+    titleFont.setPointSize(32); // Larger title font
     titleFont.setBold(true);
-    
     QFont headerFont = painter.font();
-    headerFont.setPointSize(12);
+    headerFont.setPointSize(20); // Larger header font
     headerFont.setBold(true);
-    
     QFont contentFont = painter.font();
-    contentFont.setPointSize(10);
-    
+    contentFont.setPointSize(16); // Larger content font
     // Draw title
     painter.setFont(titleFont);
-    painter.drawText(QRect(0, 100, pdfWriter.width(), 50), 
-                    Qt::AlignHCenter, "Resources Report");
-    
+    painter.drawText(QRect(0, 120, pdfWriter.width(), 60), Qt::AlignHCenter, "Resources Report"); // Adjusted Y position
     // Subtitle with date
     painter.setFont(headerFont);
-    painter.drawText(QRect(0, 150, pdfWriter.width(), 30), 
-                    Qt::AlignHCenter, "Generated on " + QDate::currentDate().toString("yyyy-MM-dd"));
-    
+    painter.drawText(QRect(0, 200, pdfWriter.width(), 40), Qt::AlignHCenter, "Generated on " + QDate::currentDate().toString("yyyy-MM-dd")); // Adjusted Y position
     // Get resources
     QList<Resource> resources = getResources();
-    
-    // Calculate row height and column widths
-    int rowHeight = 40;
-    int startY = 250;
-    QList<int> columnWidths = {80, 150, 120, 120, 80, 120};
+    // Calculate row height and column widths (skip ID column)
+    int rowHeight = 80; // Increased row height
+    int startY = 300; // Adjusted starting Y position
+    QList<int> columnWidths = {200, 160, 160, 100, 160}; // Slightly wider columns
     int totalWidth = 0;
-    for (int width : columnWidths) {
-        totalWidth += width;
-    }
-    
+    for (int width : columnWidths) totalWidth += width;
     int startX = (pdfWriter.width() - totalWidth) / 2;
-    
-    // Draw table headers
+    // Draw table headers (skip ID)
     painter.setFont(headerFont);
     int currentX = startX;
-    QStringList headers = {"ID", "Name", "Type", "Brand", "Quantity", "Purchase Date"};
-    
+    QStringList headers = {"Name", "Type", "Brand", "Quantity", "Purchase Date"};
     for (int i = 0; i < headers.size(); ++i) {
         QRect headerRect(currentX, startY, columnWidths[i], rowHeight);
+        painter.fillRect(headerRect, QColor(230, 230, 230));
         painter.drawRect(headerRect);
-        painter.drawText(headerRect, Qt::AlignCenter, headers[i]);
+        painter.drawText(headerRect.adjusted(24, 0, -24, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]); // Left-aligned headers with padding
         currentX += columnWidths[i];
     }
-    
     // Draw table content
     painter.setFont(contentFont);
     int currentY = startY + rowHeight;
-    
-    for (const Resource &resource : resources) {
-        if (currentY + rowHeight > pdfWriter.height() - 100) {
-            // Start a new page
+    QColor altRowColor(245, 245, 245); // Add alternating row color
+    for (int row = 0; row < resources.size(); ++row) {
+        if (row % 2 == 1) {
+            QRect rowRect(startX, currentY, totalWidth, rowHeight);
+            painter.fillRect(rowRect, altRowColor); // Alternating row background
+        }
+        currentX = startX;
+        const Resource &resource = resources[row];
+        // Name
+        QRect nameRect(currentX, currentY, columnWidths[0], rowHeight);
+        painter.drawRect(nameRect);
+        painter.drawText(nameRect.adjusted(24, 0, -24, 0), Qt::AlignVCenter | Qt::AlignLeft, resource.getName()); // Increased padding
+        currentX += columnWidths[0];
+        // Type
+        QRect typeRect(currentX, currentY, columnWidths[1], rowHeight);
+        painter.drawRect(typeRect);
+        painter.drawText(typeRect.adjusted(24, 0, -24, 0), Qt::AlignVCenter | Qt::AlignLeft, resource.getType()); // Increased padding
+        currentX += columnWidths[1];
+        // Brand
+        QRect brandRect(currentX, currentY, columnWidths[2], rowHeight);
+        painter.drawRect(brandRect);
+        painter.drawText(brandRect.adjusted(24, 0, -24, 0), Qt::AlignVCenter | Qt::AlignLeft, resource.getBrand()); // Increased padding
+        currentX += columnWidths[2];
+        // Quantity
+        QRect quantityRect(currentX, currentY, columnWidths[3], rowHeight);
+        painter.drawRect(quantityRect);
+        painter.drawText(quantityRect, Qt::AlignCenter, QString::number(resource.getQuantity()));
+        currentX += columnWidths[3];
+        // Purchase Date
+        QRect dateRect(currentX, currentY, columnWidths[4], rowHeight);
+        painter.drawRect(dateRect);
+        painter.drawText(dateRect, Qt::AlignCenter, resource.getPurchaseDate().toString("yyyy-MM-dd"));
+        currentY += rowHeight;
+        if (currentY + rowHeight > pdfWriter.height() - 120) { // Adjusted for larger margins
             pdfWriter.newPage();
-            currentY = 100;
-            
+            currentY = 100; // Reset Y position
             // Redraw headers on new page
             painter.setFont(headerFont);
             currentX = startX;
             for (int i = 0; i < headers.size(); ++i) {
                 QRect headerRect(currentX, currentY, columnWidths[i], rowHeight);
+                painter.fillRect(headerRect, QColor(230, 230, 230));
                 painter.drawRect(headerRect);
-                painter.drawText(headerRect, Qt::AlignCenter, headers[i]);
+                painter.drawText(headerRect.adjusted(24, 0, -24, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]); // Left-aligned headers
                 currentX += columnWidths[i];
             }
-            
             painter.setFont(contentFont);
             currentY += rowHeight;
         }
-        
-        // Fill row data
-        currentX = startX;
-        
-        // ID
-        QRect idRect(currentX, currentY, columnWidths[0], rowHeight);
-        painter.drawRect(idRect);
-        painter.drawText(idRect, Qt::AlignCenter, QString::number(resource.getResourceId()));
-        currentX += columnWidths[0];
-        
-        // Name
-        QRect nameRect(currentX, currentY, columnWidths[1], rowHeight);
-        painter.drawRect(nameRect);
-        painter.drawText(nameRect.adjusted(5, 0, -5, 0), Qt::AlignVCenter, resource.getName());
-        currentX += columnWidths[1];
-        
-        // Type
-        QRect typeRect(currentX, currentY, columnWidths[2], rowHeight);
-        painter.drawRect(typeRect);
-        painter.drawText(typeRect.adjusted(5, 0, -5, 0), Qt::AlignVCenter, resource.getType());
-        currentX += columnWidths[2];
-        
-        // Brand
-        QRect brandRect(currentX, currentY, columnWidths[3], rowHeight);
-        painter.drawRect(brandRect);
-        painter.drawText(brandRect.adjusted(5, 0, -5, 0), Qt::AlignVCenter, resource.getBrand());
-        currentX += columnWidths[3];
-        
-        // Quantity
-        QRect quantityRect(currentX, currentY, columnWidths[4], rowHeight);
-        painter.drawRect(quantityRect);
-        painter.drawText(quantityRect, Qt::AlignCenter, QString::number(resource.getQuantity()));
-        currentX += columnWidths[4];
-        
-        // Purchase Date
-        QRect dateRect(currentX, currentY, columnWidths[5], rowHeight);
-        painter.drawRect(dateRect);
-        painter.drawText(dateRect, Qt::AlignCenter, resource.getPurchaseDate().toString("yyyy-MM-dd"));
-        
-        currentY += rowHeight;
     }
-    
     // Draw footer
-    int footerY = pdfWriter.height() - 50;
-    painter.drawLine(30, footerY, pdfWriter.width() - 30, footerY);
+    int footerY = pdfWriter.height() - 80; // Adjusted for larger margins
+    painter.drawLine(50, footerY, pdfWriter.width() - 50, footerY);
     painter.setFont(contentFont);
-    painter.drawText(QRect(30, footerY + 10, pdfWriter.width() - 60, 30), 
-                    Qt::AlignCenter, "Total Resources: " + QString::number(resources.size()));
-    
+    painter.drawText(QRect(50, footerY + 20, pdfWriter.width() - 100, 40), Qt::AlignCenter, "Total Resources: " + QString::number(resources.size()));
     return true;
 }
 

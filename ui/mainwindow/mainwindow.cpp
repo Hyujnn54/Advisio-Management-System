@@ -61,6 +61,32 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     pieSeries = new QPieSeries(this);
     barSeries = new QBarSeries(this);
 
+    // CRITICAL FIX: Direct connection to employeeSectionButton before other connections
+    if (ui->employeeSectionButton) {
+        qDebug() << "Setting up direct connection for employeeSectionButton";
+        
+        // Disconnect any existing connections to ensure clean state
+        ui->employeeSectionButton->disconnect();
+        
+        // Make sure the button is enabled and visible
+        ui->employeeSectionButton->setEnabled(true);
+        ui->employeeSectionButton->setVisible(true);
+        ui->employeeSectionButton->setAutoRepeat(false);
+        ui->employeeSectionButton->setAutoRepeatDelay(0);
+        ui->employeeSectionButton->setAutoRepeatInterval(0);
+        ui->employeeSectionButton->setAutoExclusive(false);
+        
+        // Directly connect the clicked signal to our slot using lambda to ensure connection
+        connect(ui->employeeSectionButton, &QPushButton::clicked, this, [=]() {
+            qDebug() << "DIRECT employeeSectionButton clicked handler invoked";
+            ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
+            this->on_employeeSectionButton_clicked();
+        });
+    } else {
+        qDebug() << "ERROR: employeeSectionButton not found in UI!";
+    }
+
+    // Now set up the rest of the UI connections
     setupUiConnections();
     setupChartConnections();
 
@@ -111,6 +137,18 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     // Re-enable signals after all setup
     this->blockSignals(false);
 
+    // Final verification of employeeSectionButton state
+    if (ui->employeeSectionButton) {
+        qDebug() << "FINAL CHECK - employeeSectionButton state: enabled=" 
+                 << ui->employeeSectionButton->isEnabled() 
+                 << ", visible=" << ui->employeeSectionButton->isVisible()
+                 << ", signalsBlocked=" << ui->employeeSectionButton->signalsBlocked();
+                 
+        // Verify the button can actually receive events
+        ui->employeeSectionButton->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+        ui->employeeSectionButton->setFocusPolicy(Qt::StrongFocus);
+    }
+
     qDebug() << "Exiting MainWindow constructor";
 }
 
@@ -118,27 +156,6 @@ MainWindow::~MainWindow()
 {
     delete clientManager;
     delete trainingManager;
-    delete meetingManager;
-    delete employeeManager;
-    delete resourceManager;
-    delete notificationManager;
-    delete networkManager;
-    delete ui;
-}
-
-void MainWindow::setupUiConnections()
-{
-    qDebug() << "Setting up UI connections";
-    connect(ui->clientSectionButton, &QPushButton::clicked, this, &MainWindow::on_clientSectionButton_clicked);
-    connect(ui->trainingSectionButton, &QPushButton::clicked, this, &MainWindow::on_trainingSectionButton_clicked);
-    connect(ui->meetingSectionButton, &QPushButton::clicked, this, &MainWindow::on_meetingSectionButton_clicked);
-    connect(ui->employeeSectionButton, &QPushButton::clicked, this, &MainWindow::on_employeeSectionButton_clicked);
-    connect(ui->resourceSectionButton, &QPushButton::clicked, this, &MainWindow::on_resourceSectionButton_clicked);
-    connect(ui->menuButton, &QPushButton::clicked, this, &MainWindow::toggleSidebar);
-    connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
-    connect(ui->meetingChatSendButton, &QPushButton::clicked, this, &MainWindow::on_chatSendButton_clicked);
-    connect(ui->meetingChatClearButton, &QPushButton::clicked, this, &MainWindow::on_chatClearButton_clicked);
-    
     // Configurer les validateurs d'entrée
     setupInputValidators();
 }
@@ -314,6 +331,7 @@ void MainWindow::on_meetingSectionButton_clicked()
 
 void MainWindow::on_employeeSectionButton_clicked()
 {
+    qDebug() << "employeeSectionButton clicked - handler activated";
     ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
     QSqlQueryModel* model = employeeManager->getAllEmployees();
 
@@ -1480,6 +1498,19 @@ void MainWindow::updateClientChart()
                 });
             }
             
+            // Only show percentages if there are multiple categories
+            int total = 0;
+            for (auto v : data.values()) total += v;
+            for (int i = 0; i < series->count(); ++i) {
+                QPieSlice *slice = series->slices().at(i);
+                if (data.size() > 1 && total > 0) {
+                    double percent = 100.0 * slice->value() / total;
+                    slice->setLabel(QString("%1 (%2%)").arg(slice->label()).arg(QString::number(percent, 'f', 1)));
+                } else {
+                    slice->setLabel(slice->label());
+                }
+            }
+            
             chart->addSeries(series);
         } else if (chartType == "Bar Chart") {
             QBarSeries *series = new QBarSeries();
@@ -1615,6 +1646,19 @@ void MainWindow::updateTrainingChart()
                 });
             }
             
+            // Only show percentages if there are multiple categories
+            int total = 0;
+            for (auto v : data.values()) total += v;
+            for (int i = 0; i < series->count(); ++i) {
+                QPieSlice *slice = series->slices().at(i);
+                if (data.size() > 1 && total > 0) {
+                    double percent = 100.0 * slice->value() / total;
+                    slice->setLabel(QString("%1 (%2%)").arg(slice->label()).arg(QString::number(percent, 'f', 1)));
+                } else {
+                    slice->setLabel(slice->label());
+                }
+            }
+            
             chart->addSeries(series);
         } else if (chartType == "Bar Chart") {
             QBarSeries *series = new QBarSeries();
@@ -1748,6 +1792,19 @@ void MainWindow::updateMeetingChart()
                         ui->meetingHoverDescriptionLabel->setText("Hover over a chart element to see details");
                     }
                 });
+            }
+
+            // Only show percentages if there are multiple categories
+            int total = 0;
+            for (auto v : data.values()) total += v;
+            for (int i = 0; i < series->count(); ++i) {
+                QPieSlice *slice = series->slices().at(i);
+                if (data.size() > 1 && total > 0) {
+                    double percent = 100.0 * slice->value() / total;
+                    slice->setLabel(QString("%1 (%2%)").arg(slice->label()).arg(QString::number(percent, 'f', 1)));
+                } else {
+                    slice->setLabel(slice->label());
+                }
             }
 
             chart->addSeries(series);
@@ -2057,110 +2114,40 @@ void MainWindow::updateResourceChart()
 void MainWindow::improveTableDisplay(QTableView* tableView)
 {
     if (!tableView) return;
-    
-    // Set row height to be more spacious
     tableView->verticalHeader()->setDefaultSectionSize(40);
-    
-    // Set better font for readability
     QFont tableFont = tableView->font();
-    tableFont.setPointSize(10);
+    tableFont.setPointSize(11);
     tableView->setFont(tableFont);
-    
-    // Make sure headers are visible and readable
     tableView->horizontalHeader()->setVisible(true);
     tableView->horizontalHeader()->setFont(tableFont);
-    
-    // Set better cell padding
     tableView->setStyleSheet(
-        "QTableView {"
-        "    gridline-color: #E5E5E5;"
-        "    selection-background-color: #A1B8E6;"
-        "    selection-color: #333333;"
-        "}"
-        "QTableView::item {"
-        "    padding: 5px 8px;"
-        "    border: none;"
-        "}"
-        "QTableView::item:selected {"
-        "    background-color: #A1B8E6;"
-        "    color: #333333;"
-        "}"
-        "QHeaderView::section {"
-        "    background-color: #3A5DAE;"
-        "    color: white;"
-        "    padding: 8px;"
-        "    font-weight: bold;"
-        "    border: none;"
-        "}"
+        "QTableView { gridline-color: #E5E5E5; selection-background-color: #A1B8E6; selection-color: #333333; }"
+        "QTableView::item { padding: 8px 12px; border: none; }"
+        "QTableView::item:selected { background-color: #A1B8E6; color: #333333; }"
+        "QHeaderView::section { background-color: #3A5DAE; color: white; padding: 10px; font-weight: bold; border: none; font-size: 12pt; }"
     );
-    
-    // Optimiser la largeur des colonnes spécifiquement pour la table des employés
-    if (tableView->model() && tableView->model()->columnCount() >= 14) {
-        if (tableView->model()->headerData(1, Qt::Horizontal).toString() == "CIN" &&
-            tableView->model()->headerData(2, Qt::Horizontal).toString() == "Last Name") {
-
-            // Configurer la largeur des colonnes pour qu'elles s'adaptent au contenu
-            tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
-            tableView->horizontalHeader()->setStretchLastSection(true);
-
-            // Définir des largeurs optimales pour chaque colonne
-            tableView->setColumnWidth(0, 40);   // ID
-            tableView->setColumnWidth(1, 80);   // CIN
-            tableView->setColumnWidth(2, 120);  // Last Name
-            tableView->setColumnWidth(3, 120);  // First Name
-            tableView->setColumnWidth(4, 100);  // Date of Birth
-            tableView->setColumnWidth(5, 100);  // Phone
-            tableView->setColumnWidth(6, 150);  // Email
-            tableView->setColumnWidth(7, 70);   // Gender
-            tableView->setColumnWidth(8, 70);   // Salary
-            tableView->setColumnWidth(9, 100);  // Date of Hiring
-            tableView->setColumnWidth(10, 120); // Speciality
-            tableView->setColumnWidth(11, 80);  // Image
-            tableView->setColumnWidth(12, 80);  // Role
-            tableView->setColumnWidth(13, 80);  // RFID UID
-
-            // Hide the IMAGE column
-            tableView->setColumnHidden(11, true);
-        } else {
-            // Configuration par défaut si ce n'est pas la table des employés
-            tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
-            tableView->horizontalHeader()->setStretchLastSection(true);
-            tableView->horizontalHeader()->setDefaultSectionSize(150);
-            tableView->horizontalHeader()->setMinimumSectionSize(100);
-        }
-    } else {
-        // Configuration par défaut pour les autres tableaux
-        tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
-        tableView->horizontalHeader()->setStretchLastSection(true);
-        tableView->horizontalHeader()->setDefaultSectionSize(150);
-        tableView->horizontalHeader()->setMinimumSectionSize(100);
-    }
-    
-    // Donner au tableau une largeur minimale pour éviter qu'il ne soit trop à l'étroit
+    tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    tableView->horizontalHeader()->setStretchLastSection(true);
     int columnCount = tableView->model() ? tableView->model()->columnCount() : 6;
-    tableView->setMinimumWidth(columnCount * 120); // Largeur minimale basée sur les colonnes
+    tableView->setMinimumWidth(columnCount * 140);
+    // Hide ID column if present
+    if (tableView->model() && columnCount > 0 && tableView->model()->headerData(0, Qt::Horizontal).toString().toLower().contains("id")) {
+        tableView->hideColumn(0);
+    }
 }
 
 // Similar method for QTableWidget
 void MainWindow::improveTableWidgetDisplay(QTableWidget* tableWidget)
 {
     if (!tableWidget) return;
-    
-    // Set row height to be more spacious
     tableWidget->verticalHeader()->setDefaultSectionSize(40);
-    
-    // Set better font for readability
     QFont tableFont = tableWidget->font();
     tableFont.setPointSize(10);
     tableWidget->setFont(tableFont);
-    
-    // Make sure headers are visible and readable
     tableWidget->horizontalHeader()->setVisible(true);
     tableWidget->horizontalHeader()->setFont(tableFont);
     tableWidget->horizontalHeader()->setDefaultSectionSize(150);
     tableWidget->horizontalHeader()->setMinimumSectionSize(100);
-    
-    // Set better cell padding
     tableWidget->setStyleSheet(
         "QTableWidget {"
         "    gridline-color: #E5E5E5;"
@@ -2183,13 +2170,12 @@ void MainWindow::improveTableWidgetDisplay(QTableWidget* tableWidget)
         "    border: none;"
         "}"
     );
-    
-    // Ensure reasonable column sizing
     tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     tableWidget->horizontalHeader()->setStretchLastSection(true);
-    
-    // Give the table some minimum width to prevent it from being too cramped
-    tableWidget->setMinimumWidth(tableWidget->columnCount() * 150); // Minimum width based on columns
+    // Hide ID column if present
+    if (tableWidget->columnCount() > 0 && tableWidget->horizontalHeaderItem(0) && tableWidget->horizontalHeaderItem(0)->text().toLower().contains("id")) {
+        tableWidget->hideColumn(0);
+    }
 }
 
 void MainWindow::on_employeeSearchChanged(const QString &text)
@@ -2325,44 +2311,101 @@ void MainWindow::on_modifyBtn_clicked()
 
 void MainWindow::on_downloadBtn_clicked()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, "Export Employee List", "", "CSV Files (*.csv);;Text Files (*.txt)");
-    
+    QString fileName = QFileDialog::getSaveFileName(this, "Export Employee List as PDF", "", "PDF Files (*.pdf)");
     if (fileName.isEmpty()) {
         return;
     }
-    
-    QFile file(fileName);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::critical(this, "Error", "Could not open file for writing.");
+    if (!fileName.endsWith(".pdf", Qt::CaseInsensitive)) {
+        fileName += ".pdf";
+    }
+    QPdfWriter pdfWriter(fileName);
+    pdfWriter.setPageSize(QPageSize(QPageSize::A4));
+    pdfWriter.setPageMargins(QMarginsF(20, 20, 20, 20));
+    QPainter painter(&pdfWriter);
+    QFont regularFont("Arial", 11);
+    QFont headerFont("Arial", 13, QFont::Bold);
+    QFont titleFont("Arial", 20, QFont::Bold);
+    int pageWidth = pdfWriter.width();
+    int tableWidth = pageWidth - 40;
+    int rowHeight = 44;
+    painter.setFont(titleFont);
+    painter.drawText(20, 50, "Employee List");
+    painter.setFont(headerFont);
+    painter.drawText(20, 90, QString("Generated on %1").arg(QDate::currentDate().toString("yyyy-MM-dd")));
+    QAbstractItemModel* model = ui->tableView->model();
+    if (!model) {
+        QMessageBox::warning(this, "Export Error", "No employee data to export.");
         return;
     }
-    
-    QTextStream out(&file);
-    
-    // Write header
     QStringList headers;
-    QAbstractItemModel* model = ui->tableView->model();
     for (int column = 0; column < model->columnCount(); ++column) {
         headers << model->headerData(column, Qt::Horizontal).toString();
     }
-    out << headers.join(",") << "\n";
-    
-    // Write data
-    for (int row = 0; row < model->rowCount(); ++row) {
-        QStringList rowData;
-        for (int column = 0; column < model->columnCount(); ++column) {
-            QString data = model->data(model->index(row, column)).toString();
-            // Escape commas by enclosing in quotes
-            if (data.contains(',')) {
-                data = "\"" + data + "\"";
-            }
-            rowData << data;
-        }
-        out << rowData.join(",") << "\n";
+    QVector<qreal> columnWidths;
+    int colCount = headers.size();
+    for (int i = 0; i < colCount; ++i) columnWidths.append(1.0 / colCount);
+    int y = 120;
+    painter.setFont(headerFont);
+    int x = 20;
+    QRect headerRect(20, y, tableWidth, rowHeight);
+    painter.fillRect(headerRect, QColor(230, 230, 230));
+    painter.setPen(QPen(Qt::black));
+    painter.drawRect(headerRect);
+    for (int i = 0; i < headers.size(); ++i) {
+        int colWidth = tableWidth * columnWidths[i];
+        QRect cellRect(x, y, colWidth, rowHeight);
+        painter.drawRect(cellRect);
+        painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+        x += colWidth;
     }
-    
-    file.close();
-    QMessageBox::information(this, "Export Successful", "Employee data exported successfully!");
+    y += rowHeight;
+    painter.setFont(regularFont);
+    int rowCount = model->rowCount();
+    if (rowCount == 0) {
+        QRect noDataRect(20, y, tableWidth, rowHeight);
+        painter.drawRect(noDataRect);
+        painter.drawText(noDataRect, Qt::AlignCenter, "No employees to display.");
+        painter.end();
+        QMessageBox::information(this, "Export Complete", "PDF file created, but no employees were available to display.");
+        return;
+    }
+    QColor altRowColor(245, 245, 245);
+    for (int row = 0; row < rowCount; ++row) {
+        if (row % 2 == 1) {
+            QRect rowRect(20, y, tableWidth, rowHeight);
+            painter.fillRect(rowRect, altRowColor);
+        }
+        x = 20;
+        for (int col = 0; col < headers.size(); ++col) {
+            int colWidth = tableWidth * columnWidths[col];
+            QRect cellRect(x, y, colWidth, rowHeight);
+            painter.drawRect(cellRect);
+            QString text = model->data(model->index(row, col)).toString();
+            painter.drawText(cellRect.adjusted(8, 8, -8, -8), Qt::AlignVCenter | Qt::AlignLeft, text);
+            x += colWidth;
+        }
+        y += rowHeight;
+        if (y > pdfWriter.height() - 60) {
+            pdfWriter.newPage();
+            y = 40;
+            painter.setFont(headerFont);
+            x = 20;
+            QRect headerRect(20, y, tableWidth, rowHeight);
+            painter.fillRect(headerRect, QColor(230, 230, 230));
+            painter.drawRect(headerRect);
+            for (int i = 0; i < headers.size(); ++i) {
+                int colWidth = tableWidth * columnWidths[i];
+                QRect cellRect(x, y, colWidth, rowHeight);
+                painter.drawRect(cellRect);
+                painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+                x += colWidth;
+            }
+            y += rowHeight;
+            painter.setFont(regularFont);
+        }
+    }
+    painter.end();
+    QMessageBox::information(this, "Export Successful", "Employee data exported to PDF successfully!");
 }
 
 void MainWindow::on_selectImageButton_clicked()
@@ -2920,4 +2963,51 @@ void MainWindow::on_resourceSearchColumnChanged(int index)
 {
     Q_UNUSED(index);
     on_searchTimeout(); // Re-filter when column changes
+}
+
+void MainWindow::setupUiConnections()
+{
+    qDebug() << "Setting up UI connections";
+    connect(ui->clientSectionButton, &QPushButton::clicked, this, &MainWindow::on_clientSectionButton_clicked);
+    connect(ui->trainingSectionButton, &QPushButton::clicked, this, &MainWindow::on_trainingSectionButton_clicked);
+    connect(ui->meetingSectionButton, &QPushButton::clicked, this, &MainWindow::on_meetingSectionButton_clicked);
+    connect(ui->employeeSectionButton, &QPushButton::clicked, this, &MainWindow::on_employeeSectionButton_clicked);
+    connect(ui->resourceSectionButton, &QPushButton::clicked, this, &MainWindow::on_resourceSectionButton_clicked);
+    connect(ui->menuButton, &QPushButton::clicked, this, &MainWindow::toggleSidebar);
+    connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
+    
+    // Check if chat interface exists before connecting
+    if (ui->meetingChatSendButton && ui->meetingChatClearButton) {
+        connect(ui->meetingChatSendButton, &QPushButton::clicked, this, &MainWindow::on_chatSendButton_clicked);
+        connect(ui->meetingChatClearButton, &QPushButton::clicked, this, &MainWindow::on_chatClearButton_clicked);
+    }
+    
+    // Connect employee-specific buttons
+    if (ui->addButton) {
+        connect(ui->addButton, &QPushButton::clicked, this, &MainWindow::on_addButton_clicked);
+    }
+    
+    if (ui->deleteBtn) {
+        connect(ui->deleteBtn, &QPushButton::clicked, this, &MainWindow::on_deleteBtn_clicked);
+    }
+    
+    if (ui->modifyBtn) {
+        connect(ui->modifyBtn, &QPushButton::clicked, this, &MainWindow::on_modifyBtn_clicked);
+    }
+    
+    if (ui->downloadBtn) {
+        connect(ui->downloadBtn, &QPushButton::clicked, this, &MainWindow::on_downloadBtn_clicked);
+    }
+    
+    if (ui->selectImageButton) {
+        connect(ui->selectImageButton, &QPushButton::clicked, this, &MainWindow::on_selectImageButton_clicked);
+    }
+    
+    if (ui->generateQRCodeBtn) {
+        connect(ui->generateQRCodeBtn, &QPushButton::clicked, this, &MainWindow::on_generateQRCodeBtn_clicked);
+    }
+    
+    if (ui->resetSearchButton) {
+        connect(ui->resetSearchButton, &QPushButton::clicked, this, &MainWindow::on_resetSearchButton_clicked);
+    }
 }

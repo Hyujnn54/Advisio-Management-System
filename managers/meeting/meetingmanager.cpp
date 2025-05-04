@@ -205,8 +205,13 @@ void MeetingManager::handleSearchTextChanged(const QString &searchText)
         return;
     }
 
-    int column = ui->meetingSearchCriteriaComboBox->currentIndex();
-    
+    // Map ComboBox index to table column
+    int comboIndex = ui->meetingSearchCriteriaComboBox->currentIndex();
+    // Example: ComboBox order: Title, Organiser, Participant, Agenda, Duration, Date & Time
+    // TableWidget columns: 0=ID, 1=Title, 2=Organiser, 3=Participant, 4=Agenda, 5=Duration, 6=Date & Time
+    int column = 1 + comboIndex; // skip ID column
+    if (column < 1 || column > 6) column = 1; // fallback to Title
+
     // If search box is empty, show all data
     if (searchText.isEmpty()) {
         for (int i = 0; i < ui->meetingTableWidget->rowCount(); i++) {
@@ -214,16 +219,14 @@ void MeetingManager::handleSearchTextChanged(const QString &searchText)
         }
         return;
     }
-    
+
     // Hide rows that don't match the search criteria and column
     for (int i = 0; i < ui->meetingTableWidget->rowCount(); i++) {
         bool matchFound = false;
         QTableWidgetItem* item = ui->meetingTableWidget->item(i, column);
-        
         if (item && item->text().contains(searchText, Qt::CaseInsensitive)) {
             matchFound = true;
         }
-        
         ui->meetingTableWidget->setRowHidden(i, !matchFound);
     }
 }
@@ -285,149 +288,121 @@ void MeetingManager::exportAllMeetingsToPdf()
     if (fileName.isEmpty()) {
         return;
     }
-
     QPdfWriter pdfWriter(fileName);
     pdfWriter.setPageSize(QPageSize(QPageSize::A4));
-    pdfWriter.setPageMargins(QMarginsF(20, 20, 20, 20));
-
+    pdfWriter.setPageMargins(QMarginsF(50, 50, 50, 50)); // Increased margins
     QPainter painter(&pdfWriter);
-    QFont regularFont("Arial", 9);
-    QFont headerFont("Arial", 10, QFont::Bold);
-    QFont titleFont("Arial", 16, QFont::Bold);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::TextAntialiasing, true);
 
-    // Set up metrics
+    // Font setup with fallback
+    QFont regularFont("Helvetica", 16); // Use Helvetica as a reliable fallback
+    if (!regularFont.exactMatch()) {
+        regularFont = QFont("Arial", 16);
+    }
+    QFont headerFont("Helvetica", 20, QFont::Bold);
+    if (!headerFont.exactMatch()) {
+        headerFont = QFont("Arial", 20, QFont::Bold);
+    }
+    QFont titleFont("Helvetica", 32, QFont::Bold);
+    if (!titleFont.exactMatch()) {
+        titleFont = QFont("Arial", 32, QFont::Bold);
+    }
+
     int pageWidth = pdfWriter.width();
-    int tableWidth = pageWidth - 40;
-    int rowHeight = 30;
-    
-    // Draw title
+    int tableWidth = pageWidth - 100; // Adjusted for larger margins
+    int rowHeight = 80; // Increased row height
+    int cellPadding = 24; // Increased padding
+
     painter.setFont(titleFont);
-    painter.drawText(20, 30, "Meeting List");
-    
-    // Define column headers and widths
-    QStringList headers = {"ID", "Title", "Organiser", "Participant", "Agenda", "Duration", "Date & Time"};
-    QVector<qreal> columnWidths = {0.05, 0.2, 0.15, 0.15, 0.15, 0.1, 0.2}; // Proportional widths
-    
-    int y = 50;
+    painter.drawText(50, 100, "Meeting List"); // Adjusted Y position
     painter.setFont(headerFont);
-    
-    // Draw table header
-    int x = 20;
-    QRect headerRect(20, y, tableWidth, rowHeight);
+    painter.drawText(50, 160, QString("Generated on %1").arg(QDate::currentDate().toString("yyyy-MM-dd"))); // Adjusted Y position
+
+    QStringList headers = {"Title", "Organiser", "Participant", "Agenda", "Duration", "Date & Time"};
+    QVector<qreal> columnWidths = {0.2, 0.15, 0.15, 0.15, 0.1, 0.25};
+    int y = 220; // Adjusted starting Y position
+    painter.setFont(headerFont);
+    int x = 50; // Adjusted X position
+    QRect headerRect(50, y, tableWidth, rowHeight);
     painter.fillRect(headerRect, QColor(230, 230, 230));
-    painter.setPen(QPen(Qt::black));
+    painter.setPen(QPen(Qt::black, 2));
     painter.drawRect(headerRect);
-    
-    // Draw header cells with borders
+    x = 50;
     for (int i = 0; i < headers.size(); ++i) {
         int colWidth = tableWidth * columnWidths[i];
         QRect cellRect(x, y, colWidth, rowHeight);
-        
-        // Draw cell border
         painter.drawRect(cellRect);
-        
-        // Draw header text
-        painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+        painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]);
         x += colWidth;
     }
-    
     y += rowHeight;
+
     painter.setFont(regularFont);
-    
-    // Count visible rows
     int visibleRowCount = 0;
     for (int row = 0; row < ui->meetingTableWidget->rowCount(); ++row) {
         if (!ui->meetingTableWidget->isRowHidden(row)) {
             visibleRowCount++;
+            qDebug() << "Visible row" << row << "data:" << ui->meetingTableWidget->item(row, 1)->text(); // Debug output
         }
     }
-    
     if (visibleRowCount == 0) {
-        QRect noDataRect(20, y, tableWidth, rowHeight);
+        QRect noDataRect(50, y, tableWidth, rowHeight);
         painter.drawRect(noDataRect);
         painter.drawText(noDataRect, Qt::AlignCenter, "No meetings to display.");
         painter.end();
-        
-        // Show notification
         QMessageBox::information(nullptr, "Export Complete", "PDF file created, but no meetings were available to display.");
         return;
     }
 
-    // Alternate row colors
     QColor altRowColor(245, 245, 245);
     int visibleRowIndex = 0;
-    
     for (int row = 0; row < ui->meetingTableWidget->rowCount(); ++row) {
-        // Skip hidden rows (filtered out by search)
         if (ui->meetingTableWidget->isRowHidden(row)) {
             continue;
         }
-        
-        // Set alternating row colors
         if (visibleRowIndex % 2 == 1) {
-            QRect rowRect(20, y, tableWidth, rowHeight);
+            QRect rowRect(50, y, tableWidth, rowHeight);
             painter.fillRect(rowRect, altRowColor);
         }
         visibleRowIndex++;
-        
-        x = 20;
-        for (int col = 0; col < headers.size(); ++col) {
-            int colWidth = tableWidth * columnWidths[col];
+        x = 50;
+        for (int col = 1; col < 7; ++col) { // skip ID column (col 0)
+            int colWidth = tableWidth * columnWidths[col - 1];
             QRect cellRect(x, y, colWidth, rowHeight);
-            
-            // Draw cell border
             painter.drawRect(cellRect);
-            
-            // Get and format cell data
-            QString text = ui->meetingTableWidget->item(row, col) ? ui->meetingTableWidget->item(row, col)->text() : "";
-            
-            // Format duration column
-            if (col == 5 && !text.contains("min")) {
+            QTableWidgetItem* item = ui->meetingTableWidget->item(row, col);
+            QString text = item ? item->text() : "";
+            if (!text.isEmpty() && col == 5 && !text.contains("min")) {
                 text += " min";
             }
-            
-            // Draw cell text with padding
-            painter.drawText(cellRect.adjusted(5, 5, -5, -5), Qt::AlignVCenter | Qt::AlignLeft, text);
+            painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, text);
             x += colWidth;
         }
-        
         y += rowHeight;
-        
-        // Check if we need a new page
-        if (y > pdfWriter.height() - 40) {
+        if (y > pdfWriter.height() - 120) { // Adjusted for larger margins
             pdfWriter.newPage();
-            y = 50;
-            
-            // Redraw header on new page
+            y = 100; // Reset Y position
             painter.setFont(headerFont);
-            
-            // Draw table header
-            x = 20;
-            QRect headerRect(20, y, tableWidth, rowHeight);
+            x = 50;
+            QRect headerRect(50, y, tableWidth, rowHeight);
             painter.fillRect(headerRect, QColor(230, 230, 230));
             painter.drawRect(headerRect);
-            
             for (int i = 0; i < headers.size(); ++i) {
                 int colWidth = tableWidth * columnWidths[i];
                 QRect cellRect(x, y, colWidth, rowHeight);
                 painter.drawRect(cellRect);
-                painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+                painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]);
                 x += colWidth;
             }
-            
             y += rowHeight;
             painter.setFont(regularFont);
         }
     }
-
     painter.end();
-
-    // Show success message
     QMessageBox::information(nullptr, "Success", "Meeting list exported to PDF successfully!");
-    
     if (notificationManager) {
-        notificationManager->addNotification("PDF Exported", "Meeting Section", 
-                                         "Meeting list exported to " + fileName, -1);
+        notificationManager->addNotification("PDF Exported", "Meeting Section", "Meeting list exported to " + fileName, -1);
     }
 }
 
@@ -449,31 +424,31 @@ void MeetingManager::handleSortCriteriaChanged(int index)
         QMessageBox::warning(nullptr, "Database Error", "Cannot sort meetings: Database is not connected.");
         return;
     }
-    
+
     // Get the current search text and criteria
     QString searchText = ui->meetingSearchInput->text().trimmed();
     int column = ui->meetingSearchCriteriaComboBox->currentIndex();
-    
+
     // First reset the table to show all data
     refreshTableWidget();
-    
+
     // If there's search text, filter the table
     if (!searchText.isEmpty()) {
         QList<QTableWidgetItem*> items = ui->meetingTableWidget->findItems(searchText, Qt::MatchContains);
-        
+
         // Hide rows that don't match the search criteria and column
         for (int i = 0; i < ui->meetingTableWidget->rowCount(); i++) {
             bool matchFound = false;
             QTableWidgetItem* item = ui->meetingTableWidget->item(i, column);
-            
+
             if (item && item->text().contains(searchText, Qt::CaseInsensitive)) {
                 matchFound = true;
             }
-            
+
             ui->meetingTableWidget->setRowHidden(i, !matchFound);
         }
     }
-    
+
     // Sort the table based on the selected column
     ui->meetingTableWidget->sortItems(index, Qt::AscendingOrder);
 }
@@ -581,22 +556,22 @@ QMap<QString, int> MeetingManager::getStatisticsByCategory(const QString &catego
     }
 
     QSqlQuery query;
-    
+
     if (category == "Organiser") {
         query.prepare("SELECT ORGANISER, COUNT(*) AS count FROM AHMED.MEETING GROUP BY ORGANISER ORDER BY count DESC");
-    } 
+    }
     else if (category == "Participant") {
         query.prepare("SELECT PARTICIPANT, COUNT(*) AS count FROM AHMED.MEETING GROUP BY PARTICIPANT ORDER BY count DESC");
-    } 
+    }
     else if (category == "Agenda") {
         query.prepare("SELECT AGENDA, COUNT(*) AS count FROM AHMED.MEETING GROUP BY AGENDA ORDER BY count DESC");
-    } 
+    }
     else if (category == "Date") {
         query.prepare("SELECT TO_CHAR(DATEM, 'YYYY-MM-DD') as meeting_date, COUNT(*) AS count "
-                     "FROM AHMED.MEETING "
-                     "GROUP BY TO_CHAR(DATEM, 'YYYY-MM-DD') "
-                     "ORDER BY meeting_date ASC");
-    } 
+                      "FROM AHMED.MEETING "
+                      "GROUP BY TO_CHAR(DATEM, 'YYYY-MM-DD') "
+                      "ORDER BY meeting_date ASC");
+    }
     else {
         // Default fallback - by organizer
         query.prepare("SELECT ORGANISER, COUNT(*) AS count FROM AHMED.MEETING GROUP BY ORGANISER ORDER BY count DESC");

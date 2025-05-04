@@ -437,8 +437,12 @@ void ClientManager::setupCalendarView()
 void ClientManager::highlightDatesWithConsultations()
 {
     QTextCharFormat highlightFormat;
-    highlightFormat.setBackground(Qt::yellow);
-    highlightFormat.setForeground(Qt::black);
+    highlightFormat.setBackground(QBrush(QColor("#00BCD4"))); // Distinct cyan
+    highlightFormat.setForeground(Qt::white);
+    highlightFormat.setFontWeight(QFont::Bold);
+    highlightFormat.setFontUnderline(true);
+    highlightFormat.setUnderlineColor(QColor("#FF1744")); // Red underline
+    highlightFormat.setTextOutline(QPen(QColor("#FF1744"), 2)); // Outline for extra visibility
 
     QSqlQuery query;
     query.prepare("SELECT DISTINCT TRUNC(CONSULTATION_DATE) AS consult_date FROM AHMED.CLIENTS");
@@ -449,6 +453,13 @@ void ClientManager::highlightDatesWithConsultations()
         }
     } else {
         qDebug() << "Failed to highlight consultation dates:" << query.lastError().text();
+    }
+
+    QMap<QDate, int> consultationCounts = client->getConsultationCountsByDate();
+    for (auto it = consultationCounts.begin(); it != consultationCounts.end(); ++it) {
+        if (it.value() > 0) {
+            ui->clientConsultationCalendar->setDateTextFormat(it.key(), highlightFormat);
+        }
     }
 }
 
@@ -626,7 +637,22 @@ void ClientManager::refreshClientTable()
     qDebug() << "Client count:" << clientTableModel->rowCount();
 
     ui->clientTableView->setModel(clientProxyModel);
-    ui->clientTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->clientTableView->setSortingEnabled(true);
+    ui->clientTableView->horizontalHeader()->setSortIndicatorShown(true);
+    ui->clientTableView->horizontalHeader()->setSectionsClickable(true);
+    QObject::connect(ui->clientTableView->horizontalHeader(), &QHeaderView::sectionClicked, [this](int logicalIndex) {
+        this->on_clientTableViewHeader_clicked(logicalIndex);
+    });
+    // Hide ID column if present (should be column 0 if exists)
+    if (ui->clientTableView->model()->columnCount() > 0 && ui->clientTableView->model()->headerData(0, Qt::Horizontal).toString().toLower().contains("id")) {
+        ui->clientTableView->hideColumn(0);
+    }
+    // Apply improved table display for readability
+    if (auto mainWindow = qobject_cast<QMainWindow*>(ui->clientTableView->window())) {
+        if (mainWindow->metaObject()->indexOfMethod("improveTableDisplay(QTableView*)") != -1) {
+            QMetaObject::invokeMethod(mainWindow, "improveTableDisplay", Q_ARG(QTableView*, ui->clientTableView));
+        }
+    }
     setClientTableHeaders();
 
     qDebug() << "Exiting refreshClientTable";
@@ -634,12 +660,17 @@ void ClientManager::refreshClientTable()
 
 void ClientManager::setClientTableHeaders()
 {
+    // Only set headers for visible columns (skip ID)
     clientTableModel->setHeaderData(0, Qt::Horizontal, "Name");
     clientTableModel->setHeaderData(1, Qt::Horizontal, "Sector");
     clientTableModel->setHeaderData(2, Qt::Horizontal, "Contact Info");
     clientTableModel->setHeaderData(3, Qt::Horizontal, "Email");
     clientTableModel->setHeaderData(4, Qt::Horizontal, "Consultation Date");
     clientTableModel->setHeaderData(5, Qt::Horizontal, "Consultant");
+    // Hide ID column if present
+    if (clientTableModel->headerData(0, Qt::Horizontal).toString().toLower().contains("id")) {
+        if (ui->clientTableView) ui->clientTableView->hideColumn(0);
+    }
 }
 
 bool ClientManager::updateClient(const QString &originalName, const QString &newName, const QString &sector,
@@ -679,133 +710,90 @@ void ClientManager::exportClientsToPdf()
     }
     QPdfWriter pdfWriter(fileName);
     pdfWriter.setPageSize(QPageSize(QPageSize::A4));
-    pdfWriter.setPageMargins(QMarginsF(20, 20, 20, 20));
-
+    pdfWriter.setPageMargins(QMarginsF(50, 50, 50, 50)); // Increased margins
     QPainter painter(&pdfWriter);
-    QFont regularFont("Arial", 9);
-    QFont headerFont("Arial", 10, QFont::Bold);
-    QFont titleFont("Arial", 16, QFont::Bold);
-
-    // Set up metrics
+    QFont regularFont("Arial", 16); // Larger font
+    QFont headerFont("Arial", 20, QFont::Bold); // Larger header font
+    QFont titleFont("Arial", 32, QFont::Bold); // Larger title font
     int pageWidth = pdfWriter.width();
-    int tableWidth = pageWidth - 40;
-    int rowHeight = 30;
-    
-    // Draw title
+    int tableWidth = pageWidth - 100; // Adjusted for larger margins
+    int rowHeight = 80; // Increased row height
+    int cellPadding = 24; // Increased padding
     painter.setFont(titleFont);
-    painter.drawText(20, 30, "Client List");
-    
-    // Define column headers and widths
-    QStringList headers = {"Name", "Sector", "Contact", "Email", "Consultation Date", "Consultant"};
-    QVector<qreal> columnWidths = {0.2, 0.15, 0.15, 0.15, 0.2, 0.15}; // Proportional widths
-    
-    int y = 50;
+    painter.drawText(50, 100, "Client List"); // Adjusted Y position
     painter.setFont(headerFont);
-    
-    // Draw table header
-    int x = 20;
-    QRect headerRect(20, y, tableWidth, rowHeight);
+    painter.drawText(50, 160, QString("Generated on %1").arg(QDate::currentDate().toString("yyyy-MM-dd"))); // Adjusted Y position
+    QStringList headers = {"Name", "Sector", "Contact", "Email", "Consultation Date", "Consultant"};
+    QVector<qreal> columnWidths = {0.2, 0.15, 0.15, 0.15, 0.2, 0.15};
+    int y = 220; // Adjusted starting Y position
+    painter.setFont(headerFont);
+    int x = 50; // Adjusted X position
+    QRect headerRect(50, y, tableWidth, rowHeight);
     painter.fillRect(headerRect, QColor(230, 230, 230));
-    painter.setPen(QPen(Qt::black));
+    painter.setPen(QPen(Qt::black, 2));
     painter.drawRect(headerRect);
-    
-    // Draw header cells with borders
     for (int i = 0; i < headers.size(); ++i) {
         int colWidth = tableWidth * columnWidths[i];
         QRect cellRect(x, y, colWidth, rowHeight);
-        
-        // Draw cell border
         painter.drawRect(cellRect);
-        
-        // Draw header text
-        painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+        painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]);
         x += colWidth;
     }
-    
     y += rowHeight;
     painter.setFont(regularFont);
-    
-    // Draw rows using the proxy model to reflect filtering and sorting
     int rowCount = clientProxyModel->rowCount();
     if (rowCount == 0) {
-        QRect noDataRect(20, y, tableWidth, rowHeight);
+        QRect noDataRect(50, y, tableWidth, rowHeight);
         painter.drawRect(noDataRect);
         painter.drawText(noDataRect, Qt::AlignCenter, "No clients to display.");
         painter.end();
         return;
     }
-
-    // Alternate row colors
     QColor altRowColor(245, 245, 245);
-    
     for (int row = 0; row < rowCount; ++row) {
-        // Set alternating row colors
         if (row % 2 == 1) {
-            QRect rowRect(20, y, tableWidth, rowHeight);
+            QRect rowRect(50, y, tableWidth, rowHeight);
             painter.fillRect(rowRect, altRowColor);
         }
-        
-        x = 20;
+        x = 50;
         for (int col = 0; col < headers.size(); ++col) {
             int colWidth = tableWidth * columnWidths[col];
             QRect cellRect(x, y, colWidth, rowHeight);
-            
-            // Draw cell border
             painter.drawRect(cellRect);
-            
-            // Get and format cell data
             QString text = clientProxyModel->data(clientProxyModel->index(row, col)).toString();
-            
-            // Format date column
             if (col == 4 && !text.isEmpty()) {
                 QDateTime dateTime = clientProxyModel->data(clientProxyModel->index(row, col)).toDateTime();
                 if (dateTime.isValid()) {
                     text = dateTime.toString("yyyy-MM-dd HH:mm");
                 }
             }
-            
-            // Draw cell text with padding
-            painter.drawText(cellRect.adjusted(5, 5, -5, -5), Qt::AlignVCenter | Qt::AlignLeft, text);
+            painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, text);
             x += colWidth;
         }
-        
         y += rowHeight;
-        
-        // Check if we need a new page
-        if (y > pdfWriter.height() - 40) {
+        if (y > pdfWriter.height() - 120) { // Adjusted for larger margins
             pdfWriter.newPage();
-            y = 50;
-            
-            // Redraw header on new page
+            y = 100; // Reset Y position
             painter.setFont(headerFont);
-            
-            // Draw table header
-            x = 20;
-            QRect headerRect(20, y, tableWidth, rowHeight);
+            x = 50;
+            QRect headerRect(50, y, tableWidth, rowHeight);
             painter.fillRect(headerRect, QColor(230, 230, 230));
             painter.drawRect(headerRect);
-            
             for (int i = 0; i < headers.size(); ++i) {
                 int colWidth = tableWidth * columnWidths[i];
                 QRect cellRect(x, y, colWidth, rowHeight);
                 painter.drawRect(cellRect);
-                painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+                painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]);
                 x += colWidth;
             }
-            
             y += rowHeight;
             painter.setFont(regularFont);
         }
     }
-
     painter.end();
-    
-    // Show success message
     QMessageBox::information(nullptr, "Success", "Clients exported to PDF successfully!");
-    
     if (notificationManager) {
-        notificationManager->addNotification("PDF Exported", "Client Section", 
-                                           "Client list exported to " + fileName, -1);
+        notificationManager->addNotification("PDF Exported", "Client Section", "Client list exported to " + fileName, -1);
     }
 }
 

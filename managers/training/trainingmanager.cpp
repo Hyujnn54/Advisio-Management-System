@@ -337,143 +337,96 @@ void TrainingManager::exportTrainingsToPdf()
     }
     QPdfWriter pdfWriter(fileName);
     pdfWriter.setPageSize(QPageSize(QPageSize::A4));
-    pdfWriter.setPageMargins(QMarginsF(20, 20, 20, 20));
-
+    pdfWriter.setPageMargins(QMarginsF(50, 50, 50, 50)); // Increased margins
     QPainter painter(&pdfWriter);
-    QFont regularFont("Arial", 9);
-    QFont headerFont("Arial", 10, QFont::Bold);
-    QFont titleFont("Arial", 16, QFont::Bold);
-
-    // Set up metrics
+    QFont regularFont("Arial", 16); // Larger font
+    QFont headerFont("Arial", 20, QFont::Bold); // Larger header font
+    QFont titleFont("Arial", 32, QFont::Bold); // Larger title font
     int pageWidth = pdfWriter.width();
-    int tableWidth = pageWidth - 40;
-    int rowHeight = 30;
-    
-    // Draw title
+    int tableWidth = pageWidth - 100; // Adjusted for larger margins
+    int rowHeight = 80; // Increased row height
+    int cellPadding = 24; // Increased padding
     painter.setFont(titleFont);
-    painter.drawText(20, 30, "Training List");
-    
-    // Define column headers and widths
-    QStringList headers = {"Name", "Description", "Trainer", "Date", "Duration", "Price"};
-    QVector<qreal> columnWidths = {0.2, 0.2, 0.15, 0.15, 0.15, 0.15}; // Proportional widths
-    
-    int y = 50;
+    painter.drawText(50, 100, "Training List"); // Adjusted Y position
     painter.setFont(headerFont);
-    
-    // Draw table header
-    int x = 20;
-    QRect headerRect(20, y, tableWidth, rowHeight);
+    painter.drawText(50, 160, QString("Generated on %1").arg(QDate::currentDate().toString("yyyy-MM-dd"))); // Adjusted Y position
+    QStringList headers = {"Name", "Description", "Trainer", "Date", "Duration", "Price"};
+    QVector<qreal> columnWidths = {0.2, 0.2, 0.15, 0.15, 0.15, 0.15};
+    int y = 220; // Adjusted starting Y position
+    painter.setFont(headerFont);
+    int x = 50; // Adjusted X position
+    QRect headerRect(50, y, tableWidth, rowHeight);
     painter.fillRect(headerRect, QColor(230, 230, 230));
-    painter.setPen(QPen(Qt::black));
+    painter.setPen(QPen(Qt::black, 2)); // Slightly thicker border
     painter.drawRect(headerRect);
-    
-    // Draw header cells with borders
     for (int i = 0; i < headers.size(); ++i) {
         int colWidth = tableWidth * columnWidths[i];
         QRect cellRect(x, y, colWidth, rowHeight);
-        
-        // Draw cell border
         painter.drawRect(cellRect);
-        
-        // Draw header text
-        painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+        painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]); // Left-aligned headers
         x += colWidth;
     }
-    
     y += rowHeight;
     painter.setFont(regularFont);
-    
-    // Draw rows using the proxy model to reflect filtering and sorting
     int rowCount = trainingProxyModel->rowCount();
     if (rowCount == 0) {
-        QRect noDataRect(20, y, tableWidth, rowHeight);
+        QRect noDataRect(50, y, tableWidth, rowHeight);
         painter.drawRect(noDataRect);
         painter.drawText(noDataRect, Qt::AlignCenter, "No trainings to display.");
         painter.end();
         return;
     }
-
-    // Alternate row colors
     QColor altRowColor(245, 245, 245);
-    
     for (int row = 0; row < rowCount; ++row) {
-        // Set alternating row colors
         if (row % 2 == 1) {
-            QRect rowRect(20, y, tableWidth, rowHeight);
+            QRect rowRect(50, y, tableWidth, rowHeight);
             painter.fillRect(rowRect, altRowColor);
         }
-        
-        x = 20;
+        x = 50;
         for (int col = 0; col < headers.size(); ++col) {
             int colWidth = tableWidth * columnWidths[col];
             QRect cellRect(x, y, colWidth, rowHeight);
-            
-            // Draw cell border
             painter.drawRect(cellRect);
-            
-            // Get and format cell data
             QString text = trainingProxyModel->data(trainingProxyModel->index(row, col)).toString();
-            
-            // Format date column
             if (col == 3 && !text.isEmpty()) {
                 QDate date = trainingProxyModel->data(trainingProxyModel->index(row, col)).toDate();
                 if (date.isValid()) {
                     text = date.toString("yyyy-MM-dd");
                 }
             }
-            
-            // Format duration column
             if (col == 4) {
                 text += " hours";
             }
-            
-            // Format price column
             if (col == 5) {
                 text = QString("$%1").arg(text);
             }
-            
-            // Draw cell text with padding
-            painter.drawText(cellRect.adjusted(5, 5, -5, -5), Qt::AlignVCenter | Qt::AlignLeft, text);
+            painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, text); // Increased padding
             x += colWidth;
         }
-        
         y += rowHeight;
-        
-        // Check if we need a new page
-        if (y > pdfWriter.height() - 40) {
+        if (y > pdfWriter.height() - 120) { // Adjusted for larger margins
             pdfWriter.newPage();
-            y = 50;
-            
-            // Redraw header on new page
+            y = 100; // Reset Y position
             painter.setFont(headerFont);
-            
-            // Draw table header
-            x = 20;
-            QRect headerRect(20, y, tableWidth, rowHeight);
+            x = 50;
+            QRect headerRect(50, y, tableWidth, rowHeight);
             painter.fillRect(headerRect, QColor(230, 230, 230));
             painter.drawRect(headerRect);
-            
             for (int i = 0; i < headers.size(); ++i) {
                 int colWidth = tableWidth * columnWidths[i];
                 QRect cellRect(x, y, colWidth, rowHeight);
                 painter.drawRect(cellRect);
-                painter.drawText(cellRect, Qt::AlignCenter, headers[i]);
+                painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]); // Left-aligned headers
                 x += colWidth;
             }
-            
             y += rowHeight;
             painter.setFont(regularFont);
         }
     }
-
     painter.end();
-    
-    // Show success message
     QMessageBox::information(nullptr, "Success", "Training list exported to PDF successfully!");
-    
     if (notificationManager) {
-        notificationManager->addNotification("PDF Exported", "Training Section", 
-                                         "Training list exported to " + fileName, -1);
+        notificationManager->addNotification("PDF Exported", "Training Section", "Training list exported to " + fileName, -1);
     }
 }
 

@@ -441,11 +441,11 @@ void MainWindow::on_exportPdfButton_clicked() {
 
     // Define layout constants
     const int tableMargin = 100;
-    const int rowHeight = 700; // Increased to 500 for taller rows (was 400)
-    const int fontSize = 10;   // Increased font size for better readability (was 9)
-    const int headerFontSize = 12; // Increased header font size (was 11)
-    const int imageSize = 600; // Increased to 300 for larger images (was 200)
-    const int textPadding = 30; // Increased padding for better spacing (was 25)
+    const int rowHeight = 1000; // Much more space between lines
+    const int fontSize = 18;
+    const int headerFontSize = 24;
+    const int imageSize = 900;
+    const int textPadding = 80; // More padding between columns
 
     // Calculate column widths dynamically based on page width
     const int numColumns = ui->tableWidget->columnCount();
@@ -473,11 +473,11 @@ void MainWindow::on_exportPdfButton_clicked() {
     painter.setFont(font);
 
     // Draw the title and timestamp
-    painter.setFont(QFont("Arial", 14, QFont::Bold));
-    painter.drawText(tableMarginAdjusted, 150, "Resource Management System - Exported Data"); // Uncommented for better presentation
-    painter.setFont(QFont("Arial", 10));
-    painter.drawText(tableMarginAdjusted, 350, "Exported on: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
-    int y = 250;
+    painter.setFont(QFont("Arial", 28, QFont::Bold));
+    painter.drawText(tableMarginAdjusted, 300, "Resource Management System - Exported Data");
+    painter.setFont(QFont("Arial", 18));
+    painter.drawText(tableMarginAdjusted, 600, "Exported on: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+    int y = 700;
 
     // Draw the table headers
     int x = tableMarginAdjusted;
