@@ -28,6 +28,7 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QRadioButton>
+#include <QtWidgets/QScrollArea>
 #include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStackedWidget>
@@ -127,22 +128,29 @@ public:
     QTabWidget *trainingTabWidget;
     QWidget *trainingAddTab;
     QGridLayout *trainingAddGridLayout;
-    QLineEdit *trainingDescriptionInput;
-    QLabel *trainingPriceLabel;
-    QLabel *trainingDescriptionLabel;
     QDateEdit *trainingDateEdit;
-    QLabel *trainingTimeLabel;
+    QLabel *trainingTrainerComboBoxLabel;
+    QComboBox *trainingTrainerComboBox;
+    QLabel *trainingPriceLabel;
+    QLineEdit *trainingDescriptionInput;
+    QLabel *trainingDescriptionLabel;
     QLineEdit *trainingPhoneNumberInput;
-    QLineEdit *trainingTrainerInput;
-    QDoubleSpinBox *trainingPriceSpinBox;
     QLabel *trainingTrainerLabel;
+    QLabel *trainingNameLabel;
     QLabel *trainingDateLabel;
-    QSpinBox *trainingTimeSpinBox;
+    QDoubleSpinBox *trainingPriceSpinBox;
+    QLabel *trainingPhoneLabel;
     QLineEdit *trainingNameInput;
     QSpacerItem *trainingAddHorizontalSpacer;
-    QLabel *trainingNameLabel;
+    QLabel *trainingTimeLabel;
+    QSpinBox *trainingTimeSpinBox;
     QPushButton *trainingAddButton;
-    QLabel *trainingPhoneLabel;
+    QLabel *trainingClientComboBoxLabel;
+    QComboBox *trainingClientComboBox;
+    QLabel *trainingResourceComboBoxLabel;
+    QScrollArea *trainingResourceScrollArea;
+    QWidget *trainingResourceScrollWidget;
+    QVBoxLayout *trainingResourceVBoxLayout;
     QWidget *trainingManageTab;
     QVBoxLayout *trainingManageLayout;
     QGroupBox *trainingSearchGroupBox;
@@ -176,9 +184,9 @@ public:
     QLabel *meetingTitleLabel;
     QLineEdit *meetingTitleInput;
     QLabel *meetingOrganiserLabel;
-    QLineEdit *meetingOrganiserInput;
+    QComboBox *meetingOrganiserComboBox;
     QLabel *meetingParticipantLabel;
-    QLineEdit *meetingParticipantInput;
+    QComboBox *meetingParticipantComboBox;
     QLabel *meetingAgendaLabel;
     QComboBox *meetingAgendaComboBox;
     QLabel *meetingDateLabel;
@@ -186,6 +194,9 @@ public:
     QLabel *meetingDurationLabel;
     QLineEdit *meetingDurationInput;
     QPushButton *meetingAddButton;
+    QScrollArea *meetingResourceScrollArea;
+    QWidget *meetingResourceScrollWidget;
+    QVBoxLayout *meetingResourceVBoxLayout;
     QSpacerItem *meetingAddHorizontalSpacer;
     QWidget *meetingManageTab;
     QVBoxLayout *meetingManageLayout;
@@ -751,60 +762,65 @@ public:
         trainingAddTab->setContextMenuPolicy(Qt::ContextMenuPolicy::PreventContextMenu);
         trainingAddGridLayout = new QGridLayout(trainingAddTab);
         trainingAddGridLayout->setObjectName("trainingAddGridLayout");
-        trainingDescriptionInput = new QLineEdit(trainingAddTab);
-        trainingDescriptionInput->setObjectName("trainingDescriptionInput");
+        trainingDateEdit = new QDateEdit(trainingAddTab);
+        trainingDateEdit->setObjectName("trainingDateEdit");
 
-        trainingAddGridLayout->addWidget(trainingDescriptionInput, 1, 2, 1, 1);
+        trainingAddGridLayout->addWidget(trainingDateEdit, 7, 2, 1, 1);
+
+        trainingTrainerComboBoxLabel = new QLabel(trainingAddTab);
+        trainingTrainerComboBoxLabel->setObjectName("trainingTrainerComboBoxLabel");
+
+        trainingAddGridLayout->addWidget(trainingTrainerComboBoxLabel, 3, 2, 1, 1);
+
+        trainingTrainerComboBox = new QComboBox(trainingAddTab);
+        trainingTrainerComboBox->setObjectName("trainingTrainerComboBox");
+
+        trainingAddGridLayout->addWidget(trainingTrainerComboBox, 3, 2, 1, 1);
 
         trainingPriceLabel = new QLabel(trainingAddTab);
         trainingPriceLabel->setObjectName("trainingPriceLabel");
 
-        trainingAddGridLayout->addWidget(trainingPriceLabel, 5, 0, 1, 1);
+        trainingAddGridLayout->addWidget(trainingPriceLabel, 8, 0, 1, 1);
+
+        trainingDescriptionInput = new QLineEdit(trainingAddTab);
+        trainingDescriptionInput->setObjectName("trainingDescriptionInput");
+
+        trainingAddGridLayout->addWidget(trainingDescriptionInput, 1, 2, 1, 1);
 
         trainingDescriptionLabel = new QLabel(trainingAddTab);
         trainingDescriptionLabel->setObjectName("trainingDescriptionLabel");
 
         trainingAddGridLayout->addWidget(trainingDescriptionLabel, 1, 0, 1, 1);
 
-        trainingDateEdit = new QDateEdit(trainingAddTab);
-        trainingDateEdit->setObjectName("trainingDateEdit");
-
-        trainingAddGridLayout->addWidget(trainingDateEdit, 4, 2, 1, 1);
-
-        trainingTimeLabel = new QLabel(trainingAddTab);
-        trainingTimeLabel->setObjectName("trainingTimeLabel");
-
-        trainingAddGridLayout->addWidget(trainingTimeLabel, 3, 0, 1, 1);
-
         trainingPhoneNumberInput = new QLineEdit(trainingAddTab);
         trainingPhoneNumberInput->setObjectName("trainingPhoneNumberInput");
 
-        trainingAddGridLayout->addWidget(trainingPhoneNumberInput, 6, 2, 1, 1);
-
-        trainingTrainerInput = new QLineEdit(trainingAddTab);
-        trainingTrainerInput->setObjectName("trainingTrainerInput");
-
-        trainingAddGridLayout->addWidget(trainingTrainerInput, 2, 2, 1, 1);
-
-        trainingPriceSpinBox = new QDoubleSpinBox(trainingAddTab);
-        trainingPriceSpinBox->setObjectName("trainingPriceSpinBox");
-
-        trainingAddGridLayout->addWidget(trainingPriceSpinBox, 5, 2, 1, 1);
+        trainingAddGridLayout->addWidget(trainingPhoneNumberInput, 9, 2, 1, 1);
 
         trainingTrainerLabel = new QLabel(trainingAddTab);
         trainingTrainerLabel->setObjectName("trainingTrainerLabel");
 
-        trainingAddGridLayout->addWidget(trainingTrainerLabel, 2, 0, 1, 1);
+        trainingAddGridLayout->addWidget(trainingTrainerLabel, 3, 0, 1, 1);
+
+        trainingNameLabel = new QLabel(trainingAddTab);
+        trainingNameLabel->setObjectName("trainingNameLabel");
+
+        trainingAddGridLayout->addWidget(trainingNameLabel, 0, 0, 1, 1);
 
         trainingDateLabel = new QLabel(trainingAddTab);
         trainingDateLabel->setObjectName("trainingDateLabel");
 
-        trainingAddGridLayout->addWidget(trainingDateLabel, 4, 0, 1, 1);
+        trainingAddGridLayout->addWidget(trainingDateLabel, 7, 0, 1, 1);
 
-        trainingTimeSpinBox = new QSpinBox(trainingAddTab);
-        trainingTimeSpinBox->setObjectName("trainingTimeSpinBox");
+        trainingPriceSpinBox = new QDoubleSpinBox(trainingAddTab);
+        trainingPriceSpinBox->setObjectName("trainingPriceSpinBox");
 
-        trainingAddGridLayout->addWidget(trainingTimeSpinBox, 3, 2, 1, 1);
+        trainingAddGridLayout->addWidget(trainingPriceSpinBox, 8, 2, 1, 1);
+
+        trainingPhoneLabel = new QLabel(trainingAddTab);
+        trainingPhoneLabel->setObjectName("trainingPhoneLabel");
+
+        trainingAddGridLayout->addWidget(trainingPhoneLabel, 9, 0, 1, 1);
 
         trainingNameInput = new QLineEdit(trainingAddTab);
         trainingNameInput->setObjectName("trainingNameInput");
@@ -813,22 +829,49 @@ public:
 
         trainingAddHorizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
-        trainingAddGridLayout->addItem(trainingAddHorizontalSpacer, 0, 5, 7, 1);
+        trainingAddGridLayout->addItem(trainingAddHorizontalSpacer, 0, 5, 10, 1);
 
-        trainingNameLabel = new QLabel(trainingAddTab);
-        trainingNameLabel->setObjectName("trainingNameLabel");
+        trainingTimeLabel = new QLabel(trainingAddTab);
+        trainingTimeLabel->setObjectName("trainingTimeLabel");
 
-        trainingAddGridLayout->addWidget(trainingNameLabel, 0, 0, 1, 1);
+        trainingAddGridLayout->addWidget(trainingTimeLabel, 6, 0, 1, 1);
+
+        trainingTimeSpinBox = new QSpinBox(trainingAddTab);
+        trainingTimeSpinBox->setObjectName("trainingTimeSpinBox");
+
+        trainingAddGridLayout->addWidget(trainingTimeSpinBox, 6, 2, 1, 1);
 
         trainingAddButton = new QPushButton(trainingAddTab);
         trainingAddButton->setObjectName("trainingAddButton");
 
-        trainingAddGridLayout->addWidget(trainingAddButton, 6, 3, 1, 1);
+        trainingAddGridLayout->addWidget(trainingAddButton, 9, 3, 1, 1);
 
-        trainingPhoneLabel = new QLabel(trainingAddTab);
-        trainingPhoneLabel->setObjectName("trainingPhoneLabel");
+        trainingClientComboBoxLabel = new QLabel(trainingAddTab);
+        trainingClientComboBoxLabel->setObjectName("trainingClientComboBoxLabel");
 
-        trainingAddGridLayout->addWidget(trainingPhoneLabel, 6, 0, 1, 1);
+        trainingAddGridLayout->addWidget(trainingClientComboBoxLabel, 5, 0, 1, 1);
+
+        trainingClientComboBox = new QComboBox(trainingAddTab);
+        trainingClientComboBox->setObjectName("trainingClientComboBox");
+
+        trainingAddGridLayout->addWidget(trainingClientComboBox, 5, 2, 1, 1);
+
+        trainingResourceComboBoxLabel = new QLabel(trainingAddTab);
+        trainingResourceComboBoxLabel->setObjectName("trainingResourceComboBoxLabel");
+
+        trainingAddGridLayout->addWidget(trainingResourceComboBoxLabel, 4, 0, 1, 1);
+
+        trainingResourceScrollArea = new QScrollArea(trainingAddTab);
+        trainingResourceScrollArea->setObjectName("trainingResourceScrollArea");
+        trainingResourceScrollArea->setWidgetResizable(true);
+        trainingResourceScrollWidget = new QWidget();
+        trainingResourceScrollWidget->setObjectName("trainingResourceScrollWidget");
+        trainingResourceScrollWidget->setGeometry(QRect(0, 0, 489, 304));
+        trainingResourceVBoxLayout = new QVBoxLayout(trainingResourceScrollWidget);
+        trainingResourceVBoxLayout->setObjectName("trainingResourceVBoxLayout");
+        trainingResourceScrollArea->setWidget(trainingResourceScrollWidget);
+
+        trainingAddGridLayout->addWidget(trainingResourceScrollArea, 4, 2, 1, 1);
 
         trainingTabWidget->addTab(trainingAddTab, QString());
         trainingManageTab = new QWidget();
@@ -984,20 +1027,20 @@ public:
 
         meetingAddGridLayout->addWidget(meetingOrganiserLabel, 1, 0, 1, 1);
 
-        meetingOrganiserInput = new QLineEdit(meetingAddTab);
-        meetingOrganiserInput->setObjectName("meetingOrganiserInput");
+        meetingOrganiserComboBox = new QComboBox(meetingAddTab);
+        meetingOrganiserComboBox->setObjectName("meetingOrganiserComboBox");
 
-        meetingAddGridLayout->addWidget(meetingOrganiserInput, 1, 2, 1, 1);
+        meetingAddGridLayout->addWidget(meetingOrganiserComboBox, 1, 2, 1, 1);
 
         meetingParticipantLabel = new QLabel(meetingAddTab);
         meetingParticipantLabel->setObjectName("meetingParticipantLabel");
 
         meetingAddGridLayout->addWidget(meetingParticipantLabel, 2, 0, 1, 1);
 
-        meetingParticipantInput = new QLineEdit(meetingAddTab);
-        meetingParticipantInput->setObjectName("meetingParticipantInput");
+        meetingParticipantComboBox = new QComboBox(meetingAddTab);
+        meetingParticipantComboBox->setObjectName("meetingParticipantComboBox");
 
-        meetingAddGridLayout->addWidget(meetingParticipantInput, 2, 2, 1, 1);
+        meetingAddGridLayout->addWidget(meetingParticipantComboBox, 2, 2, 1, 1);
 
         meetingAgendaLabel = new QLabel(meetingAddTab);
         meetingAgendaLabel->setObjectName("meetingAgendaLabel");
@@ -1036,6 +1079,18 @@ public:
         meetingAddButton->setObjectName("meetingAddButton");
 
         meetingAddGridLayout->addWidget(meetingAddButton, 6, 2, 1, 1);
+
+        meetingResourceScrollArea = new QScrollArea(meetingAddTab);
+        meetingResourceScrollArea->setObjectName("meetingResourceScrollArea");
+        meetingResourceScrollArea->setWidgetResizable(true);
+        meetingResourceScrollWidget = new QWidget();
+        meetingResourceScrollWidget->setObjectName("meetingResourceScrollWidget");
+        meetingResourceScrollWidget->setGeometry(QRect(0, 0, 523, 336));
+        meetingResourceVBoxLayout = new QVBoxLayout(meetingResourceScrollWidget);
+        meetingResourceVBoxLayout->setObjectName("meetingResourceVBoxLayout");
+        meetingResourceScrollArea->setWidget(meetingResourceScrollWidget);
+
+        meetingAddGridLayout->addWidget(meetingResourceScrollArea, 7, 2, 1, 1);
 
         meetingAddHorizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
@@ -1807,10 +1862,10 @@ public:
 
         retranslateUi(MainWindow);
 
-        mainStackedWidget->setCurrentIndex(4);
+        mainStackedWidget->setCurrentIndex(1);
         clientTabWidget->setCurrentIndex(1);
-        trainingTabWidget->setCurrentIndex(2);
-        meetingTabWidget->setCurrentIndex(3);
+        trainingTabWidget->setCurrentIndex(0);
+        meetingTabWidget->setCurrentIndex(0);
         employeeTabWidget->setCurrentIndex(1);
         resourceTabWidget->setCurrentIndex(1);
 
@@ -1871,14 +1926,17 @@ public:
         clientChartRefreshButton->setText(QCoreApplication::translate("MainWindow", "Refresh", nullptr));
         clientHoverDescriptionLabel->setText(QCoreApplication::translate("MainWindow", "Hover over a chart element to see details", nullptr));
         clientTabWidget->setTabText(clientTabWidget->indexOf(clientStatisticsTab), QCoreApplication::translate("MainWindow", "Statistics", nullptr));
+        trainingTrainerComboBoxLabel->setText(QCoreApplication::translate("MainWindow", "Trainer (Employee)", nullptr));
         trainingPriceLabel->setText(QCoreApplication::translate("MainWindow", "Price", nullptr));
         trainingDescriptionLabel->setText(QCoreApplication::translate("MainWindow", "Description", nullptr));
-        trainingTimeLabel->setText(QCoreApplication::translate("MainWindow", "Time", nullptr));
         trainingTrainerLabel->setText(QCoreApplication::translate("MainWindow", "Trainer", nullptr));
-        trainingDateLabel->setText(QCoreApplication::translate("MainWindow", "Date:", nullptr));
         trainingNameLabel->setText(QCoreApplication::translate("MainWindow", "Training", nullptr));
-        trainingAddButton->setText(QCoreApplication::translate("MainWindow", "Add Training", nullptr));
+        trainingDateLabel->setText(QCoreApplication::translate("MainWindow", "Date:", nullptr));
         trainingPhoneLabel->setText(QCoreApplication::translate("MainWindow", "Phone", nullptr));
+        trainingTimeLabel->setText(QCoreApplication::translate("MainWindow", "Time", nullptr));
+        trainingAddButton->setText(QCoreApplication::translate("MainWindow", "Add Training", nullptr));
+        trainingClientComboBoxLabel->setText(QCoreApplication::translate("MainWindow", "Client", nullptr));
+        trainingResourceComboBoxLabel->setText(QCoreApplication::translate("MainWindow", "Resource", nullptr));
         trainingTabWidget->setTabText(trainingTabWidget->indexOf(trainingAddTab), QCoreApplication::translate("MainWindow", "Add Training", nullptr));
         trainingSearchGroupBox->setTitle(QCoreApplication::translate("MainWindow", "Search", nullptr));
         trainingSearchCriteriaComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "Formation", nullptr));

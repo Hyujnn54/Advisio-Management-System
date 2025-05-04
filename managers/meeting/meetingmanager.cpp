@@ -51,6 +51,56 @@ void MeetingManager::initialize(Ui::MainWindow *ui)
     connect(ui->meetingTabWidget, &QTabWidget::currentChanged, this, &MeetingManager::handleTabChanged);
     connect(ui->meetingSearchCriteriaComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MeetingManager::handleSortCriteriaChanged);
 
+    // Populate meetingResourceVBoxLayout with all resources (checkbox + spinbox)
+    QLayout* resourceLayout = ui->meetingResourceVBoxLayout;
+    QSqlQuery resQuery("SELECT RESOURCE_ID, NAME FROM RESOURCES");
+    while (resQuery.next()) {
+        int id = resQuery.value(0).toInt();
+        QString name = resQuery.value(1).toString();
+        QWidget* rowWidget = new QWidget();
+        QHBoxLayout* rowLayout = new QHBoxLayout(rowWidget);
+        QCheckBox* checkBox = new QCheckBox(name);
+        checkBox->setObjectName(QString("meetingResourceCheckBox_%1").arg(id));
+        QSpinBox* spinBox = new QSpinBox();
+        spinBox->setMinimum(1);
+        spinBox->setMaximum(1000);
+        spinBox->setValue(1);
+        spinBox->setObjectName(QString("meetingResourceSpinBox_%1").arg(id));
+        spinBox->setEnabled(false);
+        rowLayout->addWidget(checkBox);
+        rowLayout->addWidget(spinBox);
+        rowWidget->setLayout(rowLayout);
+        resourceLayout->addWidget(rowWidget);
+        QObject::connect(checkBox, &QCheckBox::toggled, spinBox, &QSpinBox::setEnabled);
+    }
+
+    // Populate organiser (employee) combo box
+    qDebug() << "Populating organiser combo box";
+    ui->meetingOrganiserComboBox->clear();
+    QSqlQuery empQuery("SELECT ID, NOM, PRENOM FROM EMPLOYEE");
+    if (!empQuery.exec()) {
+        qDebug() << "EMPLOYEE query error:" << empQuery.lastError().text();
+    }
+    while (empQuery.next()) {
+        int id = empQuery.value(0).toInt();
+        QString name = empQuery.value(1).toString() + " " + empQuery.value(2).toString();
+        qDebug() << "Adding employee to combo:" << name << id;
+        ui->meetingOrganiserComboBox->addItem(name, id);
+    }
+
+    qDebug() << "Populating participant combo box";
+    ui->meetingParticipantComboBox->clear();
+    QSqlQuery clientQuery("SELECT ID, NAME FROM CLIENT");
+    if (!clientQuery.exec()) {
+        qDebug() << "CLIENT query error:" << clientQuery.lastError().text();
+    }
+    while (clientQuery.next()) {
+        int id = clientQuery.value(0).toInt();
+        QString name = clientQuery.value(1).toString();
+        qDebug() << "Adding client to combo:" << name << id;
+        ui->meetingParticipantComboBox->addItem(name, id);
+    }
+
     // Set up table properties
     ui->meetingTableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->meetingTableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -70,8 +120,13 @@ void MeetingManager::initialize(Ui::MainWindow *ui)
 void MeetingManager::handleAddButtonClick()
 {
     QString title = ui->meetingTitleInput->text();
-    QString organiser = ui->meetingOrganiserInput->text();
-    QString participant = ui->meetingParticipantInput->text();
+    // Use selected employee and client IDs from combo boxes
+    int organiserIndex = ui->meetingOrganiserComboBox->currentIndex();
+    int organiserId = ui->meetingOrganiserComboBox->itemData(organiserIndex).toInt();
+    QString organiser = ui->meetingOrganiserComboBox->currentText();
+    int participantIndex = ui->meetingParticipantComboBox->currentIndex();
+    int participantId = ui->meetingParticipantComboBox->itemData(participantIndex).toInt();
+    QString participant = ui->meetingParticipantComboBox->currentText();
     QString agenda = ui->meetingAgendaComboBox->currentText();
     int duration = ui->meetingDurationInput->text().toInt();
     QDateTime dateTime = ui->meetingDateTimeEdit->dateTime();
@@ -83,7 +138,27 @@ void MeetingManager::handleAddButtonClick()
 
     // Use -1 as a placeholder ID for new meetings
     meeting m(-1, title, organiser, participant, agenda, duration, dateTime);
+    m.setEmployeeId(organiserId);
+    m.setClientId(participantId);
     if (m.add()) {
+        // Get the new meeting ID (assume it's the max ID for simplicity)
+        QSqlQuery idQuery("SELECT MAX(ID) FROM AHMED.MEETING");
+        int newMeetingId = -1;
+        if (idQuery.exec() && idQuery.next()) {
+            newMeetingId = idQuery.value(0).toInt();
+        }
+        // Insert selected resources into MEETING_RESOURCES
+        QList<QPair<int, int>> selectedResources = getSelectedMeetingResources();
+        for (const auto& pair : selectedResources) {
+            int resourceId = pair.first;
+            int quantity = pair.second;
+            QSqlQuery linkQuery;
+            linkQuery.prepare("INSERT INTO AHMED.MEETING_RESOURCES (MEETING_ID, RESOURCE_ID, QUANTITY) VALUES (:mid, :rid, :qty)");
+            linkQuery.bindValue(":mid", newMeetingId);
+            linkQuery.bindValue(":rid", resourceId);
+            linkQuery.bindValue(":qty", quantity);
+            linkQuery.exec(); // Error handling can be added
+        }
         QMessageBox::information(nullptr, "Success", "Meeting added successfully!");
         refreshTableWidget();
         if (notificationManager) {
@@ -161,6 +236,23 @@ void MeetingManager::handleUpdateButtonClick()
 
     UpdateMeeting dialog(ui->centralwidget, &m);
     if (dialog.exec() == QDialog::Accepted) {
+        // Remove old resource links
+        QSqlQuery delQuery;
+        delQuery.prepare("DELETE FROM AHMED.MEETING_RESOURCES WHERE MEETING_ID = :mid");
+        delQuery.bindValue(":mid", meetingId);
+        delQuery.exec();
+        // Insert new selected resources
+        QList<QPair<int, int>> selectedResources = getSelectedMeetingResources();
+        for (const auto& pair : selectedResources) {
+            int resourceId = pair.first;
+            int quantity = pair.second;
+            QSqlQuery linkQuery;
+            linkQuery.prepare("INSERT INTO AHMED.MEETING_RESOURCES (MEETING_ID, RESOURCE_ID, QUANTITY) VALUES (:mid, :rid, :qty)");
+            linkQuery.bindValue(":mid", meetingId);
+            linkQuery.bindValue(":rid", resourceId);
+            linkQuery.bindValue(":qty", quantity);
+            linkQuery.exec();
+        }
         refreshTableWidget();
         QMessageBox::information(ui->centralwidget, "Success", "Meeting updated successfully.");
         if (notificationManager) {
@@ -410,8 +502,8 @@ void MeetingManager::handleTabChanged(int index)
 {
     if (index == 0) { // Add Meeting tab
         ui->meetingTitleInput->clear();
-        ui->meetingOrganiserInput->clear();
-        ui->meetingParticipantInput->clear();
+        ui->meetingOrganiserComboBox->setCurrentIndex(-1);
+        ui->meetingParticipantComboBox->setCurrentIndex(-1);
         ui->meetingAgendaComboBox->setCurrentIndex(0);
         ui->meetingDurationInput->clear();
         ui->meetingDateTimeEdit->setDateTime(QDateTime::currentDateTime());
@@ -482,8 +574,8 @@ void MeetingManager::updateInputFields()
     };
 
     ui->meetingTitleInput->setText(getItemText(1));
-    ui->meetingOrganiserInput->setText(getItemText(2));
-    ui->meetingParticipantInput->setText(getItemText(3));
+    ui->meetingOrganiserComboBox->setCurrentText(getItemText(2));
+    ui->meetingParticipantComboBox->setCurrentText(getItemText(3));
     ui->meetingAgendaComboBox->setCurrentText(getItemText(4));
     ui->meetingDurationInput->setText(getItemText(5).replace(" min", ""));
     qDebug() << "Exiting updateInputFields";
@@ -545,6 +637,26 @@ void MeetingManager::applyThemeStyles()
 {
     ui->meetingTableWidget->setStyleSheet("QTableView { background-color: #FFFFFF; border: 1px solid #D3DCE6; selection-background-color: #A1B8E6; }"
                                           "QHeaderView::section { background-color: #3A5DAE; color: white; }");
+}
+
+// Helper: Collect selected resources and their quantities from meetingResourceVBoxLayout
+QList<QPair<int, int>> MeetingManager::getSelectedMeetingResources() {
+    QList<QPair<int, int>> selectedResources;
+    QLayout* resourceLayout = ui->meetingResourceVBoxLayout;
+    for (int i = 0; i < resourceLayout->count(); ++i) {
+        QWidget* rowWidget = resourceLayout->itemAt(i)->widget();
+        if (!rowWidget) continue;
+        QCheckBox* checkBox = rowWidget->findChild<QCheckBox*>();
+        QSpinBox* spinBox = rowWidget->findChild<QSpinBox*>();
+        if (checkBox && spinBox && checkBox->isChecked()) {
+            // Extract resourceId from objectName
+            QString objName = checkBox->objectName();
+            int resourceId = objName.section('_', 1, 1).toInt();
+            int quantity = spinBox->value();
+            selectedResources.append(qMakePair(resourceId, quantity));
+        }
+    }
+    return selectedResources;
 }
 
 QMap<QString, int> MeetingManager::getStatisticsByCategory(const QString &category)

@@ -1134,7 +1134,7 @@ void MainWindow::appendChatMessage(const QString &message, bool isBot)
         qDebug() << "Network request disabled for testing";
         ui->meetingChatTextEdit->append("[System] Network requests are disabled for testing.");
         // Uncomment and configure when API is ready
-        /*
+
         QUrl url("https://api.example.com/chat");
         if (!url.isValid()) {
             qDebug() << "Error: Invalid URL in appendChatMessage:" << url.toString();
@@ -1160,7 +1160,6 @@ void MainWindow::appendChatMessage(const QString &message, bool isBot)
                 ui->meetingChatTextEdit->append("[Error] Network error: " + reply->errorString());
             });
         }
-        */
     }
     qDebug() << "Exiting appendChatMessage";
 }
@@ -2372,18 +2371,25 @@ void MainWindow::on_generateQRCodeBtn_clicked()
 
 bool MainWindow::validateEmployeeInput()
 {
-    // CIN validation: Should be 8 digits
+    // CIN validation: Should be 8 digits and unique
     QString cin = ui->lineEdit_CIN->text();
     QRegularExpression cinRegex("^\\d{8}$");
     if (!cinRegex.match(cin).hasMatch()) {
         QMessageBox::warning(this, "Input Error", "CIN must be exactly 8 digits.");
         return false;
     }
-    
+    // Check uniqueness of CIN
+    QSqlQuery cinQuery;
+    cinQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE CIN = :cin");
+    cinQuery.bindValue(":cin", cin);
+    if (cinQuery.exec() && cinQuery.next() && cinQuery.value(0).toInt() > 0) {
+        QMessageBox::warning(this, "Input Error", "CIN already exists. Please enter a unique CIN.");
+        return false;
+    }
     // Name validation: Should not be empty and contain only letters
     QString lastName = ui->lineEdit_Nom->text();
     QString firstName = ui->lineEdit_Prenom->text();
-    QRegularExpression nameRegex("^[A-Za-z\\s]+$");
+    QRegularExpression nameRegex("^[A-Za-z\\s-]+$");
     if (lastName.isEmpty() || !nameRegex.match(lastName).hasMatch()) {
         QMessageBox::warning(this, "Input Error", "Last name should contain only letters.");
         return false;
@@ -2392,7 +2398,6 @@ bool MainWindow::validateEmployeeInput()
         QMessageBox::warning(this, "Input Error", "First name should contain only letters.");
         return false;
     }
-    
     // Phone validation: Should be a valid phone number
     QString phone = ui->lineEdit_phone->text();
     QRegularExpression phoneRegex("^\\d{8}$");
@@ -2400,15 +2405,20 @@ bool MainWindow::validateEmployeeInput()
         QMessageBox::warning(this, "Input Error", "Phone number must be 8 digits.");
         return false;
     }
-    
-    // Email validation
+    // Email validation and uniqueness
     QString email = ui->lineEdit_email->text();
     QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     if (!emailRegex.match(email).hasMatch()) {
         QMessageBox::warning(this, "Input Error", "Please enter a valid email address.");
         return false;
     }
-    
+    QSqlQuery emailQuery;
+    emailQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE EMAIL = :email");
+    emailQuery.bindValue(":email", email);
+    if (emailQuery.exec() && emailQuery.next() && emailQuery.value(0).toInt() > 0) {
+        QMessageBox::warning(this, "Input Error", "Email already exists. Please enter a unique email.");
+        return false;
+    }
     // Salary validation: Should be a positive number
     QString salaryText = ui->lineEdit_salaire->text();
     bool ok;
@@ -2417,31 +2427,29 @@ bool MainWindow::validateEmployeeInput()
         QMessageBox::warning(this, "Input Error", "Salary must be a positive number.");
         return false;
     }
-    
     // Date validations
     QDate birthDate = ui->dateEdit_birth->date();
     QDate hiringDate = ui->dateEdit_hiring->date();
     QDate currentDate = QDate::currentDate();
-    
-    // Birth date should be in the past and reasonable (at least 18 years old)
     if (birthDate > currentDate.addYears(-18)) {
         QMessageBox::warning(this, "Input Error", "Employee must be at least 18 years old.");
         return false;
     }
-    
-    // Hiring date should not be before birth date + 18 years
     QDate minHiringDate = birthDate.addYears(18);
     if (hiringDate < minHiringDate) {
         QMessageBox::warning(this, "Input Error", "Hiring date cannot be before employee turned 18.");
         return false;
     }
-    
-    // Hiring date should not be in the future
     if (hiringDate > currentDate) {
         QMessageBox::warning(this, "Input Error", "Hiring date cannot be in the future.");
         return false;
     }
-    
+    // Image path validation (optional, but if provided, must exist)
+    QString imagePath = ui->imagePathLineEdit->text();
+    if (!imagePath.isEmpty() && !QFile::exists(imagePath)) {
+        QMessageBox::warning(this, "Input Error", "Image file does not exist at the specified path.");
+        return false;
+    }
     return true;
 }
 
@@ -2935,7 +2943,14 @@ void MainWindow::setEmployeeTableRow(QTableWidget* table, int row, const QList<Q
             }
             table->setCellWidget(row, col, imageLabel);
         } else {
-            table->setItem(row, col, new QTableWidgetItem(employeeData[col].toString()));
+            QString text = employeeData[col].isNull() ? "" : employeeData[col].toString();
+            if (text.trimmed().isEmpty()) {
+                text = "-"; // Show dash for empty/blank values
+            }
+            QTableWidgetItem* item = new QTableWidgetItem(text);
+            // Ensure text is visible (force foreground color)
+            item->setForeground(QBrush(Qt::black));
+            table->setItem(row, col, item);
         }
     }
 }

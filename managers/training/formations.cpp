@@ -304,6 +304,95 @@ QPair<bool, QString> formations::ajouter(const QString &formation, const QString
     return qMakePair(true, QString("Training added successfully"));
 }
 
+QPair<bool, QString> formations::ajouter(const QString &formation, const QString &description, int trainerId,
+                                         const QDate &datef, int time, double prix)
+{
+    QSqlQuery query;
+    query.prepare("INSERT INTO AHMED.FORMATIONS (IDFORM, FORMATION, DESCRIPTION, EPLOYEE_ID, DATEF, TIME, PRIX) "
+                  "VALUES (FORMATIONS_SEQ.NEXTVAL, :formation, :description, :trainerId, :datef, :time, :prix)");
+    query.bindValue(":formation", formation);
+    query.bindValue(":description", description);
+    query.bindValue(":trainerId", trainerId);
+    query.bindValue(":datef", datef);
+    query.bindValue(":time", time);
+    query.bindValue(":prix", prix);
+
+    if (!query.exec())
+    {
+        qDebug() << "SQL Error:" << query.lastError().text();
+        return qMakePair(false, query.lastError().text());
+    }
+    return qMakePair(true, QString("Training added successfully"));
+}
+
+QPair<bool, QString> formations::ajouter(const QString &formation, const QString &description, int trainerId, int clientId, int resourceId,
+                                         const QDate &datef, int time, double prix)
+{
+    QSqlQuery query;
+    query.prepare("INSERT INTO AHMED.FORMATIONS (IDFORM, FORMATION, DESCRIPTION, EPLOYEE_ID, CLIENT_ID, DATEF, TIME, PRIX) "
+                  "VALUES (FORMATIONS_SEQ.NEXTVAL, :formation, :description, :trainerId, :clientId, :datef, :time, :prix)");
+    query.bindValue(":formation", formation);
+    query.bindValue(":description", description);
+    query.bindValue(":trainerId", trainerId);
+    query.bindValue(":clientId", clientId);
+    query.bindValue(":datef", datef);
+    query.bindValue(":time", time);
+    query.bindValue(":prix", prix);
+
+    if (!query.exec())
+    {
+        qDebug() << "SQL Error:" << query.lastError().text();
+        return qMakePair(false, query.lastError().text());
+    }
+    return qMakePair(true, QString("Training added successfully"));
+}
+
+QPair<bool, QString> formations::ajouter(const QString &formation, const QString &description, const QString &trainer, int trainerId, int clientId, int /*resourceId*/,
+                                         const QDate &datef, int time, double prix)
+{
+    QSqlQuery query;
+    query.prepare("INSERT INTO AHMED.FORMATIONS (IDFORM, FORMATION, DESCRIPTION, TRAINER, EPLOYEE_ID, CLIENT_ID, DATEF, TIME, PRIX) "
+                  "VALUES (FORMATIONS_SEQ.NEXTVAL, :formation, :description, :trainer, :trainerId, :clientId, :datef, :time, :prix)");
+    query.bindValue(":formation", formation);
+    query.bindValue(":description", description);
+    query.bindValue(":trainer", trainer);
+    query.bindValue(":trainerId", trainerId);
+    query.bindValue(":clientId", clientId);
+    query.bindValue(":datef", datef);
+    query.bindValue(":time", time);
+    query.bindValue(":prix", prix);
+
+    if (!query.exec())
+    {
+        qDebug() << "SQL Error:" << query.lastError().text();
+        return qMakePair(false, query.lastError().text());
+    }
+    return qMakePair(true, QString("Training added successfully"));
+}
+
+QPair<bool, QString> formations::ajouterWithId(int idform, const QString &formation, const QString &description, const QString &trainer, int trainerId, int clientId,
+                                               const QDate &datef, int time, double prix)
+{
+    QSqlQuery query;
+    query.prepare("INSERT INTO AHMED.FORMATIONS (IDFORM, FORMATION, DESCRIPTION, TRAINER, EPLOYEE_ID, CLIENT_ID, DATEF, TIME, PRIX) "
+                  "VALUES (:idform, :formation, :description, :trainer, :trainerId, :clientId, :datef, :time, :prix)");
+    query.bindValue(":idform", idform);
+    query.bindValue(":formation", formation);
+    query.bindValue(":description", description);
+    query.bindValue(":trainer", trainer);
+    query.bindValue(":trainerId", trainerId);
+    query.bindValue(":clientId", clientId);
+    query.bindValue(":datef", datef);
+    query.bindValue(":time", time);
+    query.bindValue(":prix", prix);
+
+    if (!query.exec()) {
+        qDebug() << "SQL Error (ajouterWithId):" << query.lastError().text();
+        return qMakePair(false, query.lastError().text());
+    }
+    return qMakePair(true, QString("Training added successfully"));
+}
+
 bool formations::modifier(const QString &oldFormation, const QString &newFormation, const QString &newDescription,
                           const QString &newTrainer, const QDate &newDatef, int newTime, double newPrix)
 {

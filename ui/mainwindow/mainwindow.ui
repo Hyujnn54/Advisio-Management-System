@@ -343,7 +343,7 @@ QPushButton:hover { color: darkblue; }</string>
           <item>
            <widget class="QStackedWidget" name="mainStackedWidget">
             <property name="currentIndex">
-             <number>4</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="clientPage">
              <layout class="QVBoxLayout" name="clientPageLayout">
@@ -739,7 +739,7 @@ QPushButton:hover { color: darkblue; }</string>
               <item>
                <widget class="QTabWidget" name="trainingTabWidget">
                 <property name="currentIndex">
-                 <number>2</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="trainingAddTab">
                  <property name="contextMenuPolicy">
@@ -749,15 +749,28 @@ QPushButton:hover { color: darkblue; }</string>
                   <string>Add Training</string>
                  </attribute>
                  <layout class="QGridLayout" name="trainingAddGridLayout">
-                  <item row="1" column="2">
-                   <widget class="QLineEdit" name="trainingDescriptionInput"/>
+                  <item row="7" column="2">
+                   <widget class="QDateEdit" name="trainingDateEdit"/>
                   </item>
-                  <item row="5" column="0">
+                  <item row="3" column="2">
+                   <widget class="QLabel" name="trainingTrainerComboBoxLabel">
+                    <property name="text">
+                     <string>Trainer (Employee)</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="2">
+                   <widget class="QComboBox" name="trainingTrainerComboBox"/>
+                  </item>
+                  <item row="8" column="0">
                    <widget class="QLabel" name="trainingPriceLabel">
                     <property name="text">
                      <string>Price</string>
                     </property>
                    </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QLineEdit" name="trainingDescriptionInput"/>
                   </item>
                   <item row="1" column="0">
                    <widget class="QLabel" name="trainingDescriptionLabel">
@@ -766,46 +779,44 @@ QPushButton:hover { color: darkblue; }</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="4" column="2">
-                   <widget class="QDateEdit" name="trainingDateEdit"/>
-                  </item>
-                  <item row="3" column="0">
-                   <widget class="QLabel" name="trainingTimeLabel">
-                    <property name="text">
-                     <string>Time</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="6" column="2">
+                  <item row="9" column="2">
                    <widget class="QLineEdit" name="trainingPhoneNumberInput"/>
                   </item>
-                  <item row="2" column="2">
-                   <widget class="QLineEdit" name="trainingTrainerInput"/>
-                  </item>
-                  <item row="5" column="2">
-                   <widget class="QDoubleSpinBox" name="trainingPriceSpinBox"/>
-                  </item>
-                  <item row="2" column="0">
+                  <item row="3" column="0">
                    <widget class="QLabel" name="trainingTrainerLabel">
                     <property name="text">
                      <string>Trainer</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="4" column="0">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="trainingNameLabel">
+                    <property name="text">
+                     <string>Training</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="0">
                    <widget class="QLabel" name="trainingDateLabel">
                     <property name="text">
                      <string>Date:</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="3" column="2">
-                   <widget class="QSpinBox" name="trainingTimeSpinBox"/>
+                  <item row="8" column="2">
+                   <widget class="QDoubleSpinBox" name="trainingPriceSpinBox"/>
+                  </item>
+                  <item row="9" column="0">
+                   <widget class="QLabel" name="trainingPhoneLabel">
+                    <property name="text">
+                     <string>Phone</string>
+                    </property>
+                   </widget>
                   </item>
                   <item row="0" column="2">
                    <widget class="QLineEdit" name="trainingNameInput"/>
                   </item>
-                  <item row="0" column="5" rowspan="7">
+                  <item row="0" column="5" rowspan="10">
                    <spacer name="trainingAddHorizontalSpacer">
                     <property name="orientation">
                      <enum>Qt::Orientation::Horizontal</enum>
@@ -818,25 +829,56 @@ QPushButton:hover { color: darkblue; }</string>
                     </property>
                    </spacer>
                   </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="trainingNameLabel">
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="trainingTimeLabel">
                     <property name="text">
-                     <string>Training</string>
+                     <string>Time</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="3">
+                  <item row="6" column="2">
+                   <widget class="QSpinBox" name="trainingTimeSpinBox"/>
+                  </item>
+                  <item row="9" column="3">
                    <widget class="QPushButton" name="trainingAddButton">
                     <property name="text">
                      <string>Add Training</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="0">
-                   <widget class="QLabel" name="trainingPhoneLabel">
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="trainingClientComboBoxLabel">
                     <property name="text">
-                     <string>Phone</string>
+                     <string>Client</string>
                     </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="2">
+                   <widget class="QComboBox" name="trainingClientComboBox"/>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="trainingResourceComboBoxLabel">
+                    <property name="text">
+                     <string>Resource</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="2">
+                   <widget class="QScrollArea" name="trainingResourceScrollArea">
+                    <property name="widgetResizable">
+                     <bool>true</bool>
+                    </property>
+                    <widget class="QWidget" name="trainingResourceScrollWidget">
+                     <property name="geometry">
+                      <rect>
+                       <x>0</x>
+                       <y>0</y>
+                       <width>489</width>
+                       <height>304</height>
+                      </rect>
+                     </property>
+                     <layout class="QVBoxLayout" name="trainingResourceVBoxLayout"/>
+                    </widget>
                    </widget>
                   </item>
                  </layout>
@@ -1058,7 +1100,7 @@ QPushButton:hover { color: darkblue; }</string>
               <item>
                <widget class="QTabWidget" name="meetingTabWidget">
                 <property name="currentIndex">
-                 <number>3</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="meetingAddTab">
                  <attribute name="title">
@@ -1083,7 +1125,7 @@ QPushButton:hover { color: darkblue; }</string>
                    </widget>
                   </item>
                   <item row="1" column="2">
-                   <widget class="QLineEdit" name="meetingOrganiserInput"/>
+                   <widget class="QComboBox" name="meetingOrganiserComboBox"/>
                   </item>
                   <item row="2" column="0">
                    <widget class="QLabel" name="meetingParticipantLabel">
@@ -1093,7 +1135,7 @@ QPushButton:hover { color: darkblue; }</string>
                    </widget>
                   </item>
                   <item row="2" column="2">
-                   <widget class="QLineEdit" name="meetingParticipantInput"/>
+                   <widget class="QComboBox" name="meetingParticipantComboBox"/>
                   </item>
                   <item row="3" column="0">
                    <widget class="QLabel" name="meetingAgendaLabel">
@@ -1146,6 +1188,24 @@ QPushButton:hover { color: darkblue; }</string>
                     <property name="text">
                      <string>Add Meeting</string>
                     </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="2">
+                   <widget class="QScrollArea" name="meetingResourceScrollArea">
+                    <property name="widgetResizable">
+                     <bool>true</bool>
+                    </property>
+                    <widget class="QWidget" name="meetingResourceScrollWidget">
+                     <property name="geometry">
+                      <rect>
+                       <x>0</x>
+                       <y>0</y>
+                       <width>523</width>
+                       <height>336</height>
+                      </rect>
+                     </property>
+                     <layout class="QVBoxLayout" name="meetingResourceVBoxLayout"/>
+                    </widget>
                    </widget>
                   </item>
                   <item row="0" column="3" rowspan="7">

@@ -41,6 +41,15 @@ public:
     // New methods for TrainingManager
     QPair<bool, QString> ajouter(const QString &formation, const QString &description, const QString &trainer,
                                  const QDate &datef, int time, double prix);
+    QPair<bool, QString> ajouter(const QString &formation, const QString &description, int trainerId,
+                                 const QDate &datef, int time, double prix);
+    QPair<bool, QString> ajouter(const QString &formation, const QString &description, int trainerId, int clientId, int resourceId,
+                                 const QDate &datef, int time, double prix);
+    QPair<bool, QString> ajouter(const QString &formation, const QString &description, const QString &trainer, int trainerId, int clientId, int resourceId,
+                                 const QDate &datef, int time, double prix);
+    // Add a new method to insert a training with a specific ID
+    QPair<bool, QString> ajouterWithId(int idform, const QString &formation, const QString &description, const QString &trainer, int trainerId, int clientId,
+                                       const QDate &datef, int time, double prix);
     bool modifier(const QString &oldFormation, const QString &newFormation, const QString &newDescription,
                   const QString &newTrainer, const QDate &newDatef, int newTime, double newPrix);
     bool supprimer(const QString &formation);

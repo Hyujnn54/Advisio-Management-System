@@ -9,6 +9,8 @@
 #include <QSqlRecord>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QCheckBox>
+#include <QSpinBox>
 
 TrainingManager::TrainingManager(bool dbConnected, QObject *parent)
     : QObject(parent),
@@ -40,6 +42,45 @@ void TrainingManager::initialize(Ui::MainWindow *ui)
     this->ui = ui;
     trainingProxyModel->setSourceModel(trainingTableModel);
     ui->trainingTableView->setModel(trainingProxyModel);
+
+    // Populate trainer combo box with employee names and IDs
+    ui->trainingTrainerComboBox->clear();
+    QSqlQuery empQuery("SELECT ID, FIRST_NAME, LAST_NAME FROM EMPLOYEE");
+    while (empQuery.next()) {
+        int id = empQuery.value(0).toInt();
+        QString name = empQuery.value(1).toString() + " " + empQuery.value(2).toString();
+        ui->trainingTrainerComboBox->addItem(name, id);
+    }
+    // Populate client combo box with client names and IDs
+    ui->trainingClientComboBox->clear();
+    QSqlQuery clientQuery("SELECT CLIENT_ID, NAME FROM CLIENTS");
+    while (clientQuery.next()) {
+        int id = clientQuery.value(0).toInt();
+        QString name = clientQuery.value(1).toString();
+        ui->trainingClientComboBox->addItem(name, id);
+    }
+    // Populate resource scroll area with checkboxes and spinboxes for each resource
+    QLayout* resourceLayout = ui->trainingResourceVBoxLayout;
+    QSqlQuery resQuery("SELECT RESOURCE_ID, NAME FROM RESOURCES");
+    while (resQuery.next()) {
+        int id = resQuery.value(0).toInt();
+        QString name = resQuery.value(1).toString();
+        QWidget* rowWidget = new QWidget();
+        QHBoxLayout* rowLayout = new QHBoxLayout(rowWidget);
+        QCheckBox* checkBox = new QCheckBox(name);
+        checkBox->setObjectName(QString("resourceCheckBox_%1").arg(id));
+        QSpinBox* spinBox = new QSpinBox();
+        spinBox->setMinimum(1);
+        spinBox->setMaximum(1000);
+        spinBox->setValue(1);
+        spinBox->setObjectName(QString("resourceSpinBox_%1").arg(id));
+        spinBox->setEnabled(false);
+        rowLayout->addWidget(checkBox);
+        rowLayout->addWidget(spinBox);
+        rowWidget->setLayout(rowLayout);
+        resourceLayout->addWidget(rowWidget);
+        QObject::connect(checkBox, &QCheckBox::toggled, spinBox, &QSpinBox::setEnabled);
+    }
 
     // Initialize search criteria combo box
     ui->trainingSearchCriteriaComboBox->clear();
@@ -75,18 +116,59 @@ void TrainingManager::on_trainingAddButton_clicked()
     QString name = ui->trainingNameInput->text().trimmed();
     QString description = ui->trainingDescriptionInput->text().trimmed();
     QDate date = ui->trainingDateEdit->date();
-    QString trainer = ui->trainingTrainerInput->text().trimmed();
+    int trainerId = ui->trainingTrainerComboBox->currentData().toInt();
+    QString trainerName = ui->trainingTrainerComboBox->currentText();
+    int clientId = ui->trainingClientComboBox->currentData().toInt();
     int time = ui->trainingTimeSpinBox->value();
-    double prix = ui->trainingPhoneNumberInput->text().trimmed().toDouble();
+    double prix = ui->trainingPriceSpinBox->value();
 
-    auto result = formations->ajouter(name, description, trainer, date, time, prix);
+    // Collect selected resources and their quantities
+    QList<QPair<int, int>> selectedResources; // (resourceId, quantity)
+    QLayout* resourceLayout = ui->trainingResourceVBoxLayout;
+    for (int i = 0; i < resourceLayout->count(); ++i) {
+        QWidget* rowWidget = resourceLayout->itemAt(i)->widget();
+        if (!rowWidget) continue;
+        QCheckBox* checkBox = rowWidget->findChild<QCheckBox*>();
+        QSpinBox* spinBox = rowWidget->findChild<QSpinBox*>();
+        if (checkBox && spinBox && checkBox->isChecked()) {
+            // Extract resourceId from objectName
+            QString objName = checkBox->objectName();
+            int resourceId = objName.section('_', 1, 1).toInt();
+            int quantity = spinBox->value();
+            selectedResources.append(qMakePair(resourceId, quantity));
+        }
+    }
+
+    // Get the next value from the sequence for the new training ID
+    QSqlQuery seqQuery("SELECT FORMATIONS_SEQ.NEXTVAL FROM DUAL");
+    int newTrainingId = -1;
+    if (seqQuery.next()) {
+        newTrainingId = seqQuery.value(0).toInt();
+    } else {
+        QMessageBox::critical(nullptr, "Error", "Failed to get new training ID from sequence.");
+        return;
+    }
+
+    // Insert the training using the newTrainingId
+    auto result = formations->ajouterWithId(newTrainingId, name, description, trainerName, trainerId, clientId, date, time, prix);
     if (result.first) {
+        // Insert into TRAINING_RESOURCES table for each selected resource
+        for (const auto& pair : selectedResources) {
+            int resourceId = pair.first;
+            int quantity = pair.second;
+            QSqlQuery linkQuery;
+            linkQuery.prepare("INSERT INTO AHMED.TRAINING_RESOURCES (TRAINING_ID, RESOURCE_ID, QUANTITY) VALUES (:tid, :rid, :qty)");
+            linkQuery.bindValue(":tid", newTrainingId);
+            linkQuery.bindValue(":rid", resourceId);
+            linkQuery.bindValue(":qty", quantity);
+            linkQuery.exec(); // Error handling can be added
+        }
         QMessageBox::information(nullptr, "Success", "Training added successfully!");
         refreshTrainingTable();
-        trainingProxyModel->setFilterRegularExpression(""); // Reset filter
-        trainingProxyModel->sort(-1); // Reset sorting
-        ui->trainingTableView->viewport()->update(); // Force repaint
-        int newRow = trainingTableModel->rowCount() - 1; // Last row
+        trainingProxyModel->setFilterRegularExpression("");
+        trainingProxyModel->sort(-1);
+        ui->trainingTableView->viewport()->update();
+        int newRow = trainingTableModel->rowCount() - 1;
         if (notificationManager) {
             notificationManager->addNotification("Added Training", "Training Section", QString("Training: %1").arg(name), newRow);
         }
@@ -181,16 +263,30 @@ bool TrainingManager::validateTrainingInputs()
     QString name = ui->trainingNameInput->text().trimmed();
     QString description = ui->trainingDescriptionInput->text().trimmed();
     QDate date = ui->trainingDateEdit->date();
-    QString trainer = ui->trainingTrainerInput->text().trimmed();
+    int trainerIndex = ui->trainingTrainerComboBox->currentIndex();
+    int clientIndex = ui->trainingClientComboBox->currentIndex();
     int time = ui->trainingTimeSpinBox->value();
     QString prixStr = ui->trainingPhoneNumberInput->text().trimmed();
 
-    if (name.isEmpty() || description.isEmpty() || trainer.isEmpty() || prixStr.isEmpty()) {
-        QMessageBox::warning(nullptr, "Input Error", "Please fill in all fields.");
+    // Validate at least one resource is selected
+    bool resourceSelected = false;
+    QLayout* resourceLayout = ui->trainingResourceVBoxLayout;
+    for (int i = 0; i < resourceLayout->count(); ++i) {
+        QWidget* rowWidget = resourceLayout->itemAt(i)->widget();
+        if (!rowWidget) continue;
+        QCheckBox* checkBox = rowWidget->findChild<QCheckBox*>();
+        if (checkBox && checkBox->isChecked()) {
+            resourceSelected = true;
+            break;
+        }
+    }
+
+    if (name.isEmpty() || description.isEmpty() || trainerIndex < 0 || clientIndex < 0 || !resourceSelected || prixStr.isEmpty()) {
+        QMessageBox::warning(nullptr, "Input Error", "Please fill in all fields and select at least one resource.");
         return false;
     }
-    if (!isValidName(name) || !isValidName(trainer)) {
-        QMessageBox::warning(nullptr, "Input Error", "Invalid name or trainer format.");
+    if (!isValidName(name)) {
+        QMessageBox::warning(nullptr, "Input Error", "Invalid name format.");
         return false;
     }
     if (!date.isValid()) {
@@ -221,9 +317,23 @@ void TrainingManager::clearTrainingInputs()
     ui->trainingNameInput->clear();
     ui->trainingDescriptionInput->clear();
     ui->trainingDateEdit->setDate(QDate::currentDate());
-    ui->trainingTrainerInput->clear();
+    ui->trainingTrainerComboBox->setCurrentIndex(-1);
+    ui->trainingClientComboBox->setCurrentIndex(-1);
     ui->trainingTimeSpinBox->setValue(0);
     ui->trainingPhoneNumberInput->clear();
+    // Uncheck all resource checkboxes and reset spinboxes
+    QLayout* resourceLayout = ui->trainingResourceVBoxLayout;
+    for (int i = 0; i < resourceLayout->count(); ++i) {
+        QWidget* rowWidget = resourceLayout->itemAt(i)->widget();
+        if (!rowWidget) continue;
+        QCheckBox* checkBox = rowWidget->findChild<QCheckBox*>();
+        QSpinBox* spinBox = rowWidget->findChild<QSpinBox*>();
+        if (checkBox) checkBox->setChecked(false);
+        if (spinBox) {
+            spinBox->setValue(1);
+            spinBox->setEnabled(false);
+        }
+    }
 }
 
 void TrainingManager::performTrainingSearch()
