@@ -74,30 +74,21 @@ void MeetingManager::initialize(Ui::MainWindow *ui)
         QObject::connect(checkBox, &QCheckBox::toggled, spinBox, &QSpinBox::setEnabled);
     }
 
-    // Populate organiser (employee) combo box
-    qDebug() << "Populating organiser combo box";
+    // Populate organiser (employee) combo box (corrected columns)
     ui->meetingOrganiserComboBox->clear();
-    QSqlQuery empQuery("SELECT ID, NOM, PRENOM FROM EMPLOYEE");
-    if (!empQuery.exec()) {
-        qDebug() << "EMPLOYEE query error:" << empQuery.lastError().text();
-    }
+    QSqlQuery empQuery("SELECT ID, FIRST_NAME, LAST_NAME FROM AHMED.EMPLOYEE");
     while (empQuery.next()) {
         int id = empQuery.value(0).toInt();
         QString name = empQuery.value(1).toString() + " " + empQuery.value(2).toString();
-        qDebug() << "Adding employee to combo:" << name << id;
         ui->meetingOrganiserComboBox->addItem(name, id);
     }
 
-    qDebug() << "Populating participant combo box";
+    // Populate participant (client) combo box (corrected table/columns)
     ui->meetingParticipantComboBox->clear();
-    QSqlQuery clientQuery("SELECT ID, NAME FROM CLIENT");
-    if (!clientQuery.exec()) {
-        qDebug() << "CLIENT query error:" << clientQuery.lastError().text();
-    }
+    QSqlQuery clientQuery("SELECT CLIENT_ID, NAME FROM AHMED.CLIENTS");
     while (clientQuery.next()) {
         int id = clientQuery.value(0).toInt();
         QString name = clientQuery.value(1).toString();
-        qDebug() << "Adding client to combo:" << name << id;
         ui->meetingParticipantComboBox->addItem(name, id);
     }
 
@@ -157,7 +148,9 @@ void MeetingManager::handleAddButtonClick()
             linkQuery.bindValue(":mid", newMeetingId);
             linkQuery.bindValue(":rid", resourceId);
             linkQuery.bindValue(":qty", quantity);
-            linkQuery.exec(); // Error handling can be added
+            if (!linkQuery.exec()) {
+                qDebug() << "Failed to insert into MEETING_RESOURCES:" << linkQuery.lastError().text();
+            }
         }
         QMessageBox::information(nullptr, "Success", "Meeting added successfully!");
         refreshTableWidget();
