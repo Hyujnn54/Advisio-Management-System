@@ -2,14 +2,8 @@
 #define UPDATETRAININGDIALOG_H
 
 #include <QDialog>
-#include <QLineEdit>
-#include <QDateEdit>
-#include <QSpinBox>
-#include <QDoubleSpinBox>
-#include <QVBoxLayout>
-#include <QFormLayout>
-#include <QPushButton>
 #include <QDate>
+#include "ui_updatetrainingdialog.h"
 
 class UpdateTrainingDialog : public QDialog
 {
@@ -17,6 +11,7 @@ class UpdateTrainingDialog : public QDialog
 
 public:
     explicit UpdateTrainingDialog(QWidget *parent = nullptr);
+    ~UpdateTrainingDialog();
     void setTrainingData(const QString &name, const QString &description, const QString &trainer,
                          const QDate &date, int time, double prix);
     QString getName() const;
@@ -27,14 +22,12 @@ public:
     double getPrix() const;
     void setResourceData(int trainingId);
     QList<QPair<int, int>> getSelectedResources() const;
+    void accept() override;
+    void setTrainingId(int id) { trainingId = id; }
 
 private:
-    QLineEdit *nameEdit;
-    QLineEdit *descriptionEdit;
-    QLineEdit *trainerEdit;
-    QDateEdit *dateEdit;
-    QSpinBox *timeSpinBox;
-    QDoubleSpinBox *prixSpinBox;
+    Ui::UpdateTrainingDialog *ui;
+    int trainingId;
 };
 
 #endif // UPDATETRAININGDIALOG_H

@@ -5,6 +5,7 @@
 #include "dialog/updateemployee/updateemployeedialog.h"  // Updated include path
 #include "dialog/updateresourcesdialog/updateresourcesdialog.h"  // Include for UpdateResourceDialog
 #include "lib/qrcodegen/qrcodegen.hpp"  // Ajout de l'inclusion qrcodegen
+#include "ui/employeeArd/arduino.h"  // Include for Arduino integration
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QNetworkReply>
@@ -28,6 +29,7 @@
 #include <QStyledItemDelegate>
 #include <QPainter>
 #include <QSqlRecord>
+#include <QInputDialog>
 
 // Inline delegate for image thumbnail in the employee table
 class InlineImageDelegate : public QStyledItemDelegate {
@@ -180,6 +182,21 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
         ui->employeeSectionButton->setFocusPolicy(Qt::StrongFocus);
     }
 
+    // --- Arduino integration for employee RFID ---
+    // Initialisation Arduino pour RFID employé
+    arduino = new Arduino();
+    serialBuffer = "";
+    {
+        QString portName = "COM4"; // À adapter selon le port réel
+        if (arduino->connectArduino(portName)) {
+            qDebug() << "Arduino connecté avec succès";
+            connect(arduino, &Arduino::dataAvailable, this, &MainWindow::handleSerialData);
+        } else {
+            qDebug() << "Échec de connexion à Arduino";
+            QMessageBox::warning(this, "Erreur Arduino", "Impossible de se connecter à Arduino sur le port " + portName);
+        }
+    }
+
     qDebug() << "Exiting MainWindow constructor";
 }
 
@@ -187,6 +204,7 @@ MainWindow::~MainWindow()
 {
     delete clientManager;
     delete trainingManager;
+    delete arduino; // Clean up Arduino instance
     // Configurer les validateurs d'entrée
     setupInputValidators();
 }
@@ -3013,4 +3031,86 @@ void MainWindow::populateEmployeeTable(const QList<QList<QVariant>>& employees) 
         setEmployeeTableRow(table, row, employees[row]);
     }
     improveTableWidgetDisplay(table);
+}
+
+void MainWindow::handleSerialData()
+{
+    static QString lastUidProcessed;
+    QByteArray data = arduino->readData();
+    serialBuffer += QString(data);
+    int newlineIndex;
+    while ((newlineIndex = serialBuffer.indexOf('\n')) != -1) {
+        QString uid = serialBuffer.left(newlineIndex).trimmed();
+        serialBuffer.remove(0, newlineIndex + 1);
+        QRegularExpression uidRegex("^[A-Fa-f0-9]{8}$");
+        if (!uidRegex.match(uid).hasMatch()) continue;
+        if (uid == lastUidProcessed) continue;
+        lastUidProcessed = uid;
+        qDebug() << "UID RFID reçu d'Arduino :" << uid;
+        QSqlQuery query;
+        query.prepare("SELECT ID, FIRST_NAME, LAST_NAME FROM EMPLOYEE WHERE RFID_UID = :uid");
+        query.bindValue(":uid", uid);
+        if (!query.exec()) {
+            qDebug() << "Erreur requête :" << query.lastError().text();
+            arduino->sendData("error");
+            QMessageBox::warning(this, "Erreur BDD", "Échec de la requête : " + query.lastError().text());
+            continue;
+        }
+        if (query.next()) {
+            int employeeId = query.value("ID").toInt();
+            QString firstName = query.value("FIRST_NAME").toString();
+            QString lastName = query.value("LAST_NAME").toString();
+            // Requête pour compter les consultations aujourd'hui
+            QSqlQuery countQuery;
+            QString today = QDate::currentDate().toString("yyyy-MM-dd");
+            countQuery.prepare("SELECT COUNT(*) FROM CLIENTS WHERE CONSULTANT_ID = :employeeId AND TRUNC(CONSULTATION_DATE) = TO_DATE(:today, 'YYYY-MM-DD')");
+            countQuery.bindValue(":employeeId", employeeId);
+            countQuery.bindValue(":today", today);
+            int count = 0;
+            if (countQuery.exec() && countQuery.next()) {
+                count = countQuery.value(0).toInt();
+                arduino->sendData(QString::number(count));
+            } else {
+                arduino->sendData("error");
+            }
+            QMessageBox::information(this, "Employé trouvé", "Badge employé : " + firstName + " " + lastName + "\nConsultations aujourd'hui : " + QString::number(count));
+        } else {
+            arduino->sendData("error");
+            // Demander à l'utilisateur s'il veut assigner ce badge
+            auto reply = QMessageBox::question(this, "Badge inconnu", "Aucun employé trouvé pour ce badge. Voulez-vous l'assigner à un employé existant ?", QMessageBox::Yes | QMessageBox::No);
+            if (reply == QMessageBox::Yes) {
+                // Récupérer la liste des employés sans badge
+                QSqlQuery listQuery("SELECT ID, FIRST_NAME, LAST_NAME FROM EMPLOYEE WHERE RFID_UID IS NULL OR RFID_UID = ''");
+                QStringList employeeList;
+                QList<int> employeeIds;
+                while (listQuery.next()) {
+                    int id = listQuery.value("ID").toInt();
+                    QString name = listQuery.value("FIRST_NAME").toString() + " " + listQuery.value("LAST_NAME").toString();
+                    employeeList << name;
+                    employeeIds << id;
+                }
+                if (employeeList.isEmpty()) {
+                    QMessageBox::information(this, "Aucun employé disponible", "Tous les employés ont déjà un badge assigné.");
+                    continue;
+                }
+                bool ok = false;
+                QString selected = QInputDialog::getItem(this, "Assigner badge", "Choisissez l'employé à qui assigner ce badge :", employeeList, 0, false, &ok);
+                if (ok && !selected.isEmpty()) {
+                    int idx = employeeList.indexOf(selected);
+                    int selectedId = employeeIds.value(idx);
+                    QSqlQuery updateQuery;
+                    updateQuery.prepare("UPDATE EMPLOYEE SET RFID_UID = :uid WHERE ID = :id");
+                    updateQuery.bindValue(":uid", uid);
+                    updateQuery.bindValue(":id", selectedId);
+                    if (updateQuery.exec()) {
+                        QMessageBox::information(this, "Badge assigné", "Le badge a été assigné à : " + selected);
+                    } else {
+                        QMessageBox::warning(this, "Erreur", "Impossible d'assigner le badge : " + updateQuery.lastError().text());
+                    }
+                }
+            } else {
+                QMessageBox::warning(this, "Badge inconnu", "Aucun employé trouvé pour ce badge.");
+            }
+        }
+    }
 }

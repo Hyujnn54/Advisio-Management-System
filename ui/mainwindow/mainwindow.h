@@ -8,6 +8,7 @@
 #include "managers/resources/resourcemanager.h"
 #include "managers/employee/employeemanager.h"
 #include "core/notificationmanager.h"
+#include "ui/employeeArd/arduino.h"
 #include <QMainWindow>
 #include <QNetworkAccessManager>
 #include <QtCharts/QChartView>
@@ -96,6 +97,7 @@ private slots:
     void on_searchTimeout();
     void on_resourceSearchColumnChanged(int index);
     void on_resourceTableSelectionChanged();
+    void handleSerialData(); // Slot pour Arduino RFID
 
 private:
     void setupUiConnections();
@@ -146,6 +148,8 @@ private:
     QTimer *searchTimer;
     QPieSeries *pieSeries;
     QBarSeries *barSeries;
+    Arduino* arduino; // Instance Arduino pour RFID
+    QString serialBuffer; // Buffer série pour lecture RFID
 };
 
 #endif // MAINWINDOW_H

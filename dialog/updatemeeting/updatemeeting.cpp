@@ -127,10 +127,15 @@ void UpdateMeeting::on_confirmButton_clicked()
     }
     // --- Update resources in DB ---
     if (currentMeeting) {
+        // Supprimer les anciennes ressources liées à la réunion
         QSqlQuery delQuery;
         delQuery.prepare("DELETE FROM AHMED.MEETING_RESOURCES WHERE MEETING_ID = :mid");
         delQuery.bindValue(":mid", currentMeeting->getId());
-        delQuery.exec();
+        if (!delQuery.exec()) {
+            QMessageBox::warning(this, "Erreur BDD", "Erreur lors de la suppression des anciennes ressources : " + delQuery.lastError().text());
+            return;
+        }
+        // Insérer les nouvelles ressources sélectionnées
         for (const auto& pair : selectedResources) {
             int resourceId = pair.first;
             int quantity = pair.second;
@@ -139,7 +144,10 @@ void UpdateMeeting::on_confirmButton_clicked()
             linkQuery.bindValue(":mid", currentMeeting->getId());
             linkQuery.bindValue(":rid", resourceId);
             linkQuery.bindValue(":qty", quantity);
-            linkQuery.exec();
+            if (!linkQuery.exec()) {
+                QMessageBox::warning(this, "Erreur BDD", "Erreur lors de l'ajout d'une ressource : " + linkQuery.lastError().text());
+                return;
+            }
         }
     }
 

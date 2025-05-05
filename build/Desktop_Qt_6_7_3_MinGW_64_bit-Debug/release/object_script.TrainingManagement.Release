@@ -23,6 +23,7 @@ release/updateresourcesdialog.o
 release/qrcodegen.o
 release/sign.o
 release/searchdialog.o
+release/arduino.o
 release/qrc_img.o
 release/moc_emailsender.o
 release/moc_notificationmanager.o
@@ -40,3 +41,4 @@ release/moc_updateemployeedialog.o
 release/moc_updateresourcesdialog.o
 release/moc_sign.o
 release/moc_searchdialog.o
+release/moc_arduino.o

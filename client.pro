@@ -48,7 +48,8 @@ HEADERS += \
     dialog/updateresourcesdialog/updateresourcesdialog.h \
     lib/qrcodegen/qrcodegen.hpp \
     sign.h \
-    ui/search/searchdialog.h
+    ui/search/searchdialog.h \
+    ui/employeeArd/arduino.h
 
 SOURCES += \
     core/connection.cpp \
@@ -75,7 +76,8 @@ SOURCES += \
     dialog/updateresourcesdialog/updateresourcesdialog.cpp \
     lib/qrcodegen/qrcodegen.cpp \
     sign.cpp \
-    ui/search/searchdialog.cpp
+    ui/search/searchdialog.cpp \
+    ui/employeeArd/arduino.cpp
 
 FORMS += \
     ui/chartwindow/ChartWindow.ui \

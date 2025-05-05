@@ -244,6 +244,7 @@ void TrainingManager::on_trainingUpdateButton_clicked()
     }
     if (trainingId != -1) {
         dialog.setResourceData(trainingId);
+        dialog.setTrainingId(trainingId); // Ajout pour garantir la bonne initialisation
     }
     if (dialog.exec() == QDialog::Accepted) {
         QString newName = dialog.getName();

@@ -223,7 +223,7 @@ bool meeting::update()
     QSqlQuery query;
     query.prepare("UPDATE AHMED.MEETING SET TITLE = :title, ORGANISER = :organiser, PARTICIPANT = :participant, "
                   "AGENDA = :agenda, DURATION = :duration, EMPLOYEE_ID = :employeeId, CLIENT_ID = :clientId, "
-                  "RESSOURCE_ID = :resourceId, DATEM = :datem WHERE ID = :id");
+                  "DATEM = :datem WHERE ID = :id");
     query.bindValue(":id", id);
     query.bindValue(":title", title);
     query.bindValue(":organiser", organiser);
@@ -254,18 +254,6 @@ bool meeting::update()
         }
     } else {
         query.bindValue(":clientId", QVariant(QMetaType(QMetaType::Int)));
-    }
-    
-    if (resourceId.isValid() && !resourceId.isNull()) {
-        bool ok;
-        int resId = resourceId.toInt(&ok);
-        if (ok) {
-            query.bindValue(":resourceId", resId);
-        } else {
-            query.bindValue(":resourceId", QVariant(QMetaType(QMetaType::Int)));
-        }
-    } else {
-        query.bindValue(":resourceId", QVariant(QMetaType(QMetaType::Int)));
     }
     
     query.bindValue(":datem", m_dateTime);

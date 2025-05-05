@@ -4,89 +4,68 @@
 #include <QCheckBox>
 #include <QSpinBox>
 #include <QHBoxLayout>
+#include <QMessageBox>
 
 UpdateTrainingDialog::UpdateTrainingDialog(QWidget *parent)
     : QDialog(parent),
-    nameEdit(new QLineEdit(this)),
-    descriptionEdit(new QLineEdit(this)),
-    trainerEdit(new QLineEdit(this)),
-    dateEdit(new QDateEdit(this)),
-    timeSpinBox(new QSpinBox(this)),
-    prixSpinBox(new QDoubleSpinBox(this))
+      ui(new Ui::UpdateTrainingDialog),
+      trainingId(-1)
 {
-    setWindowTitle("Update Training");
-
-    QFormLayout *formLayout = new QFormLayout;
-    formLayout->addRow("Name:", nameEdit);
-    formLayout->addRow("Description:", descriptionEdit);
-    formLayout->addRow("Trainer:", trainerEdit);
-    dateEdit->setCalendarPopup(true);
-    formLayout->addRow("Date:", dateEdit);
-    timeSpinBox->setRange(1, 1000);
-    formLayout->addRow("Duration (hours):", timeSpinBox);
-    prixSpinBox->setRange(0.0, 10000.0);
-    prixSpinBox->setDecimals(2);
-    formLayout->addRow("Price:", prixSpinBox);
-
-    QPushButton *okButton = new QPushButton("OK", this);
-    QPushButton *cancelButton = new QPushButton("Cancel", this);
-
-    QHBoxLayout *buttonLayout = new QHBoxLayout;
-    buttonLayout->addWidget(okButton);
-    buttonLayout->addWidget(cancelButton);
-
-    QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->addLayout(formLayout);
-    mainLayout->addLayout(buttonLayout);
-
-    connect(okButton, &QPushButton::clicked, this, &QDialog::accept);
-    connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
+    ui->setupUi(this);
+    // Connect Confirm/Cancel buttons
+    connect(ui->confirmButton, &QPushButton::clicked, this, &UpdateTrainingDialog::accept);
+    connect(ui->cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 }
 
 void UpdateTrainingDialog::setTrainingData(const QString &name, const QString &description, const QString &trainer,
                                            const QDate &date, int time, double prix)
 {
-    nameEdit->setText(name);
-    descriptionEdit->setText(description);
-    trainerEdit->setText(trainer);
-    dateEdit->setDate(date);
-    timeSpinBox->setValue(time);
-    prixSpinBox->setValue(prix);
+    ui->formationLineEdit->setText(name);
+    ui->descriptionLineEdit->setText(description);
+    ui->trainerLineEdit->setText(trainer);
+    ui->dateEdit->setDate(date);
+    ui->timeSpinBox->setValue(time);
+    ui->prixSpinBox->setValue(prix);
 }
 
 QString UpdateTrainingDialog::getName() const
 {
-    return nameEdit->text().trimmed();
+    return ui->formationLineEdit->text().trimmed();
 }
 
 QString UpdateTrainingDialog::getDescription() const
 {
-    return descriptionEdit->text().trimmed();
+    return ui->descriptionLineEdit->text().trimmed();
 }
 
 QString UpdateTrainingDialog::getTrainer() const
 {
-    return trainerEdit->text().trimmed();
+    return ui->trainerLineEdit->text().trimmed();
 }
 
 QDate UpdateTrainingDialog::getDate() const
 {
-    return dateEdit->date();
+    return ui->dateEdit->date();
 }
 
 int UpdateTrainingDialog::getTime() const
 {
-    return timeSpinBox->value();
+    return ui->timeSpinBox->value();
 }
 
 double UpdateTrainingDialog::getPrix() const
 {
-    return prixSpinBox->value();
+    return ui->prixSpinBox->value();
 }
 
-// Add resource area population and update logic
 void UpdateTrainingDialog::setResourceData(int trainingId) {
-    // Get used resources for this training
+    // Nettoyer le layout
+    QLayoutItem *child;
+    while ((child = ui->resourcesVBoxLayout->takeAt(0)) != nullptr) {
+        delete child->widget();
+        delete child;
+    }
+
     QMap<int, int> usedResources;
     QSqlQuery usedQuery;
     usedQuery.prepare("SELECT RESOURCE_ID, QUANTITY FROM AHMED.TRAINING_RESOURCES WHERE TRAINING_ID = :tid");
@@ -97,8 +76,6 @@ void UpdateTrainingDialog::setResourceData(int trainingId) {
         }
     }
     QSqlQuery resQuery("SELECT RESOURCE_ID, NAME FROM RESOURCES");
-    QVBoxLayout* vbox = findChild<QVBoxLayout*>("resourcesVBoxLayout");
-    if (!vbox) return;
     while (resQuery.next()) {
         int id = resQuery.value(0).toInt();
         QString name = resQuery.value(1).toString();
@@ -115,7 +92,7 @@ void UpdateTrainingDialog::setResourceData(int trainingId) {
         rowLayout->addWidget(checkBox);
         rowLayout->addWidget(spinBox);
         rowWidget->setLayout(rowLayout);
-        vbox->addWidget(rowWidget);
+        ui->resourcesVBoxLayout->addWidget(rowWidget);
         QObject::connect(checkBox, &QCheckBox::toggled, spinBox, &QSpinBox::setEnabled);
         if (usedResources.contains(id)) {
             checkBox->setChecked(true);
@@ -126,10 +103,8 @@ void UpdateTrainingDialog::setResourceData(int trainingId) {
 
 QList<QPair<int, int>> UpdateTrainingDialog::getSelectedResources() const {
     QList<QPair<int, int>> selectedResources;
-    QVBoxLayout* vbox = findChild<QVBoxLayout*>("resourcesVBoxLayout");
-    if (!vbox) return selectedResources;
-    for (int i = 0; i < vbox->count(); ++i) {
-        QWidget* rowWidget = vbox->itemAt(i)->widget();
+    for (int i = 0; i < ui->resourcesVBoxLayout->count(); ++i) {
+        QWidget* rowWidget = ui->resourcesVBoxLayout->itemAt(i)->widget();
         if (!rowWidget) continue;
         QCheckBox* checkBox = rowWidget->findChild<QCheckBox*>();
         QSpinBox* spinBox = rowWidget->findChild<QSpinBox*>();
@@ -141,4 +116,34 @@ QList<QPair<int, int>> UpdateTrainingDialog::getSelectedResources() const {
         }
     }
     return selectedResources;
+}
+
+void UpdateTrainingDialog::accept() {
+    // Valider les champs si besoin
+    QList<QPair<int, int>> selectedResources = getSelectedResources();
+    QSqlQuery delQuery;
+    delQuery.prepare("DELETE FROM AHMED.TRAINING_RESOURCES WHERE TRAINING_ID = :tid");
+    delQuery.bindValue(":tid", trainingId);
+    if (!delQuery.exec()) {
+        QMessageBox::warning(this, "Database Error", "Error while deleting old resources: " + delQuery.lastError().text());
+        return;
+    }
+    for (const auto& pair : selectedResources) {
+        int resourceId = pair.first;
+        int quantity = pair.second;
+        QSqlQuery linkQuery;
+        linkQuery.prepare("INSERT INTO AHMED.TRAINING_RESOURCES (TRAINING_ID, RESOURCE_ID, QUANTITY) VALUES (:tid, :rid, :qty)");
+        linkQuery.bindValue(":tid", trainingId);
+        linkQuery.bindValue(":rid", resourceId);
+        linkQuery.bindValue(":qty", quantity);
+        if (!linkQuery.exec()) {
+            QMessageBox::warning(this, "Database Error", "Error while adding a resource: " + linkQuery.lastError().text());
+            return;
+        }
+    }
+    QDialog::accept();
+}
+
+UpdateTrainingDialog::~UpdateTrainingDialog() {
+    delete ui;
 }

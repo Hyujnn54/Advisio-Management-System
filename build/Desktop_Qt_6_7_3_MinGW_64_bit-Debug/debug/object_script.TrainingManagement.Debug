@@ -23,6 +23,7 @@ debug/updateresourcesdialog.o
 debug/qrcodegen.o
 debug/sign.o
 debug/searchdialog.o
+debug/arduino.o
 debug/qrc_img.o
 debug/moc_emailsender.o
 debug/moc_notificationmanager.o
@@ -40,3 +41,4 @@ debug/moc_updateemployeedialog.o
 debug/moc_updateresourcesdialog.o
 debug/moc_sign.o
 debug/moc_searchdialog.o
+debug/moc_arduino.o
