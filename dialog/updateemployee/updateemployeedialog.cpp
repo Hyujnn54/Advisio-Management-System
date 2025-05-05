@@ -36,7 +36,7 @@ void UpdateEmployeeDialog::loadEmployeeData()
     query.prepare("SELECT CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, "
                   "SALARY, DATE_HIRING, SPECIALITY, IMAGE, ROLE FROM EMPLOYEE WHERE ID = :id");
     query.bindValue(":id", m_employeeId);
-    
+
     if (query.exec() && query.next()) {
         ui->cinLineEdit->setText(query.value("CIN").toString());
         ui->lastNameLineEdit->setText(query.value("LAST_NAME").toString());
@@ -44,41 +44,35 @@ void UpdateEmployeeDialog::loadEmployeeData()
         ui->dateOfBirthEdit->setDate(query.value("DATE_BIRTH").toDate());
         ui->phoneLineEdit->setText(query.value("PHONE").toString());
         ui->emailLineEdit->setText(query.value("EMAIL").toString());
-        
-        // Gender
+
         QString gender = query.value("GENDER").toString();
         if (gender == "Homme") {
             ui->radioButton_H->setChecked(true);
         } else {
             ui->radioButton_F->setChecked(true);
         }
-        
+
         ui->salaryLineEdit->setText(query.value("SALARY").toString());
         ui->dateOfHireEdit->setDate(query.value("DATE_HIRING").toDate());
-        
-        // Specialty
+
         QString specialty = query.value("SPECIALITY").toString();
         int index = ui->specialtyComboBox->findText(specialty);
         if (index != -1) {
             ui->specialtyComboBox->setCurrentIndex(index);
         }
-        
-        // Image
-        m_imagePath = query.value("IMAGE").toString();
-        if (!m_imagePath.isEmpty()) {
-            QPixmap pixmap(m_imagePath);
-            if (!pixmap.isNull()) {
-                QPixmap scaledPixmap = pixmap.scaled(100, 100, Qt::KeepAspectRatio);
-                ui->imageLabel->setPixmap(scaledPixmap);
-                ui->imageLabel->setScaledContents(true);
-            } else {
-                ui->imageLabel->setText("No Image");
-            }
+
+        // Handle IMAGE as BLOB
+        QVariant imageVar = query.value("IMAGE");
+        m_imagePath.clear(); // Reset unless a new image is selected
+        if (imageVar.isValid() && !imageVar.isNull() && imageVar.type() == QVariant::ByteArray) {
+            QByteArray blobData = imageVar.toByteArray();
+            qDebug() << "IMAGE is BLOB, size:" << blobData.size() << "bytes";
+            // Optionally, save to a temp file for display (see below)
+            ui->imageLabel->setText("(Image stored as BLOB)");
         } else {
             ui->imageLabel->setText("No Image");
         }
-        
-        // Role
+
         QString role = query.value("ROLE").toString();
         index = ui->roleComboBox->findText(role);
         if (index != -1) {

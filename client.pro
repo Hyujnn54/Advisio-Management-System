@@ -89,16 +89,16 @@ FORMS += \
     ui/search/searchdialog.ui
 
 # Commented out OpenCV includes and libraries
-# INCLUDEPATH += C:/opencv/build/install/include
+ INCLUDEPATH += C:/opencv/build/install/include
 # 
-# LIBS += -LC:/opencv/build/lib \
-#            -lopencv_core480 \
-#            -lopencv_imgproc480 \
-#            -lopencv_imgcodecs480 \
-#            -lopencv_highgui480 \
-#            -lopencv_videoio480 \
-#            -lopencv_objdetect480 \
-#            -lopencv_face480 \
+ LIBS += -LC:/opencv/build/lib \
+            -lopencv_core480 \
+            -lopencv_imgproc480 \
+            -lopencv_imgcodecs480 \
+            -lopencv_highgui480 \
+            -lopencv_videoio480 \
+            -lopencv_objdetect480 \
+            -lopencv_face480 \
 
 RESOURCES += img.qrc
 

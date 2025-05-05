@@ -73,9 +73,13 @@ MainWindow::MainWindow(bool dbConnected, QWidget *parent)
     applyLightTheme();
     setAttribute(Qt::WA_DeleteOnClose);
 
+    m_loggedInRole = "";
+
     clientManager->setNotificationManager(notificationManager);
     trainingManager->setNotificationManager(notificationManager);
     meetingManager->setNotificationManager(notificationManager);
+
+    setupInputValidators();
 
     // Initialize resource-specific variables
     selectedResourceId = -1;
@@ -189,136 +193,196 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupInputValidators()
 {
-    // Configuration des validateurs pour les champs d'entrée employé
-    
-    // CIN - Validation en temps réel
-    connect(ui->lineEdit_CIN, &QLineEdit::textChanged, this, &MainWindow::validateCIN);
-    
-    // Nom et prénom - Validation en temps réel
-    connect(ui->lineEdit_Nom, &QLineEdit::textChanged, this, &MainWindow::validateName);
-    connect(ui->lineEdit_Prenom, &QLineEdit::textChanged, this, &MainWindow::validateName);
-    
-    // Téléphone - Validation en temps réel
-    connect(ui->lineEdit_phone, &QLineEdit::textChanged, this, &MainWindow::validatePhone);
-    
-    // Email - Validation en temps réel
-    connect(ui->lineEdit_email, &QLineEdit::textChanged, this, &MainWindow::validateEmail);
-    
-    // Salaire - Validation en temps réel
-    connect(ui->lineEdit_salaire, &QLineEdit::textChanged, this, &MainWindow::validateSalary);
-    
-    // Réinitialiser les styles des champs
-    ui->lineEdit_CIN->setStyleSheet("");
-    ui->lineEdit_Nom->setStyleSheet("");
-    ui->lineEdit_Prenom->setStyleSheet("");
-    ui->lineEdit_phone->setStyleSheet("");
-    ui->lineEdit_email->setStyleSheet("");
-    ui->lineEdit_salaire->setStyleSheet("");
+    // CIN: 8 digits strictly
+    QRegularExpression cinRegex("^[0-9]{8}$");
+    QRegularExpressionValidator* cinValidator = new QRegularExpressionValidator(cinRegex, this);
+    ui->lineEdit_CIN->setValidator(cinValidator);
+    ui->lineEdit_CIN->setMaxLength(8);  // Strictly limit to 8 characters
+
+    // Name/First Name: letters, spaces, hyphens only
+    QRegularExpression nameRegex("^[A-Za-zÀ-ÖØ-öø-ÿ\\s-]+$");
+    QValidator* nameValidator = new QRegularExpressionValidator(nameRegex, this);
+    ui->lineEdit_Nom->setValidator(nameValidator);
+    ui->lineEdit_Prenom->setValidator(nameValidator);
+    ui->lineEdit_Nom->setMaxLength(50);    // Reasonable limit for last name
+    ui->lineEdit_Prenom->setMaxLength(50); // Reasonable limit for first name
+
+    // Phone: 8 digits
+    QRegularExpression phoneRegex("^[0-9]{8}$");
+    QRegularExpressionValidator* phoneValidator = new QRegularExpressionValidator(phoneRegex, this);
+    ui->lineEdit_phone->setValidator(phoneValidator);
+    ui->lineEdit_phone->setMaxLength(8);  // Strictly limit to 8 digits
+
+    // Email: format email
+    QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    QRegularExpressionValidator* emailValidator = new QRegularExpressionValidator(emailRegex, this);
+    ui->lineEdit_email->setValidator(emailValidator);
+    ui->lineEdit_email->setMaxLength(100);  // Reasonable limit for email
+
+    // Salary: integer >= 1000
+    QIntValidator* salaryValidator = new QIntValidator(1000, 1000000, this);
+    ui->lineEdit_salaire->setValidator(salaryValidator);
+    ui->lineEdit_salaire->setMaxLength(7);  // Max 7 digits (up to 1000000)
+
+    // Date of hire: fixed to today, non-editable
+    QDate currentDate = QDate::currentDate();
+    ui->dateEdit_hiring->setDate(currentDate);
+    ui->dateEdit_hiring->setMinimumDate(currentDate);
+    ui->dateEdit_hiring->setMaximumDate(currentDate);
+    ui->dateEdit_hiring->setEnabled(false);  // Ensure it’s non-editable
+    ui->dateEdit_hiring->setCalendarPopup(false);  // Disable calendar popup to prevent changes
+
+    // Date of birth: max = today - 18 years
+    QDate maxBirth = QDate::currentDate().addYears(-18);
+    ui->dateEdit_birth->setMaximumDate(maxBirth);
+    ui->dateEdit_birth->setDate(maxBirth);
+
+    // Debug to confirm validators are set
+    qDebug() << "Validators set for CIN, Name, Phone, Email, Salary, and Dates";
 }
 
 void MainWindow::validateCIN(const QString &text)
 {
-    // Limiter à 8 caractères et seulement des chiffres
-    QString filtered = text;
-    for (int i = filtered.length() - 1; i >= 0; --i) {
-        if (!filtered[i].isDigit()) {
-            filtered.remove(i, 1);
-        }
-    }
-    
-    // Limiter à 8 chiffres maximum
-    if (filtered.length() > 8) {
-        filtered = filtered.left(8);
-    }
-    
-    // Si le texte a été modifié, mettre à jour le champ
-    if (filtered != text) {
-        ui->lineEdit_CIN->setText(filtered);
-    }
-    
-    // Mise à jour du style selon la validité
-    if (filtered.length() == 8) {
+    QRegularExpression cinRegex("^[0-9]{8}$");
+    bool isValid = cinRegex.match(text).hasMatch();
+    if (text.isEmpty()) {
+        ui->lineEdit_CIN->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
         ui->lineEdit_CIN->setStyleSheet("border: 1px solid green;");
     } else {
         ui->lineEdit_CIN->setStyleSheet("border: 1px solid red;");
     }
+    qDebug() << "CIN validation: text=" << text << ", isValid=" << isValid;
 }
 
 void MainWindow::validateName(const QString &text)
 {
     QLineEdit* senderLineEdit = qobject_cast<QLineEdit*>(sender());
     if (!senderLineEdit) return;
-    
-    QString filtered = text;
-    for (int i = filtered.length() - 1; i >= 0; --i) {
-        // Accepter seulement les lettres et les espaces
-        if (!filtered[i].isLetter() && filtered[i] != ' ' && filtered[i] != '-') {
-            filtered.remove(i, 1);
-        }
-    }
-    
-    // Si le texte a été modifié, mettre à jour le champ
-    if (filtered != text) {
-        senderLineEdit->setText(filtered);
-    }
-    
-    // Mise à jour du style selon la validité
-    if (!filtered.isEmpty()) {
+
+    QRegularExpression nameRegex("^[A-Za-zÀ-ÖØ-öø-ÿ\\s-]+$");
+    bool isValid = !text.isEmpty() && nameRegex.match(text).hasMatch();
+    if (text.isEmpty()) {
+        senderLineEdit->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
         senderLineEdit->setStyleSheet("border: 1px solid green;");
     } else {
         senderLineEdit->setStyleSheet("border: 1px solid red;");
     }
+    qDebug() << "Name validation: text=" << text << ", isValid=" << isValid << ", sender=" << senderLineEdit->objectName();
 }
 
 void MainWindow::validatePhone(const QString &text)
 {
-    // Limiter à des chiffres seulement
-    QString filtered = text;
-    for (int i = filtered.length() - 1; i >= 0; --i) {
-        if (!filtered[i].isDigit()) {
-            filtered.remove(i, 1);
-        }
-    }
-    
-    // Si le texte a été modifié, mettre à jour le champ
-    if (filtered != text) {
-        ui->lineEdit_phone->setText(filtered);
-    }
-    
-    // Mise à jour du style selon la validité
-    if (filtered.length() >= 8) {
+    QRegularExpression phoneRegex("^[0-9]{8}$");
+    bool isValid = phoneRegex.match(text).hasMatch();
+    if (text.isEmpty()) {
+        ui->lineEdit_phone->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
         ui->lineEdit_phone->setStyleSheet("border: 1px solid green;");
     } else {
         ui->lineEdit_phone->setStyleSheet("border: 1px solid red;");
     }
+    qDebug() << "Phone validation: text=" << text << ", isValid=" << isValid;
 }
 
 void MainWindow::validateEmail(const QString &text)
 {
-    // Vérification simple d'email avec une expression régulière
-    QRegularExpression emailRegex("\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b");
+    QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     bool isValid = emailRegex.match(text).hasMatch();
-    
-    // Mise à jour du style selon la validité
-    if (isValid || text.isEmpty()) {
+    if (text.isEmpty()) {
+        ui->lineEdit_email->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
         ui->lineEdit_email->setStyleSheet("border: 1px solid green;");
     } else {
         ui->lineEdit_email->setStyleSheet("border: 1px solid red;");
     }
+    qDebug() << "Email validation: text=" << text << ", isValid=" << isValid;
 }
 
 void MainWindow::validateSalary(const QString &text)
 {
-    // Vérifier que le texte peut être converti en nombre
     bool ok;
-    text.toDouble(&ok);
-    
-    // Mise à jour du style selon la validité
-    if (ok || text.isEmpty()) {
+    int salary = text.toInt(&ok);
+    bool isValid = ok && salary >= 1000;
+    if (text.isEmpty()) {
+        ui->lineEdit_salaire->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
         ui->lineEdit_salaire->setStyleSheet("border: 1px solid green;");
     } else {
         ui->lineEdit_salaire->setStyleSheet("border: 1px solid red;");
     }
+    qDebug() << "Salary validation: text=" << text << ", isValid=" << isValid;
+}
+
+bool MainWindow::validateEmployeeInput()
+{
+    // CIN validation: Should be 8 digits and unique
+    QString cin = ui->lineEdit_CIN->text();
+    // Check uniqueness of CIN
+    QSqlQuery cinQuery;
+    cinQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE CIN = :cin");
+    cinQuery.bindValue(":cin", cin);
+    if (cinQuery.exec() && cinQuery.next() && cinQuery.value(0).toInt() > 0) {
+        QMessageBox::warning(this, "Input Error", "CIN already exists. Please enter a unique CIN.");
+        return false;
+    }
+    // Name validation: Should not be empty and contain only letters
+    QString lastName = ui->lineEdit_Nom->text();
+    QString firstName = ui->lineEdit_Prenom->text();
+    QRegularExpression nameRegex("^[A-Za-z\\s-]+$");
+    if (lastName.isEmpty() || !nameRegex.match(lastName).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Last name should contain only letters and spaces.");
+        return false;
+    }
+    if (firstName.isEmpty() || !nameRegex.match(firstName).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "First name should contain only letters and spaces.");
+        return false;
+    }
+    // Phone validation: Should be a valid phone number
+    QString phone = ui->lineEdit_phone->text();
+    QRegularExpression phoneRegex("^\\d{8}$");
+    if (!phoneRegex.match(phone).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Phone number must be 8 digits.");
+        return false;
+    }
+    // Email validation and uniqueness
+    QString email = ui->lineEdit_email->text();
+    QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    if (!emailRegex.match(email).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid email address.");
+        return false;
+    }
+    QSqlQuery emailQuery;
+    emailQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE EMAIL = :email");
+    emailQuery.bindValue(":email", email);
+    if (emailQuery.exec() && emailQuery.next() && emailQuery.value(0).toInt() > 0) {
+        QMessageBox::warning(this, "Input Error", "Email already exists. Please enter a unique email.");
+        return false;
+    }
+    // Salary validation: Minimum 1000
+    QString salaryText = ui->lineEdit_salaire->text();
+    bool ok;
+    int salary = salaryText.toInt(&ok);
+    if (!ok || salary < 1000) {
+        QMessageBox::warning(this, "Input Error", "Salary must be at least 1000.");
+        return false;
+    }
+    // Date validations
+    QDate birthDate = ui->dateEdit_birth->date();
+    QDate currentDate = QDate::currentDate();
+    if (birthDate > currentDate.addYears(-18)) {
+        QMessageBox::warning(this, "Input Error", "Employee must be at least 18 years old.");
+        return false;
+    }
+    // Date d'embauche déjà fixée à aujourd'hui et non modifiable
+    // Image path validation (optionnel)
+    QString imagePath = ui->imagePathLineEdit->text();
+    if (!imagePath.isEmpty() && !QFile::exists(imagePath)) {
+        QMessageBox::warning(this, "Input Error", "Image file does not exist at the specified path.");
+        return false;
+    }
+    return true;
 }
 
 void MainWindow::on_clientSectionButton_clicked()
@@ -360,7 +424,7 @@ void MainWindow::on_employeeSectionButton_clicked()
 {
     qDebug() << "employeeSectionButton clicked - handler activated";
     ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
-    // Fetch employee data from the database
+
     QList<QList<QVariant>> employees;
     QSqlQuery query("SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY, IMAGE, ROLE, RFID_UID FROM EMPLOYEE");
     while (query.next()) {
@@ -370,18 +434,18 @@ void MainWindow::on_employeeSectionButton_clicked()
         }
         employees << row;
     }
-    // Set up headers if needed
+
     QTableWidget* table = ui->employeeTableWidget;
+    table->blockSignals(true);
     table->clear();
     table->setColumnCount(14);
     QStringList headers = {"ID", "CIN", "Last Name", "First Name", "Date of Birth", "Phone", "Email", "Gender", "Salary", "Date of Hiring", "Speciality", "Image", "Role", "RFID UID"};
     table->setHorizontalHeaderLabels(headers);
-    // Populate the table
     populateEmployeeTable(employees);
-    // Enable sorting and improve display
     table->setSortingEnabled(true);
     improveTableWidgetDisplay(table);
-    // Connect search functionality
+    table->blockSignals(false);
+
     connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_employeeSearchChanged);
 }
 
@@ -2210,18 +2274,66 @@ void MainWindow::on_modifyBtn_clicked()
 {
     QTableWidget* table = ui->employeeTableWidget;
     int row = table->currentRow();
-    if (row < 0) {
-        QMessageBox::warning(this, "Error", "Please select an employee to update.");
+    qDebug() << "on_modifyBtn_clicked called - Selected row:" << row;
+
+    static bool isProcessing = false;
+    if (isProcessing) {
+        qDebug() << "on_modifyBtn_clicked re-entrant call detected, ignoring";
         return;
     }
-    int employeeId = table->item(row, 0)->text().toInt();
-    UpdateEmployeeDialog updateDialog(employeeId, this);
-    if (updateDialog.exec() == QDialog::Accepted) {
-        on_employeeSectionButton_clicked();
-        QString employeeName = table->item(row, 2)->text() + " " + table->item(row, 3)->text();
-        notificationManager->addNotification("Employee Updated", "Updated: " + employeeName, 
-                                         "Updated at " + QDateTime::currentDateTime().toString(), -1);
+    isProcessing = true;
+
+    if (row < 0) {
+        QMessageBox::warning(this, "Error", "Please select an employee to update.");
+        isProcessing = false;
+        return;
     }
+
+    QTableWidgetItem* idItem = table->item(row, 0);
+    if (!idItem) {
+        QMessageBox::warning(this, "Error", "Invalid employee ID in table.");
+        isProcessing = false;
+        return;
+    }
+    bool ok;
+    int employeeId = idItem->text().toInt(&ok);
+    if (!ok || employeeId <= 0) {
+        QMessageBox::warning(this, "Error", "Invalid employee ID: " + idItem->text());
+        isProcessing = false;
+        return;
+    }
+    qDebug() << "Opening UpdateEmployeeDialog with employeeId:" << employeeId;
+
+    // Disconnect the signal temporarily to prevent re-triggering
+    disconnect(ui->modifyBtn, &QPushButton::clicked, this, &MainWindow::on_modifyBtn_clicked);
+
+    UpdateEmployeeDialog updateDialog(employeeId, this);
+    int result = updateDialog.exec();
+    qDebug() << "UpdateEmployeeDialog closed with result:" << result;
+
+    if (result == QDialog::Accepted) {
+        qDebug() << "Employee updated successfully, refreshing table";
+        on_employeeSectionButton_clicked();
+
+        QString employeeName = table->item(row, 2) ? table->item(row, 2)->text() : "Unknown";
+        employeeName += " ";
+        employeeName += table->item(row, 3) ? table->item(row, 3)->text() : "Employee";
+        notificationManager->addNotification("Employee Updated", "Updated: " + employeeName,
+                                             "Updated at " + QDateTime::currentDateTime().toString(), -1);
+    } else {
+        qDebug() << "Update dialog was rejected or canceled";
+    }
+
+    if (row < table->rowCount() && table->item(row, 0)) {
+        table->blockSignals(true);
+        table->setCurrentCell(row, 0);
+        table->blockSignals(false);
+        qDebug() << "Restored selection to row:" << row << "with signals blocked";
+    }
+
+    // Reconnect the signal
+    connect(ui->modifyBtn, &QPushButton::clicked, this, &MainWindow::on_modifyBtn_clicked);
+    isProcessing = false;
 }
 
 void MainWindow::on_downloadBtn_clicked()
@@ -2367,90 +2479,6 @@ void MainWindow::on_generateQRCodeBtn_clicked()
             QMessageBox::critical(this, "Error", "Failed to save QR Code image.");
         }
     }
-}
-
-bool MainWindow::validateEmployeeInput()
-{
-    // CIN validation: Should be 8 digits and unique
-    QString cin = ui->lineEdit_CIN->text();
-    QRegularExpression cinRegex("^\\d{8}$");
-    if (!cinRegex.match(cin).hasMatch()) {
-        QMessageBox::warning(this, "Input Error", "CIN must be exactly 8 digits.");
-        return false;
-    }
-    // Check uniqueness of CIN
-    QSqlQuery cinQuery;
-    cinQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE CIN = :cin");
-    cinQuery.bindValue(":cin", cin);
-    if (cinQuery.exec() && cinQuery.next() && cinQuery.value(0).toInt() > 0) {
-        QMessageBox::warning(this, "Input Error", "CIN already exists. Please enter a unique CIN.");
-        return false;
-    }
-    // Name validation: Should not be empty and contain only letters
-    QString lastName = ui->lineEdit_Nom->text();
-    QString firstName = ui->lineEdit_Prenom->text();
-    QRegularExpression nameRegex("^[A-Za-z\\s-]+$");
-    if (lastName.isEmpty() || !nameRegex.match(lastName).hasMatch()) {
-        QMessageBox::warning(this, "Input Error", "Last name should contain only letters.");
-        return false;
-    }
-    if (firstName.isEmpty() || !nameRegex.match(firstName).hasMatch()) {
-        QMessageBox::warning(this, "Input Error", "First name should contain only letters.");
-        return false;
-    }
-    // Phone validation: Should be a valid phone number
-    QString phone = ui->lineEdit_phone->text();
-    QRegularExpression phoneRegex("^\\d{8}$");
-    if (!phoneRegex.match(phone).hasMatch()) {
-        QMessageBox::warning(this, "Input Error", "Phone number must be 8 digits.");
-        return false;
-    }
-    // Email validation and uniqueness
-    QString email = ui->lineEdit_email->text();
-    QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
-    if (!emailRegex.match(email).hasMatch()) {
-        QMessageBox::warning(this, "Input Error", "Please enter a valid email address.");
-        return false;
-    }
-    QSqlQuery emailQuery;
-    emailQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE EMAIL = :email");
-    emailQuery.bindValue(":email", email);
-    if (emailQuery.exec() && emailQuery.next() && emailQuery.value(0).toInt() > 0) {
-        QMessageBox::warning(this, "Input Error", "Email already exists. Please enter a unique email.");
-        return false;
-    }
-    // Salary validation: Should be a positive number
-    QString salaryText = ui->lineEdit_salaire->text();
-    bool ok;
-    int salary = salaryText.toInt(&ok);
-    if (!ok || salary <= 0) {
-        QMessageBox::warning(this, "Input Error", "Salary must be a positive number.");
-        return false;
-    }
-    // Date validations
-    QDate birthDate = ui->dateEdit_birth->date();
-    QDate hiringDate = ui->dateEdit_hiring->date();
-    QDate currentDate = QDate::currentDate();
-    if (birthDate > currentDate.addYears(-18)) {
-        QMessageBox::warning(this, "Input Error", "Employee must be at least 18 years old.");
-        return false;
-    }
-    QDate minHiringDate = birthDate.addYears(18);
-    if (hiringDate < minHiringDate) {
-        QMessageBox::warning(this, "Input Error", "Hiring date cannot be before employee turned 18.");
-        return false;
-    }
-    if (hiringDate > currentDate) {
-        QMessageBox::warning(this, "Input Error", "Hiring date cannot be in the future.");
-        return false;
-    }
-    // Image path validation (optional, but if provided, must exist)
-    QString imagePath = ui->imagePathLineEdit->text();
-    if (!imagePath.isEmpty() && !QFile::exists(imagePath)) {
-        QMessageBox::warning(this, "Input Error", "Image file does not exist at the specified path.");
-        return false;
-    }
-    return true;
 }
 
 void MainWindow::on_resourceSectionButton_clicked()
@@ -2821,16 +2849,31 @@ void MainWindow::on_btnLookForResource_clicked()
 void MainWindow::setLoggedInRole(const QString &role)
 {
     m_loggedInRole = role;
-    
-    // Update UI based on role (e.g., disable certain sections for specific roles)
     bool isAdmin = (role == "Admin");
-    
-    // Example: Allow only admins to access the employee section
+    bool isManager = (role == "Manager");
+    bool isEmployee = (role == "Employee");
+
     if (ui->employeeSectionButton) {
-        ui->employeeSectionButton->setEnabled(isAdmin);
+        ui->employeeSectionButton->setEnabled(true);
     }
-    
-    // Display the role in the status bar
+    if (ui->addButton) {
+        ui->addButton->setEnabled(isAdmin);
+    }
+    if (ui->deleteBtn) {
+        ui->deleteBtn->setEnabled(isAdmin);
+    }
+    if (ui->modifyBtn) {
+        ui->modifyBtn->setEnabled(isAdmin || isManager);
+    }
+    if (isEmployee) {
+        if (ui->addButton) ui->addButton->setVisible(false);
+        if (ui->deleteBtn) ui->deleteBtn->setVisible(false);
+        if (ui->modifyBtn) ui->modifyBtn->setVisible(false);
+    } else {
+        if (ui->addButton) ui->addButton->setVisible(true);
+        if (ui->deleteBtn) ui->deleteBtn->setVisible(true);
+        if (ui->modifyBtn) ui->modifyBtn->setVisible(true);
+    }
     statusBar()->showMessage(QString("Logged in as: %1").arg(role));
 }
 
@@ -2908,6 +2951,13 @@ void MainWindow::setupUiConnections()
     if (ui->resetSearchButton) {
         connect(ui->resetSearchButton, &QPushButton::clicked, this, &MainWindow::on_resetSearchButton_clicked);
     }
+    connect(ui->lineEdit_CIN, &QLineEdit::textChanged, this, &MainWindow::validateCIN);
+    connect(ui->lineEdit_Nom, &QLineEdit::textChanged, this, &MainWindow::validateName);
+    connect(ui->lineEdit_Prenom, &QLineEdit::textChanged, this, &MainWindow::validateName);
+    connect(ui->lineEdit_phone, &QLineEdit::textChanged, this, &MainWindow::validatePhone);
+    connect(ui->lineEdit_email, &QLineEdit::textChanged, this, &MainWindow::validateEmail);
+    connect(ui->lineEdit_salaire, &QLineEdit::textChanged, this, &MainWindow::validateSalary);
+    qDebug() << "Validation signals connected for CIN, Name, Phone, Email, and Salary";
 }
 
 void MainWindow::on_resourceTableSelectionChanged() {

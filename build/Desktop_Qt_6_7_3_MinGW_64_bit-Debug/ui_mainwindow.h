@@ -62,10 +62,10 @@ public:
     QFrame *frame_6;
     QVBoxLayout *verticalLayout_3;
     QPushButton *trainingNotificationLabel;
-    QPushButton *clientSectionButton;
-    QPushButton *trainingSectionButton;
-    QPushButton *meetingSectionButton;
     QPushButton *employeeSectionButton;
+    QPushButton *clientSectionButton;
+    QPushButton *meetingSectionButton;
+    QPushButton *trainingSectionButton;
     QPushButton *resourceSectionButton;
     QPushButton *themeButton;
     QFrame *frame_4;
@@ -448,25 +448,25 @@ public:
 
         verticalLayout_3->addWidget(trainingNotificationLabel);
 
+        employeeSectionButton = new QPushButton(frame_6);
+        employeeSectionButton->setObjectName("employeeSectionButton");
+
+        verticalLayout_3->addWidget(employeeSectionButton);
+
         clientSectionButton = new QPushButton(frame_6);
         clientSectionButton->setObjectName("clientSectionButton");
 
         verticalLayout_3->addWidget(clientSectionButton);
-
-        trainingSectionButton = new QPushButton(frame_6);
-        trainingSectionButton->setObjectName("trainingSectionButton");
-
-        verticalLayout_3->addWidget(trainingSectionButton);
 
         meetingSectionButton = new QPushButton(frame_6);
         meetingSectionButton->setObjectName("meetingSectionButton");
 
         verticalLayout_3->addWidget(meetingSectionButton);
 
-        employeeSectionButton = new QPushButton(frame_6);
-        employeeSectionButton->setObjectName("employeeSectionButton");
+        trainingSectionButton = new QPushButton(frame_6);
+        trainingSectionButton->setObjectName("trainingSectionButton");
 
-        verticalLayout_3->addWidget(employeeSectionButton);
+        verticalLayout_3->addWidget(trainingSectionButton);
 
         resourceSectionButton = new QPushButton(frame_6);
         resourceSectionButton->setObjectName("resourceSectionButton");
@@ -866,7 +866,7 @@ public:
         trainingResourceScrollArea->setWidgetResizable(true);
         trainingResourceScrollWidget = new QWidget();
         trainingResourceScrollWidget->setObjectName("trainingResourceScrollWidget");
-        trainingResourceScrollWidget->setGeometry(QRect(0, 0, 489, 304));
+        trainingResourceScrollWidget->setGeometry(QRect(0, 0, 467, 236));
         trainingResourceVBoxLayout = new QVBoxLayout(trainingResourceScrollWidget);
         trainingResourceVBoxLayout->setObjectName("trainingResourceVBoxLayout");
         trainingResourceScrollArea->setWidget(trainingResourceScrollWidget);
@@ -1085,7 +1085,7 @@ public:
         meetingResourceScrollArea->setWidgetResizable(true);
         meetingResourceScrollWidget = new QWidget();
         meetingResourceScrollWidget->setObjectName("meetingResourceScrollWidget");
-        meetingResourceScrollWidget->setGeometry(QRect(0, 0, 523, 336));
+        meetingResourceScrollWidget->setGeometry(QRect(0, 0, 505, 273));
         meetingResourceVBoxLayout = new QVBoxLayout(meetingResourceScrollWidget);
         meetingResourceVBoxLayout->setObjectName("meetingResourceVBoxLayout");
         meetingResourceScrollArea->setWidget(meetingResourceScrollWidget);
@@ -1862,7 +1862,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        mainStackedWidget->setCurrentIndex(1);
+        mainStackedWidget->setCurrentIndex(3);
         clientTabWidget->setCurrentIndex(1);
         trainingTabWidget->setCurrentIndex(0);
         meetingTabWidget->setCurrentIndex(0);
@@ -1877,12 +1877,12 @@ public:
     {
         MainWindow->setWindowTitle(QCoreApplication::translate("MainWindow", "Client, Training, and Meeting Management System", nullptr));
         menuButton->setText(QCoreApplication::translate("MainWindow", "Menu", nullptr));
-        headerLabel->setText(QCoreApplication::translate("MainWindow", "Client, Training, and Meeting Management System", nullptr));
+        headerLabel->setText(QCoreApplication::translate("MainWindow", "Advisio Management System", nullptr));
         trainingNotificationLabel->setText(QCoreApplication::translate("MainWindow", "notifications", nullptr));
-        clientSectionButton->setText(QCoreApplication::translate("MainWindow", "Clients", nullptr));
-        trainingSectionButton->setText(QCoreApplication::translate("MainWindow", "Training", nullptr));
-        meetingSectionButton->setText(QCoreApplication::translate("MainWindow", "Meetings", nullptr));
         employeeSectionButton->setText(QCoreApplication::translate("MainWindow", "Employee", nullptr));
+        clientSectionButton->setText(QCoreApplication::translate("MainWindow", "Clients", nullptr));
+        meetingSectionButton->setText(QCoreApplication::translate("MainWindow", "Meetings", nullptr));
+        trainingSectionButton->setText(QCoreApplication::translate("MainWindow", "Training", nullptr));
         resourceSectionButton->setText(QCoreApplication::translate("MainWindow", "Resource", nullptr));
         themeButton->setText(QCoreApplication::translate("MainWindow", "Toggle Theme", nullptr));
         clientConsultantComboBox->setPlaceholderText(QCoreApplication::translate("MainWindow", "Select Consultant...", nullptr));

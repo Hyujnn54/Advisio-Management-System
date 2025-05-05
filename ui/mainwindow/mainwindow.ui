@@ -151,7 +151,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Client, Training, and Meeting Management System</string>
+             <string>Advisio Management System</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -272,16 +272,16 @@ QPushButton:hover { color: darkblue; }</string>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="clientSectionButton">
+              <widget class="QPushButton" name="employeeSectionButton">
                <property name="text">
-                <string>Clients</string>
+                <string>Employee</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="trainingSectionButton">
+              <widget class="QPushButton" name="clientSectionButton">
                <property name="text">
-                <string>Training</string>
+                <string>Clients</string>
                </property>
               </widget>
              </item>
@@ -293,9 +293,9 @@ QPushButton:hover { color: darkblue; }</string>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="employeeSectionButton">
+              <widget class="QPushButton" name="trainingSectionButton">
                <property name="text">
-                <string>Employee</string>
+                <string>Training</string>
                </property>
               </widget>
              </item>
@@ -343,7 +343,7 @@ QPushButton:hover { color: darkblue; }</string>
           <item>
            <widget class="QStackedWidget" name="mainStackedWidget">
             <property name="currentIndex">
-             <number>1</number>
+             <number>3</number>
             </property>
             <widget class="QWidget" name="clientPage">
              <layout class="QVBoxLayout" name="clientPageLayout">
@@ -873,8 +873,8 @@ QPushButton:hover { color: darkblue; }</string>
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>489</width>
-                       <height>304</height>
+                       <width>467</width>
+                       <height>236</height>
                       </rect>
                      </property>
                      <layout class="QVBoxLayout" name="trainingResourceVBoxLayout"/>
@@ -1200,8 +1200,8 @@ QPushButton:hover { color: darkblue; }</string>
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>523</width>
-                       <height>336</height>
+                       <width>505</width>
+                       <height>273</height>
                       </rect>
                      </property>
                      <layout class="QVBoxLayout" name="meetingResourceVBoxLayout"/>

@@ -215,37 +215,31 @@ bool Employee::updateEmployee(int id, QString cin, QString lastName, QString fir
                               QString field, QString imagePath, QString role) {
     QSqlQuery query;
     QByteArray imageData;
-    
-    // Si un nouveau chemin d'image est fourni, lire le fichier
-    if (!imagePath.isEmpty()) {
+
+    // Prepare the query dynamically
+    QString queryStr = "UPDATE EMPLOYEE SET CIN = :cin, LAST_NAME = :lastName, FIRST_NAME = :firstName, "
+                       "DATE_BIRTH = :dateOfBirth, PHONE = :phoneNumber, EMAIL = :email, GENDER = :gender, "
+                       "SALARY = :salary, DATE_HIRING = :dateOfHire, SPECIALITY = :field, ROLE = :role";
+    bool hasNewImage = !imagePath.isEmpty() && QFile::exists(imagePath); // Valid new image check
+    if (hasNewImage) {
         QFile file(imagePath);
         if (file.open(QIODevice::ReadOnly)) {
             imageData = file.readAll();
             file.close();
-            
-            // Prépare la requête avec mise à jour de l'image
-            query.prepare("UPDATE EMPLOYEE SET CIN = :cin, LAST_NAME = :lastName, FIRST_NAME = :firstName, "
-                         "DATE_BIRTH = :dateOfBirth, PHONE = :phoneNumber, EMAIL = :email, GENDER = :gender, "
-                         "SALARY = :salary, DATE_HIRING = :dateOfHire, SPECIALITY = :field, "
-                         "IMAGE = :image, ROLE = :role WHERE ID = :id");
-            
-            query.bindValue(":image", imageData);
+            qDebug() << "Image loaded successfully for update, size:" << imageData.size() << "bytes";
+            queryStr += ", IMAGE = :image";
         } else {
-            qDebug() << "Failed to open image file for reading:" << imagePath;
-            // En cas d'échec d'ouverture du fichier, ne pas mettre à jour l'image
-            query.prepare("UPDATE EMPLOYEE SET CIN = :cin, LAST_NAME = :lastName, FIRST_NAME = :firstName, "
-                         "DATE_BIRTH = :dateOfBirth, PHONE = :phoneNumber, EMAIL = :email, GENDER = :gender, "
-                         "SALARY = :salary, DATE_HIRING = :dateOfHire, SPECIALITY = :field, "
-                         "ROLE = :role WHERE ID = :id");
+            qDebug() << "Failed to open image file for update:" << imagePath << "- Error:" << file.errorString();
+            // Proceed without updating IMAGE if file open fails
         }
     } else {
-        // Si aucune nouvelle image n'est fournie, ne pas mettre à jour la colonne IMAGE
-        query.prepare("UPDATE EMPLOYEE SET CIN = :cin, LAST_NAME = :lastName, FIRST_NAME = :firstName, "
-                     "DATE_BIRTH = :dateOfBirth, PHONE = :phoneNumber, EMAIL = :email, GENDER = :gender, "
-                     "SALARY = :salary, DATE_HIRING = :dateOfHire, SPECIALITY = :field, "
-                     "ROLE = :role WHERE ID = :id");
+        qDebug() << "No valid new image provided, IMAGE column will remain unchanged";
     }
-    
+    queryStr += " WHERE ID = :id";
+
+    query.prepare(queryStr);
+
+    // Bind common values
     query.bindValue(":id", id);
     query.bindValue(":cin", cin);
     query.bindValue(":lastName", lastName);
@@ -259,10 +253,23 @@ bool Employee::updateEmployee(int id, QString cin, QString lastName, QString fir
     query.bindValue(":field", field);
     query.bindValue(":role", role);
 
+    // Bind image data only if a new image was loaded
+    if (hasNewImage && !imageData.isEmpty()) {
+        query.bindValue(":image", imageData);
+    }
+
+    // Execute the query
     bool success = query.exec();
     if (!success) {
-        qDebug() << "Mise à jour employé échouée:" << query.lastError().text();
+        qDebug() << "Employee update failed:";
+        qDebug() << "  - Error message:" << query.lastError().text();
+        qDebug() << "  - Error type:" << query.lastError().type();
+        qDebug() << "  - Error code:" << query.lastError().nativeErrorCode();
+        qDebug() << "  - Query:" << query.lastQuery();
+    } else {
+        qDebug() << "Employee updated successfully for ID:" << id;
     }
+
     return success;
 }
 bool Employee::deleteEmployee(int id) {
