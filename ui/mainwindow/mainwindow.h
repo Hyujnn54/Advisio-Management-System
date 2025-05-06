@@ -45,7 +45,7 @@ private slots:
     void on_chatSendButton_clicked();
     void on_chatClearButton_clicked();
     void processUserInput(const QString &input);
-    //void onAIResponseReceived(QNetworkReply *reply);
+    void onAIResponseReceived(QNetworkReply *reply);
     
     // Employee slots
     void on_employeeSearchChanged(const QString &text);

@@ -343,7 +343,7 @@ QPushButton:hover { color: darkblue; }</string>
           <item>
            <widget class="QStackedWidget" name="mainStackedWidget">
             <property name="currentIndex">
-             <number>3</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="clientPage">
              <layout class="QVBoxLayout" name="clientPageLayout">
@@ -739,7 +739,7 @@ QPushButton:hover { color: darkblue; }</string>
               <item>
                <widget class="QTabWidget" name="trainingTabWidget">
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <widget class="QWidget" name="trainingAddTab">
                  <property name="contextMenuPolicy">
@@ -1100,7 +1100,7 @@ QPushButton:hover { color: darkblue; }</string>
               <item>
                <widget class="QTabWidget" name="meetingTabWidget">
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <widget class="QWidget" name="meetingAddTab">
                  <attribute name="title">

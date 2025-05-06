@@ -7,8 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>300</height>
+    <height>400</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>400</width>
+    <height>400</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Update Training</string>
@@ -100,11 +106,30 @@
     </layout>
    </item>
    <item>
-    <widget class="QGroupBox" name="resourcesGroupBox">
-     <property name="title">
-      <string>Resources Used</string>
+    <widget class="QScrollArea" name="resourcesScrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-     <layout class="QVBoxLayout" name="resourcesVBoxLayout"/>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>380</width>
+        <height>100</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="scrollAreaLayout">
+       <item>
+        <widget class="QGroupBox" name="resourcesGroupBox">
+         <property name="title">
+          <string>Resources Used</string>
+         </property>
+         <layout class="QVBoxLayout" name="resourcesVBoxLayout"/>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>

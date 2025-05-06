@@ -64,7 +64,7 @@ void ResourceManager::setupHeaders(QTableWidget *tableWidget)
     tableWidget->setColumnWidth(6, 120); // Image
 }
 
-void ResourceManager::updateTable(QTableWidget *tableWidget, const QString &filter)
+/*void ResourceManager::updateTable(QTableWidget *tableWidget, const QString &filter)
 {
     if (!tableWidget) return;
 
@@ -83,6 +83,7 @@ void ResourceManager::updateTable(QTableWidget *tableWidget, const QString &filt
     
     tableWidget->setSortingEnabled(true);
 }
+
 
 void ResourceManager::updateTable(QTableWidget* tableWidget, const QString& searchText, const QString& column)
 {
@@ -114,6 +115,100 @@ void ResourceManager::updateTable(QTableWidget* tableWidget, const QString& sear
             tableWidget->setItem(row, col, new QTableWidgetItem(query.value(col).toString()));
         }
         // Handle image column if needed
+        row++;
+    }
+}*/
+void ResourceManager::updateTable(QTableWidget *tableWidget, const QString &filter)
+{
+    if (!tableWidget) return;
+
+    tableWidget->setSortingEnabled(false);
+    tableWidget->setRowCount(0);
+
+    QList<Resource> resources = getResources(filter);
+
+    tableWidget->setRowCount(resources.size());
+
+    int row = 0;
+    for (const Resource &resource : resources) {
+        // Assuming Resource has getters for each field
+        tableWidget->setItem(row, 0, new QTableWidgetItem(QString::number(resource.getResourceId())));
+        tableWidget->setItem(row, 1, new QTableWidgetItem(resource.getName()));
+        tableWidget->setItem(row, 2, new QTableWidgetItem(resource.getType()));
+        tableWidget->setItem(row, 3, new QTableWidgetItem(resource.getBrand()));
+        tableWidget->setItem(row, 4, new QTableWidgetItem(QString::number(resource.getQuantity())));
+        tableWidget->setItem(row, 5, new QTableWidgetItem(resource.getPurchaseDate().toString("yyyy-MM-dd")));
+
+        // Handle the Image column (index 6)
+        QTableWidgetItem *imageItem = new QTableWidgetItem();
+        QByteArray imageData = resource.getImage(); // Assuming Resource has a getImage() method returning QByteArray
+        QString base64 = QString::fromLatin1(imageData.toBase64());
+        // Store base64 string in Qt::UserRole for PDF export
+        imageItem->setData(Qt::UserRole, base64);
+        // Convert to QPixmap for display in the table
+        QPixmap pixmap;
+        if (pixmap.loadFromData(QByteArray::fromBase64(base64.toUtf8()))) {
+            imageItem->setData(Qt::DecorationRole, pixmap.scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        } else {
+            imageItem->setText("Image Load Failed");
+        }
+        tableWidget->setItem(row, 6, imageItem);
+
+        row++;
+    }
+
+    tableWidget->setSortingEnabled(true);
+}
+
+void ResourceManager::updateTable(QTableWidget* tableWidget, const QString& searchText, const QString& column)
+{
+    // Default: show all resources if no search text
+    QString queryStr = "SELECT RESOURCE_ID, NAME, TYPE, BRAND, QUANTITY, PURCHASE_DATE, IMAGE FROM RESOURCES";
+    QMap<QString, QString> columnMap = {
+        {"Name", "NAME"},
+        {"Type", "TYPE"},
+        {"Brand", "BRAND"},
+        {"Quantity", "QUANTITY"},
+        {"Purchase Date", "PURCHASE_DATE"}
+    };
+    QList<QVariant> bindValues;
+    if (!searchText.isEmpty() && columnMap.contains(column)) {
+        queryStr += QString(" WHERE UPPER(%1) LIKE UPPER(?)").arg(columnMap[column]);
+        bindValues << ("%" + searchText + "%");
+    }
+    QSqlQuery query;
+    query.prepare(queryStr);
+    for (const QVariant& val : bindValues) {
+        query.addBindValue(val);
+    }
+    if (!query.exec()) {
+        qDebug() << "Query failed:" << query.lastError().text();
+        return;
+    }
+
+    tableWidget->setRowCount(0);
+    int row = 0;
+    while (query.next()) {
+        tableWidget->insertRow(row);
+        for (int col = 0; col < 7; ++col) { // Handling all 7 columns
+            if (col == 6) { // Image column
+                QTableWidgetItem *imageItem = new QTableWidgetItem();
+                QByteArray imageBytes = query.value(col).toByteArray();
+                QString base64 = QString::fromLatin1(imageBytes.toBase64());
+                // Store base64 string in Qt::UserRole for PDF export
+                imageItem->setData(Qt::UserRole, base64);
+                // Convert to QPixmap for display in the table
+                QPixmap pixmap;
+                if (pixmap.loadFromData(QByteArray::fromBase64(base64.toUtf8()))) {
+                    imageItem->setData(Qt::DecorationRole, pixmap.scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                } else {
+                    imageItem->setText("Image Load Failed");
+                }
+                tableWidget->setItem(row, col, imageItem);
+            } else {
+                tableWidget->setItem(row, col, new QTableWidgetItem(query.value(col).toString()));
+            }
+        }
         row++;
     }
 }

@@ -33,7 +33,7 @@ public:
     void setPrix(double prix);
 
     bool ajoutforma();
-    static bool deleteFormation(int id);
+    static bool deleteFormation(int idfor);
     static bool updateFormation(int idfor, const QString &newFormation, const QString &newDescription,
                                 const QString &newTrainer, const QDate &newDatef, int newTime, double newPrix);
     static bool exists(int idfor);

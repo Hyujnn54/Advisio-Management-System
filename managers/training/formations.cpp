@@ -208,26 +208,89 @@ QSqlQueryModel *formations::getTrainingsForDate(const QDate &date)
     return model;
 }
 
-bool formations::deleteFormation(int idfor)
+/*bool formations::deleteFormation(int idfor)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM AHMED.FORMATIONS WHERE IDFORM = :id");
-    query.bindValue(":id", idfor);
 
-    if (!query.exec())
-    {
-        qDebug() << "Delete failed:" << query.lastError().text();
+    // Step 1: Delete dependent records from TRAINING_RESOURCES
+    query.prepare("DELETE FROM AHMED.TRAINING_RESOURCES WHERE TRAINING_ID = :idfor");
+    query.bindValue(":idfor", idfor);
+    if (!query.exec()) {
+        qDebug() << "Delete from TRAINING_RESOURCES failed: " << query.lastError().text();
         return false;
     }
 
-    if (query.numRowsAffected() == 0)
-    {
+    // Step 2: Delete the formation from FORMATIONS
+    query.prepare("DELETE FROM AHMED.FORMATIONS WHERE IDFORM = :idfor");
+    query.bindValue(":idfor", idfor);
+    if (!query.exec()) {
+        qDebug() << "Delete failed: " << query.lastError().text();
+        return false;
+    }
+
+    if (query.numRowsAffected() == 0) {
         qDebug() << "No row found with ID:" << idfor;
         return false;
     }
 
     return true;
-}
+}*/
+/*bool formations::deleteFormation(int idfor)
+{
+    QSqlQuery query;
+
+    // Step 1: Check for child records in TRAINING_RESOURCES
+    query.prepare("SELECT COUNT(*) FROM AHMED.TRAINING_RESOURCES WHERE TRAINING_ID = :idfor");
+    query.bindValue(":idfor", idfor);
+    if (!query.exec()) {
+        qDebug() << "Failed to check child records in TRAINING_RESOURCES for TRAINING_ID" << idfor << ":" << query.lastError().text();
+        return false;
+    }
+    query.next();
+    int childCount = query.value(0).toInt();
+    qDebug() << "Found" << childCount << "child records in TRAINING_RESOURCES for TRAINING_ID" << idfor;
+
+    // Step 2: Delete dependent records from TRAINING_RESOURCES
+    query.prepare("DELETE FROM AHMED.TRAINING_RESOURCES WHERE TRAINING_ID = :idfor");
+    query.bindValue(":idfor", idfor);
+    if (!query.exec()) {
+        qDebug() << "Delete from TRAINING_RESOURCES failed for TRAINING_ID" << idfor << ":" << query.lastError().text();
+        return false;
+    }
+    int rowsAffected = query.numRowsAffected();
+    qDebug() << "Deleted" << rowsAffected << "rows from TRAINING_RESOURCES for TRAINING_ID" << idfor;
+
+    // Step 3: Verify child records are gone
+    query.prepare("SELECT COUNT(*) FROM AHMED.TRAINING_RESOURCES WHERE TRAINING_ID = :idfor");
+    query.bindValue(":idfor", idfor);
+    if (!query.exec()) {
+        qDebug() << "Failed to verify child records in TRAINING_RESOURCES after deletion for TRAINING_ID" << idfor << ":" << query.lastError().text();
+        return false;
+    }
+    query.next();
+    childCount = query.value(0).toInt();
+    qDebug() << "After deletion, found" << childCount << "child records in TRAINING_RESOURCES for TRAINING_ID" << idfor;
+    if (childCount > 0) {
+        qDebug() << "Child records remain in TRAINING_RESOURCES - deletion did not work as expected";
+        return false;
+    }
+
+    // Step 4: Delete the formation from FORMATIONS
+    query.prepare("DELETE FROM AHMED.FORMATIONS WHERE IDFORM = :idfor");
+    query.bindValue(":idfor", idfor);
+    if (!query.exec()) {
+        qDebug() << "Delete from FORMATIONS failed for IDFORM" << idfor << ":" << query.lastError().text();
+        return false;
+    }
+
+    if (query.numRowsAffected() == 0) {
+        qDebug() << "No row found in FORMATIONS with IDFORM:" << idfor;
+        return false;
+    }
+
+    qDebug() << "Successfully deleted formation with IDFORM" << idfor;
+    return true;
+}*/
 
 bool formations::updateFormation(int idfor, const QString &newFormation, const QString &newDescription,
                                  const QString &newTrainer, const QDate &newDatef, int newTime, double newPrix)
@@ -374,7 +437,7 @@ QPair<bool, QString> formations::ajouterWithId(int idform, const QString &format
                                                const QDate &datef, int time, double prix)
 {
     QSqlQuery query;
-    query.prepare("INSERT INTO AHMED.FORMATIONS (IDFORM, FORMATION, DESCRIPTION, TRAINER, EPLOYEE_ID, CLIENT_ID, DATEF, TIME, PRIX) "
+    query.prepare("INSERT INTO AHMED.FORMATIONS (IDFORM, FORMATION, DESCRIPTION, TRAINER, EMPLOYEE_ID, CLIENT_ID, DATEF, TIME, PRIX) "
                   "VALUES (:idform, :formation, :description, :trainer, :trainerId, :clientId, :datef, :time, :prix)");
     query.bindValue(":idform", idform);
     query.bindValue(":formation", formation);
@@ -416,7 +479,7 @@ bool formations::modifier(const QString &oldFormation, const QString &newFormati
     return query.numRowsAffected() > 0;
 }
 
-bool formations::supprimer(const QString &formation)
+/*bool formations::supprimer(const QString &formation)
 {
     QSqlQuery query;
     query.prepare("DELETE FROM AHMED.FORMATIONS WHERE FORMATION = :formation");
@@ -428,4 +491,52 @@ bool formations::supprimer(const QString &formation)
         return false;
     }
     return query.numRowsAffected() > 0;
+}*/
+bool formations::supprimer(const QString &formation)
+{
+    QSqlQuery query;
+
+    // Step 1: Retrieve the IDFORM(s) of the formation(s) matching the given FORMATION value
+    query.prepare("SELECT IDFORM FROM AHMED.FORMATIONS WHERE FORMATION = :formation");
+    query.bindValue(":formation", formation);
+    if (!query.exec()) {
+        qDebug() << "Failed to retrieve IDFORM for FORMATION" << formation << ":" << query.lastError().text();
+        return false;
+    }
+
+    // Collect all IDFORM values (in case multiple formations have the same name)
+    QList<int> idforms;
+    while (query.next()) {
+        idforms.append(query.value(0).toInt());
+    }
+
+    if (idforms.isEmpty()) {
+        qDebug() << "No formation found with FORMATION:" << formation;
+        return false;
+    }
+
+    // Step 2: Delete dependent records from TRAINING_RESOURCES for each IDFORM
+    for (int idfor : idforms) {
+        query.prepare("DELETE FROM AHMED.TRAINING_RESOURCES WHERE TRAINING_ID = :idfor");
+        query.bindValue(":idfor", idfor);
+        if (!query.exec()) {
+            qDebug() << "Delete from TRAINING_RESOURCES failed for TRAINING_ID" << idfor << ":" << query.lastError().text();
+            return false;
+        }
+        int rowsAffected = query.numRowsAffected();
+        qDebug() << "Deleted" << rowsAffected << "rows from TRAINING_RESOURCES for TRAINING_ID" << idfor;
+    }
+
+    // Step 3: Delete the formation(s) from FORMATIONS
+    query.prepare("DELETE FROM AHMED.FORMATIONS WHERE FORMATION = :formation");
+    query.bindValue(":formation", formation);
+    if (!query.exec()) {
+        qDebug() << "Delete from FORMATIONS failed for FORMATION" << formation << ":" << query.lastError().text();
+        return false;
+    }
+
+    int rowsDeleted = query.numRowsAffected();
+    qDebug() << "Deleted" << rowsDeleted << "formations with FORMATION" << formation;
+
+    return rowsDeleted > 0;
 }

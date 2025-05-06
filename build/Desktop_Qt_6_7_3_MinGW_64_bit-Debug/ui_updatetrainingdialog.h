@@ -20,9 +20,11 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QScrollArea>
 #include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QVBoxLayout>
+#include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
 
@@ -43,6 +45,9 @@ public:
     QSpinBox *timeSpinBox;
     QLabel *label_prix;
     QDoubleSpinBox *prixSpinBox;
+    QScrollArea *resourcesScrollArea;
+    QWidget *scrollAreaWidgetContents;
+    QVBoxLayout *scrollAreaLayout;
     QGroupBox *resourcesGroupBox;
     QVBoxLayout *resourcesVBoxLayout;
     QHBoxLayout *horizontalLayout;
@@ -54,7 +59,8 @@ public:
     {
         if (UpdateTrainingDialog->objectName().isEmpty())
             UpdateTrainingDialog->setObjectName("UpdateTrainingDialog");
-        UpdateTrainingDialog->resize(400, 300);
+        UpdateTrainingDialog->resize(400, 400);
+        UpdateTrainingDialog->setMinimumSize(QSize(400, 400));
         verticalLayout = new QVBoxLayout(UpdateTrainingDialog);
         verticalLayout->setObjectName("verticalLayout");
         formLayout = new QFormLayout();
@@ -128,12 +134,24 @@ public:
 
         verticalLayout->addLayout(formLayout);
 
-        resourcesGroupBox = new QGroupBox(UpdateTrainingDialog);
+        resourcesScrollArea = new QScrollArea(UpdateTrainingDialog);
+        resourcesScrollArea->setObjectName("resourcesScrollArea");
+        resourcesScrollArea->setWidgetResizable(true);
+        scrollAreaWidgetContents = new QWidget();
+        scrollAreaWidgetContents->setObjectName("scrollAreaWidgetContents");
+        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 380, 100));
+        scrollAreaLayout = new QVBoxLayout(scrollAreaWidgetContents);
+        scrollAreaLayout->setObjectName("scrollAreaLayout");
+        resourcesGroupBox = new QGroupBox(scrollAreaWidgetContents);
         resourcesGroupBox->setObjectName("resourcesGroupBox");
         resourcesVBoxLayout = new QVBoxLayout(resourcesGroupBox);
         resourcesVBoxLayout->setObjectName("resourcesVBoxLayout");
 
-        verticalLayout->addWidget(resourcesGroupBox);
+        scrollAreaLayout->addWidget(resourcesGroupBox);
+
+        resourcesScrollArea->setWidget(scrollAreaWidgetContents);
+
+        verticalLayout->addWidget(resourcesScrollArea);
 
         horizontalLayout = new QHBoxLayout();
         horizontalLayout->setObjectName("horizontalLayout");

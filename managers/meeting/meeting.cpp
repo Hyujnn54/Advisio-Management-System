@@ -62,8 +62,8 @@ bool meeting::add()
         }
         
         QSqlQuery query;
-        query.prepare("INSERT INTO AHMED.MEETING (ID, TITLE, ORGANISER, PARTICIPANT, AGENDA, DURATION, EMPLOYEE_ID, CLIENT_ID, RESSOURCE_ID, DATEM) "
-                      "VALUES (:id, :title, :organiser, :participant, :agenda, :duration, :employee_id, :client_id, :ressource_id, :datem)");
+        query.prepare("INSERT INTO AHMED.MEETING (ID, TITLE, ORGANISER, PARTICIPANT, AGENDA, DURATION, EMPLOYEE_ID, CLIENT_ID,DATEM) "
+                      "VALUES (:id, :title, :organiser, :participant, :agenda, :duration, :employee_id, :client_id, :datem)");
         query.bindValue(":id", id);
         query.bindValue(":title", title);
         query.bindValue(":organiser", organiser);
@@ -100,7 +100,7 @@ bool meeting::add()
             query.bindValue(":client_id", QVariant(QMetaType(QMetaType::Int)));
         }
         
-        if (resourceId.isValid() && !resourceId.isNull()) {
+        /*if (resourceId.isValid() && !resourceId.isNull()) {
             bool ok;
             int resId = resourceId.toInt(&ok);
             if (ok) {
@@ -112,7 +112,7 @@ bool meeting::add()
         } else {
             // Update to use QMetaType instead of deprecated QVariant::Int
             query.bindValue(":ressource_id", QVariant(QMetaType(QMetaType::Int)));
-        }
+        }*/
         
         query.bindValue(":datem", m_dateTime);
 
@@ -206,7 +206,7 @@ QSqlQueryModel* meeting::afficher()
     return model;
 }
 
-bool meeting::deleteMeeting(int id)
+/*bool meeting::deleteMeeting(int id)
 {
     QSqlQuery query;
     query.prepare("DELETE FROM AHMED.MEETING WHERE ID = :id");
@@ -215,6 +215,28 @@ bool meeting::deleteMeeting(int id)
         qDebug() << "Delete meeting failed: " << query.lastError().text();
         return false;
     }
+    return true;
+}*/
+bool meeting::deleteMeeting(int id)
+{
+    QSqlQuery query;
+
+    // Step 1: Delete dependent records from MEETING_RESOURCES
+    query.prepare("DELETE FROM AHMED.MEETING_RESOURCES WHERE MEETING_ID = :id");
+    query.bindValue(":id", id);
+    if (!query.exec()) {
+        qDebug() << "Delete from MEETING_RESOURCES failed: " << query.lastError().text();
+        return false;
+    }
+
+    // Step 2: Delete the meeting from MEETING
+    query.prepare("DELETE FROM AHMED.MEETING WHERE ID = :id");
+    query.bindValue(":id", id);
+    if (!query.exec()) {
+        qDebug() << "Delete meeting failed: " << query.lastError().text();
+        return false;
+    }
+
     return true;
 }
 

@@ -439,7 +439,7 @@ void MainWindow::on_meetingSectionButton_clicked()
     improveTableWidgetDisplay(ui->meetingTableWidget);
 }
 
-void MainWindow::on_employeeSectionButton_clicked()
+/*void MainWindow::on_employeeSectionButton_clicked()
 {
     qDebug() << "employeeSectionButton clicked - handler activated";
     ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
@@ -461,6 +461,59 @@ void MainWindow::on_employeeSectionButton_clicked()
     QStringList headers = {"ID", "CIN", "Last Name", "First Name", "Date of Birth", "Phone", "Email", "Gender", "Salary", "Date of Hiring", "Speciality", "Image", "Role", "RFID UID"};
     table->setHorizontalHeaderLabels(headers);
     populateEmployeeTable(employees);
+    table->setSortingEnabled(true);
+    improveTableWidgetDisplay(table);
+    table->blockSignals(false);
+
+    connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_employeeSearchChanged);
+}*/
+void MainWindow::on_employeeSectionButton_clicked()
+{
+    qDebug() << "employeeSectionButton clicked - handler activated";
+    ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
+
+    QList<QList<QVariant>> employees;
+    QSqlQuery query("SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY, IMAGE, ROLE, RFID_UID FROM EMPLOYEE");
+    while (query.next()) {
+        QList<QVariant> row;
+        for (int i = 0; i < query.record().count(); ++i) {
+            row << query.value(i);
+        }
+        employees << row;
+    }
+
+    QTableWidget* table = ui->employeeTableWidget;
+    table->blockSignals(true);
+    table->clear();
+    table->setRowCount(employees.size());
+    table->setColumnCount(14);
+    QStringList headers = {"ID", "CIN", "Last Name", "First Name", "Date of Birth", "Phone", "Email", "Gender", "Salary", "Date of Hiring", "Speciality", "Image", "Role", "RFID UID"};
+    table->setHorizontalHeaderLabels(headers);
+
+    // Populate the table, converting image BLOB to base64 and displaying as image
+    for (int row = 0; row < employees.size(); ++row) {
+        const QList<QVariant>& employee = employees[row];
+        for (int col = 0; col < employee.size(); ++col) {
+            if (headers[col].toLower() == "image") {
+                QTableWidgetItem *imageItem = new QTableWidgetItem();
+                QByteArray imageBytes = employee[col].toByteArray();
+                QString base64 = QString::fromLatin1(imageBytes.toBase64());
+                // Store base64 string in Qt::UserRole for PDF export
+                imageItem->setData(Qt::UserRole, base64);
+                // Convert to QPixmap for display in the table
+                QPixmap pixmap;
+                if (pixmap.loadFromData(QByteArray::fromBase64(base64.toUtf8()))) {
+                    imageItem->setData(Qt::DecorationRole, pixmap.scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                } else {
+                    imageItem->setText("Image Load Failed");
+                }
+                table->setItem(row, col, imageItem);
+            } else {
+                table->setItem(row, col, new QTableWidgetItem(employee[col].toString()));
+            }
+        }
+    }
+
     table->setSortingEnabled(true);
     improveTableWidgetDisplay(table);
     table->blockSignals(false);
@@ -1208,47 +1261,14 @@ void MainWindow::appendChatMessage(const QString &message, bool isBot)
         return;
     }
 
-    QString formattedMessage = QString("[%1] %2: %3\n")
-                                   .arg(QDateTime::currentDateTime().toString("hh:mm:ss"),
-                                        isBot ? "Assistant" : "User", message);
+    QString formattedMessage = isBot ? "<b>Assistant:</b> " + message : "<b>You:</b> " + message;
     ui->meetingChatTextEdit->append(formattedMessage);
-
-    if (!isBot) {
-        qDebug() << "Network request disabled for testing";
-        ui->meetingChatTextEdit->append("[System] Network requests are disabled for testing.");
-        // Uncomment and configure when API is ready
-
-        QUrl url("https://api.example.com/chat");
-        if (!url.isValid()) {
-            qDebug() << "Error: Invalid URL in appendChatMessage:" << url.toString();
-            ui->meetingChatTextEdit->append("[Error] Invalid API URL. Please check the configuration.");
-            return;
-        }
-
-        QNetworkRequest request(url);
-        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-        QJsonObject json;
-        json["message"] = message;
-        QJsonDocument doc(json);
-        QByteArray data = doc.toJson();
-
-        QNetworkReply *reply = networkManager->post(request, data);
-        if (!reply) {
-            qDebug() << "Error: Failed to create network reply";
-            ui->meetingChatTextEdit->append("[Error] Failed to send message to API.");
-        } else {
-            connect(reply, &QNetworkReply::errorOccurred, this, [this, reply](QNetworkReply::NetworkError code) {
-                qDebug() << "Network error in appendChatMessage:" << reply->errorString();
-                ui->meetingChatTextEdit->append("[Error] Network error: " + reply->errorString());
-            });
-        }
-    }
     qDebug() << "Exiting appendChatMessage";
 }
 
 void MainWindow::processUserInput(const QString &input)
 {
+    // Check if the input matches the add meeting regex
     static const QRegularExpression addMeetingRegex(R"(add meeting\s+(.+?)\s+by\s+(.+?)\s+with\s+(.+?)\s+about\s+(.+?)\s+for\s+(\d+)\s+min\s+on\s+(.+))", QRegularExpression::CaseInsensitiveOption);
     static const QRegularExpression deleteMeetingRegex(R"(delete meeting\s+(\d+))", QRegularExpression::CaseInsensitiveOption);
 
@@ -1266,34 +1286,141 @@ void MainWindow::processUserInput(const QString &input)
         meeting m = createMeetingFromInput(input);
         if (m.add()) {
             meetingManager->refreshTableWidget();
-            appendChatMessage("Meeting added successfully!", true);
+            appendChatMessage("Meeting added successfully! Here's the QR code:", true);
+            QPixmap qrCode = m.generateQRCode();
+            QMessageBox qrDialog(this);
+            qrDialog.setWindowTitle("Meeting QR Code");
+            qrDialog.setText("Scan this QR code for meeting details:");
+            qrDialog.setIconPixmap(qrCode.scaled(200, 200, Qt::KeepAspectRatio));
+            qrDialog.exec();
             if (notificationManager) {
                 notificationManager->addNotification("Meeting Added", "Meeting: " + m.getTitle(), "Added meeting via chat", -1);
             }
         } else {
             appendChatMessage("Failed to add meeting. Check database connection.", true);
         }
+        return;
+    }
+
+    // Handle specific commands locally
+    QString trimmedInput = input.trimmed().toLower();
+    if (trimmedInput == "show meetings") {
+        meeting m;
+        QSqlQueryModel* model = m.afficher();
+        QString meetingList;
+        for (int row = 0; row < model->rowCount(); ++row) {
+            meetingList += QString("ID: %1, Title: %2, Organiser: %3, Participant: %4, Date: %5\n")
+            .arg(model->data(model->index(row, 0)).toString())
+                .arg(model->data(model->index(row, 1)).toString())
+                .arg(model->data(model->index(row, 2)).toString())
+                .arg(model->data(model->index(row, 3)).toString())
+                .arg(model->data(model->index(row, 6)).toDateTime().toString("yyyy-MM-dd hh:mm"));
+        }
+        appendChatMessage(meetingList.isEmpty() ? "No meetings found." : meetingList, true);
+        delete model;
+        return;
+    } else if (trimmedInput == "help") {
+        appendChatMessage("I can help with:\n"
+                          "- Adding a meeting: Use format 'add meeting <title> by <organiser> with <participant> about <agenda> for <duration> min on <date>' (e.g., 'add meeting Team Sync by Alice with Bob about Project Update for 30 min on 2025-05-07 14:00').\n"
+                          "- Listing meetings: Say 'show meetings'.\n"
+                          "- Deleting a meeting: Say 'delete meeting <ID>' (e.g., 'delete meeting 9').\n"
+                          "- Help: Say 'help' to see this message.\n"
+                          "- Clear chat: Say 'clear chat' to clear the chat.", true);
+        return;
+    } else if (trimmedInput == "clear chat") {
+        ui->meetingChatTextEdit->clear();
+        appendChatMessage("Chat cleared. How can I assist you now?", true);
+        return;
     } else if (deleteMatch.hasMatch()) {
         int id = deleteMatch.captured(1).toInt();
         meeting m;
-        if (m.deleteMeeting(id)) {
+        if (m.deleteMeeting(id)) { // Assuming deleteMeeting is the correct method name
             meetingManager->refreshTableWidget();
-            appendChatMessage("Meeting deleted successfully!", true);
+            appendChatMessage(QString("Meeting with ID %1 deleted successfully.").arg(id), true);
             if (notificationManager) {
                 notificationManager->addNotification("Meeting Deleted", "Meeting ID: " + QString::number(id), "Deleted meeting via chat", -1);
             }
         } else {
             appendChatMessage("Failed to delete meeting. Check database connection.", true);
         }
-    } else {
-        QNetworkRequest request(QUrl("http://api.example.com/chatbot"));
-        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-        QJsonObject json;
-        json["message"] = input;
-        QJsonDocument doc(json);
-        networkManager->post(request, doc.toJson());
+        return;
     }
+
+    // For all other inputs, query the Hugging Face AI
+    QNetworkRequest request;
+    request.setUrl(QUrl("https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"));
+    if (!request.url().isValid()) {
+        qDebug() << "Error: Invalid URL in processUserInput:" << request.url().toString();
+        appendChatMessage("Error: Invalid API URL. Please check the configuration.", true);
+        return;
+    }
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer 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"); // Your new token // Replace with your valid API key
+
+    // Prepare the JSON payload with a system prompt
+    QJsonObject json;
+    QString systemPrompt = "You are a friendly and helpful Meeting Assistant. Respond naturally and conversationally, as if you're a human assistant.";
+    json["inputs"] = QString("[INST] %1\n\nUser: %2 [/INST]").arg(systemPrompt, input);
+
+    QJsonObject parameters;
+    parameters["max_new_tokens"] = 150;
+    parameters["temperature"] = 0.7;
+    parameters["top_p"] = 0.9;
+    parameters["do_sample"] = true;
+    json["parameters"] = parameters;
+
+    QJsonDocument doc(json);
+    QByteArray data = doc.toJson();
+
+    // Send the request
+    appendChatMessage("Processing...", true); // Show a loading message
+    disconnect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::on_imageAnalysisFinished);
+    connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onAIResponseReceived);
+    QNetworkReply *reply = networkManager->post(request, data);
+    if (!reply) {
+        qDebug() << "Error: Failed to create network reply in processUserInput";
+        appendChatMessage("Error: Failed to send message to API.", true);
+        return;
+    }
+
+
+    connect(reply, &QNetworkReply::errorOccurred, this, [this, reply](QNetworkReply::NetworkError code) {
+        qDebug() << "Network error in processUserInput:" << reply->errorString();
+        appendChatMessage("Error: " + reply->errorString(), true);
+    });
+}
+
+void MainWindow::onAIResponseReceived(QNetworkReply *reply)
+{
+    qDebug() << "Entering onAIResponseReceived";
+    if (reply->error() != QNetworkReply::NoError) {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        QString errorMsg = reply->errorString();
+        QByteArray responseBody = reply->readAll();
+        QString detailedError = QString("Error communicating with AI: %1 (HTTP %2)\nServer response: %3")
+                                    .arg(errorMsg)
+                                    .arg(statusCode)
+                                    .arg(QString(responseBody));
+        appendChatMessage(detailedError, true);
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray responseData = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+
+    if (doc.isArray() && !doc.array().isEmpty()) {
+        QString aiResponse = doc.array()[0].toObject()["generated_text"].toString();
+        // Clean up the response (remove the [INST] prompt part)
+        aiResponse = aiResponse.section("[/INST]", 1).trimmed();
+        // Display the AI's natural response
+        appendChatMessage(aiResponse, true);
+    } else {
+        appendChatMessage("Sorry, I couldn't process that. Please try again.\nResponse: " + QString(responseData), true);
+    }
+
+    reply->deleteLater();
+    qDebug() << "Exiting onAIResponseReceived";
 }
 
 meeting MainWindow::createMeetingFromInput(const QString &input)
@@ -2357,6 +2484,9 @@ void MainWindow::on_modifyBtn_clicked()
 
 void MainWindow::on_downloadBtn_clicked()
 {
+    static bool isSaving = false;
+    if (isSaving) return;
+
     QTableWidget* table = ui->employeeTableWidget;
     QList<QTableWidgetItem*> selectedItems = table->selectedItems();
     if (selectedItems.isEmpty()) {
@@ -2372,12 +2502,11 @@ void MainWindow::on_downloadBtn_clicked()
     }
 
     QStringList employeeData;
-    QByteArray imageData;
+    QString base64Image;
     for (int col = 0; col < headers.size(); ++col) {
         QTableWidgetItem* item = table->item(row, col);
         if (item && headers[col].toLower() == "image") {
-            // Assuming the image is stored as base64 string in the table
-            imageData = QByteArray::fromBase64(item->text().toUtf8());
+            base64Image = item->data(Qt::UserRole).toString();
         } else {
             employeeData << (item ? item->text() : "");
         }
@@ -2391,23 +2520,28 @@ void MainWindow::on_downloadBtn_clicked()
         fileName += ".pdf";
     }
 
+    isSaving = true; // Set flag to prevent re-entry
+
     QTextDocument doc;
     QString imageHtml;
-    if (!imageData.isEmpty()) {
-        QString base64 = QString::fromLatin1(imageData.toBase64());
+    if (!base64Image.isEmpty()) {
         imageHtml = QString(R"(
             <div style="text-align: center; margin-bottom: 20px;">
-                <img src='data:image/png;base64,%1' width='120' height='160' style='border:2px solid #4a90e2; border-radius: 5px;'/>
+                <img src='data:image/jpeg;base64,%1' width='120' height='160' style='border:2px solid #4a90e2; border-radius: 5px;'/>
             </div>
-        )").arg(base64);
+        )").arg(base64Image);
     } else {
         imageHtml = "<p><em>No Image Available</em></p>";
     }
 
     QString infoItems;
+    int dataIndex = 0;
     for (int i = 0; i < headers.size(); ++i) {
         if (headers[i].toLower() != "image") {
-            infoItems += "<div class='info-item'><strong>" + headers[i] + ":</strong> " + employeeData[i] + "</div>";
+            if (dataIndex < employeeData.size()) {
+                infoItems += "<div class='info-item'><strong>" + headers[i] + ":</strong> " + employeeData[dataIndex] + "</div>";
+                dataIndex++;
+            }
         }
     }
 
@@ -2469,6 +2603,8 @@ void MainWindow::on_downloadBtn_clicked()
 
     doc.print(&printer);
     QMessageBox::information(this, "Export Successful", "Employee data exported to PDF successfully!");
+
+    isSaving = false; // Reset flag after successful save
 }
 void MainWindow::on_selectImageButton_clicked()
 {
@@ -2633,6 +2769,8 @@ void MainWindow::on_confirmFormButton_clicked()
     reply->setProperty("quantity", quantity);
     reply->setProperty("purchaseDate", purchase_date.toString("yyyy-MM-dd"));
     qDebug() << "Sent image analysis request to Clarifai API";
+    disconnect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onAIResponseReceived);
+    connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::on_imageAnalysisFinished);
 }
 
 void MainWindow::on_imageAnalysisFinished(QNetworkReply *reply)
@@ -2865,7 +3003,7 @@ void MainWindow::on_deleteButton_clicked()
     }
 }
 
-void MainWindow::on_exportPdfButton_clicked() {
+/*void MainWindow::on_exportPdfButton_clicked() {
     // Refresh the table with all data (no filter)
     //refreshTableWidget("");
     qDebug() << "Table row count before export:" << ui->tableWidget->rowCount();
@@ -2996,6 +3134,190 @@ void MainWindow::on_exportPdfButton_clicked() {
                         } else {
                             painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "Image Load Failed");
                             qDebug() << "Image is null for row" << row;
+                        }
+                    } else {
+                        painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "No Image Data");
+                        qDebug() << "No image data for row" << row;
+                    }
+                } else {
+                    painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "No Item");
+                    qDebug() << "No item in image column for row" << row;
+                }
+            } else { // Text columns
+                QString text = item ? item->text() : "";
+                painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, text);
+            }
+
+            painter.drawRect(cellRect);
+            x += colWidths[col];
+        }
+
+        y += rowHeight;
+
+        // Check if we need a new page
+        if (y > pageHeight - tableMargin) {
+            printer.newPage();
+            y = tableMargin;
+
+            // Redraw the headers on the new page
+            x = tableMarginAdjusted;
+            painter.setFont(headerFont);
+            for (int col = 0; col < numColumns; ++col) {
+                QString headerText = ui->tableWidget->horizontalHeaderItem(col)->text();
+                QRect headerRect(x, y, colWidths[col], rowHeight);
+                QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+                painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, headerText);
+                painter.drawRect(headerRect);
+                x += colWidths[col];
+            }
+            y += rowHeight;
+            painter.setFont(font);
+        }
+    }
+
+    // Finish painting and save the PDF
+    painter.end();
+
+    // Verify the file was written
+    if (QFile::exists(filePath)) {
+        QMessageBox::information(this, "PDF Export", "Table data has been successfully exported to " + filePath);
+        qDebug() << "PDF exported to:" << filePath;
+    } else {
+        QMessageBox::warning(this, "PDF Export Error", "Failed to save the PDF file.");
+        qDebug() << "PDF export failed: File not found at" << filePath;
+    }
+}*/
+void MainWindow::on_exportPdfButton_clicked() {
+    qDebug() << "Table row count before export:" << ui->tableWidget->rowCount();
+
+    // Prompt the user to choose a save location for the PDF
+    QString filePath = QFileDialog::getSaveFileName(this, "Save PDF", QDir::homePath() + "/resources.pdf", "PDF Files (*.pdf)");
+    if (filePath.isEmpty()) {
+        qDebug() << "PDF export canceled by user.";
+        return;
+    }
+
+    // Ensure the file has a .pdf extension
+    if (!filePath.endsWith(".pdf", Qt::CaseInsensitive)) {
+        filePath += ".pdf";
+    }
+
+    // Check if file is writable to avoid issues later
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        QMessageBox::warning(this, "PDF Export Error", "Cannot write to the selected file location.");
+        qDebug() << "Failed to open file for writing:" << filePath;
+        return;
+    }
+    file.close(); // Close it since QPrinter will handle writing
+
+    // Set up the QPrinter for PDF output
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(filePath);
+    printer.setPageSize(QPageSize(QPageSize::A4));
+    printer.setPageMargins(QMarginsF(15, 50, 15, 15), QPageLayout::Millimeter);
+
+    // Set up the QPainter to draw on the PDF
+    QPainter painter(&printer);
+    if (!painter.isActive()) {
+        QMessageBox::warning(this, "PDF Export Error", "Failed to initialize PDF painter.");
+        qDebug() << "Failed to initialize QPainter for PDF export.";
+        return;
+    }
+
+    // Get the page dimensions in pixels
+    QRectF pageRect = printer.pageRect(QPrinter::DevicePixel);
+    int pageWidth = pageRect.width();
+    int pageHeight = pageRect.height();
+    qDebug() << "Page dimensions:" << pageWidth << "x" << pageHeight;
+
+    // Define layout constants
+    const int tableMargin = 100;
+    const int rowHeight = 700; // Increased to 500 for taller rows (was 400)
+    const int fontSize = 10;   // Increased font size for better readability (was 9)
+    const int headerFontSize = 12; // Increased header font size (was 11)
+    const int imageSize = 600; // Increased to 300 for larger images (was 200)
+    const int textPadding = 30; // Increased padding for better spacing (was 25)
+
+    // Calculate column widths dynamically based on page width
+    const int numColumns = ui->tableWidget->columnCount();
+    int totalTableWidth = pageWidth - 2 * tableMargin;
+    int colWidths[] = {40, 100, 100, 100, 100, 100, 200}; // Adjusted widths: Quantity (index 4) to 100, Image (index 6) to 350
+    int totalDefinedWidth = 0;
+    for (int colWidth : colWidths) {
+        totalDefinedWidth += colWidth;
+    }
+    double scaleFactor = static_cast<double>(totalTableWidth) / totalDefinedWidth;
+    for (int &colWidth : colWidths) {
+        colWidth = static_cast<int>(colWidth * scaleFactor);
+    }
+
+    // Center the table on the page
+    totalTableWidth = 0;
+    for (int colWidth : colWidths) {
+        totalTableWidth += colWidth;
+    }
+    int tableMarginAdjusted = (pageWidth - totalTableWidth) / 2;
+
+    // Set up fonts
+    QFont font("Arial", fontSize);
+    QFont headerFont("Arial", headerFontSize, QFont::Bold);
+    painter.setFont(font);
+
+    // Draw the title and timestamp
+    painter.setFont(QFont("Arial", 14, QFont::Bold));
+    painter.drawText(tableMarginAdjusted, 150, "Resource Management System - Exported Data");
+    painter.setFont(QFont("Arial", 10));
+    painter.drawText(tableMarginAdjusted, 350, "Exported on: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+    int y = 250;
+
+    // Draw the table headers
+    int x = tableMarginAdjusted;
+    painter.setFont(headerFont);
+    for (int col = 0; col < numColumns; ++col) {
+        QString headerText = ui->tableWidget->horizontalHeaderItem(col)->text();
+        QRect headerRect(x, y, colWidths[col], rowHeight);
+        QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, headerText);
+        painter.drawRect(headerRect);
+        x += colWidths[col];
+    }
+    y += rowHeight;
+
+    // Set the font back to normal for the table data
+    painter.setFont(font);
+
+    // Draw the table data
+    for (int row = 0; row < ui->tableWidget->rowCount(); ++row) {
+        x = tableMarginAdjusted;
+
+        // Add alternating row colors
+        if (row % 2 == 0) {
+            painter.fillRect(QRect(tableMarginAdjusted, y, totalTableWidth, rowHeight), QBrush(QColor(240, 240, 240)));
+        }
+
+        for (int col = 0; col < numColumns; ++col) {
+            QTableWidgetItem *item = ui->tableWidget->item(row, col);
+            QRect cellRect(x, y, colWidths[col], rowHeight);
+            QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+
+            if (col == 6) { // Image column
+                if (item) {
+                    // Read the base64 string from Qt::UserRole
+                    QString base64 = item->data(Qt::UserRole).toString();
+                    if (!base64.isEmpty()) {
+                        QByteArray imageData = QByteArray::fromBase64(base64.toUtf8());
+                        QPixmap pixmap;
+                        if (pixmap.loadFromData(imageData)) {
+                            QPixmap scaledPixmap = pixmap.scaled(imageSize, imageSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                            int imageX = x + (colWidths[col] - imageSize) / 2; // Center horizontally
+                            int imageY = y + (rowHeight - imageSize) / 2;      // Center vertically
+                            painter.drawPixmap(imageX, imageY, scaledPixmap);
+                            qDebug() << "Image rendered successfully for row" << row;
+                        } else {
+                            painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "Image Load Failed");
+                            qDebug() << "Failed to load image from base64 for row" << row;
                         }
                     } else {
                         painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "No Image Data");
@@ -3209,21 +3531,22 @@ void MainWindow::setupUiConnections()
         connect(ui->addButton, &QPushButton::clicked, this, &MainWindow::on_addButton_clicked);
     }
     
-    if (ui->deleteBtn) {
+    /*if (ui->deleteBtn) {
         connect(ui->deleteBtn, &QPushButton::clicked, this, &MainWindow::on_deleteBtn_clicked);
-    }
+    }*/
     
     if (ui->modifyBtn) {
         connect(ui->modifyBtn, &QPushButton::clicked, this, &MainWindow::on_modifyBtn_clicked);
     }
     
-    if (ui->downloadBtn) {
+    /*if (ui->downloadBtn) {
+        disconnect(ui->downloadBtn, &QPushButton::clicked, this, &MainWindow::on_downloadBtn_clicked);
         connect(ui->downloadBtn, &QPushButton::clicked, this, &MainWindow::on_downloadBtn_clicked);
-    }
+    }*/
     
-    if (ui->selectImageButton) {
+    /*if (ui->selectImageButton) {
         connect(ui->selectImageButton, &QPushButton::clicked, this, &MainWindow::on_selectImageButton_clicked);
-    }
+    }*/
     
     if (ui->generateQRCodeBtn) {
         connect(ui->generateQRCodeBtn, &QPushButton::clicked, this, &MainWindow::on_generateQRCodeBtn_clicked);
