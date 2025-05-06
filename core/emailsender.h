@@ -17,7 +17,7 @@ private:
     QString smtpServer = "smtp.gmail.com";
     int smtpPort = 465; // SSL port for Gmail
     QString senderEmail = "shaco54lol@gmail.com"; // Replace with your Gmail
-    QString senderPassword = "pezy bnhw gtpb bnre"; // Replace with your App Password
+    QString senderPassword = "lnvu hzja uhhh afvc"; // Replace with your App Password
     bool lastSendSuccessful = false; // Tracks success of last send attempt
 
     bool connectToServer(QSslSocket &socket);

@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QTextStream>
 #include <QDateTime>
+#include <QRegularExpression> // Added for QRegularExpression
 
 EmailSender::EmailSender(QObject *parent) : QObject(parent)
 {
@@ -11,6 +12,13 @@ bool EmailSender::sendEmail(const QString &to, const QString &subject, const QSt
 {
     lastSendSuccessful = false; // Reset before attempting to send
     QSslSocket socket;
+
+    // Validate email addresses
+    QRegularExpression emailRegex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    if (!emailRegex.match(senderEmail).hasMatch() || !emailRegex.match(to).hasMatch()) {
+        qDebug() << "Invalid email address format. Sender:" << senderEmail << "To:" << to;
+        return false;
+    }
 
     // Connect to SMTP server
     if (!connectToServer(socket)) {
@@ -49,7 +57,8 @@ bool EmailSender::sendEmail(const QString &to, const QString &subject, const QSt
     QString emailData = "From: " + senderEmail + "\r\n"
                                                  "To: " + to + "\r\n"
                                "Subject: " + subject + "\r\n"
-                                    "\r\n" + body + "\r\n"
+                                    "Date: " + QDateTime::currentDateTime().toString("ddd, d MMM yyyy hh:mm:ss +0000") + "\r\n"
+                                                                                                    "\r\n" + body + "\r\n"
                                  ".\r\n";
     if (!sendData(socket, emailData) || !checkResponse(socket, "250")) {
         qDebug() << "Email data send failed";
@@ -65,6 +74,7 @@ bool EmailSender::sendEmail(const QString &to, const QString &subject, const QSt
 
     socket.disconnectFromHost();
     lastSendSuccessful = true; // Email sent successfully
+    qDebug() << "Email sent successfully to" << to;
     return true;
 }
 
