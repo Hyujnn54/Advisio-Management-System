@@ -1,4 +1,3 @@
-// managers/training/trainingmanager.h
 #ifndef TRAININGMANAGER_H
 #define TRAININGMANAGER_H
 
@@ -9,7 +8,10 @@
 #include "formations.h"
 #include "core/notificationmanager.h"
 #include "dialog/updatetrainingdialog/updatetrainingdialog.h"
-
+#include "ui/waitingArd/arduinoy.h" // Updated to ensure correct include
+#include "waitingroomdialog.h"
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 namespace Ui {
 class MainWindow;
 }
@@ -27,8 +29,12 @@ public:
     void initialize(Ui::MainWindow *ui);
     void refresh();
     void setNotificationManager(NotificationManager *manager);
-    // Add this declaration
     QMap<QString, int> getStatisticsByCategory(const QString &category);
+    void updateWaitingRoomCount();
+    Arduinoy* getArduino() const; // Updated to Arduinoy
+
+signals:
+    void waitingRoomCountChanged(int count);
 
 private slots:
     void on_trainingAddButton_clicked();
@@ -39,6 +45,9 @@ private slots:
     void on_trainingResetSearchButton_clicked();
     void on_trainingTableViewHeader_clicked(int logicalIndex);
     void on_trainingExportPdfButton_clicked();
+    void onSmsRequestFinished(QNetworkReply *reply);
+    void on_viewWaitingRoomButton_clicked();
+
 
 private:
     bool m_dbConnected;
@@ -49,6 +58,7 @@ private:
     NotificationManager *notificationManager;
     int currentSortColumn;
     Qt::SortOrder currentSortOrder;
+    Arduinoy *arduino; // Updated to Arduinoy
 
     bool validateTrainingInputs();
     bool isValidName(const QString &name);
@@ -56,6 +66,11 @@ private:
     void performTrainingSearch();
     void refreshTrainingTable();
     void exportTrainingsToPdf();
+    void initializeArduino();
+    WaitingRoomDialog *waitingRoomDialog;
+    QNetworkAccessManager *networkManager;
+
+
 };
 
 #endif // TRAININGMANAGER_H

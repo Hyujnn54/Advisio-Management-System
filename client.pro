@@ -4,9 +4,9 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = TrainingManagement
 TEMPLATE = app
-
+QT += core gui widgets sql
 CONFIG += c++17
-
+QT += network
 # Quote paths to handle spaces
 INCLUDEPATH += "$$PWD/core" \
                "$$PWD/managers/client" \
@@ -22,7 +22,8 @@ INCLUDEPATH += "$$PWD/core" \
                "$$PWD/dialog/updateemployee" \
                "$$PWD/dialog/updateresourcesdialog" \
                "$$PWD/lib/qrcodegen" \
-               "$$PWD/ui/search"
+               "$$PWD/ui/search" \
+               "$$PWD/ui/waitingArd" \
 
 HEADERS += \
     core/connection.h \
@@ -39,6 +40,7 @@ HEADERS += \
     managers/employee/employeemanager.h \
     managers/resources/resource.h \
     managers/resources/resourcemanager.h \
+    managers/training/waitingroomdialog.h \
     ui/chartwindow/chartwindow.h \
     ui/mainwindow/mainwindow.h \
     dialog/updateclientdialog/updateclientdialog.h \
@@ -49,7 +51,8 @@ HEADERS += \
     lib/qrcodegen/qrcodegen.hpp \
     sign.h \
     ui/search/searchdialog.h \
-    ui/employeeArd/arduino.h
+    ui/employeeArd/arduino.h \
+    ui/waitingArd/arduinoy.h
 
 SOURCES += \
     core/connection.cpp \
@@ -67,6 +70,7 @@ SOURCES += \
     managers/employee/employeemanager.cpp \
     managers/resources/resource.cpp \
     managers/resources/resourcemanager.cpp \
+    managers/training/waitingroomdialog.cpp \
     ui/chartwindow/chartwindow.cpp \
     ui/mainwindow/mainwindow.cpp \
     dialog/updateclientdialog/updateclientdialog.cpp \
@@ -77,7 +81,8 @@ SOURCES += \
     lib/qrcodegen/qrcodegen.cpp \
     sign.cpp \
     ui/search/searchdialog.cpp \
-    ui/employeeArd/arduino.cpp
+    ui/employeeArd/arduino.cpp \
+    ui/waitingArd/arduinoy.cpp
 
 FORMS += \
     ui/chartwindow/ChartWindow.ui \

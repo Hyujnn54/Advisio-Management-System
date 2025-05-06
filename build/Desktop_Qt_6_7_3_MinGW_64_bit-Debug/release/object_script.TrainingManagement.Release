@@ -13,6 +13,7 @@ release/employee.o
 release/employeemanager.o
 release/resource.o
 release/resourcemanager.o
+release/waitingroomdialog.o
 release/chartwindow.o
 release/mainwindow.o
 release/updateclientdialog.o
@@ -24,6 +25,7 @@ release/qrcodegen.o
 release/sign.o
 release/searchdialog.o
 release/arduino.o
+release/arduinoy.o
 release/qrc_img.o
 release/moc_emailsender.o
 release/moc_notificationmanager.o
@@ -32,6 +34,7 @@ release/moc_trainingmanager.o
 release/moc_meetingmanager.o
 release/moc_employeemanager.o
 release/moc_resourcemanager.o
+release/moc_waitingroomdialog.o
 release/moc_chartwindow.o
 release/moc_mainwindow.o
 release/moc_updateclientdialog.o
@@ -42,3 +45,4 @@ release/moc_updateresourcesdialog.o
 release/moc_sign.o
 release/moc_searchdialog.o
 release/moc_arduino.o
+release/moc_arduinoy.o

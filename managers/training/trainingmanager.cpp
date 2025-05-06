@@ -11,6 +11,8 @@
 #include <QSqlQuery>
 #include <QCheckBox>
 #include <QSpinBox>
+#include <QDebug>
+#include "waitingroomdialog.h"
 
 TrainingManager::TrainingManager(bool dbConnected, QObject *parent)
     : QObject(parent),
@@ -21,15 +23,28 @@ TrainingManager::TrainingManager(bool dbConnected, QObject *parent)
     trainingProxyModel(new QSortFilterProxyModel(this)),
     notificationManager(nullptr),
     currentSortColumn(-1),
-    currentSortOrder(Qt::AscendingOrder)
+    currentSortOrder(Qt::AscendingOrder),
+    arduino(new Arduinoy(this)),
+    waitingRoomDialog(nullptr),
+    networkManager(new QNetworkAccessManager(this)) // Updated to Arduinoy
 {
+    initializeArduino();
 }
 
 TrainingManager::~TrainingManager()
 {
+
     delete formations;
     delete trainingTableModel;
     delete trainingProxyModel;
+    delete arduino;
+    delete networkManager;
+}
+
+Arduinoy* TrainingManager::getArduino() const // Updated to Arduinoy
+{
+
+    return arduino;
 }
 
 void TrainingManager::setNotificationManager(NotificationManager *manager)
@@ -95,14 +110,135 @@ void TrainingManager::initialize(Ui::MainWindow *ui)
     connect(ui->trainingSearchInput, &QLineEdit::textChanged, this, &TrainingManager::on_trainingSearchInput_textChanged);
     connect(ui->trainingSearchCriteriaComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &TrainingManager::on_trainingSearchCriteriaComboBox_currentIndexChanged);
     connect(ui->trainingResetSearchButton, &QPushButton::clicked, this, &TrainingManager::on_trainingResetSearchButton_clicked);
+    connect(ui->viewWaitingRoomButton, &QPushButton::clicked, this, &TrainingManager::on_viewWaitingRoomButton_clicked);
+
 
     refresh();
+}
+void TrainingManager::on_viewWaitingRoomButton_clicked()
+{
+    // If dialog already exists, just show it
+    if (waitingRoomDialog && waitingRoomDialog->isVisible()) {
+        waitingRoomDialog->activateWindow();
+        waitingRoomDialog->raise();
+        return;
+    }
+
+    // Clean up any existing dialog
+    if (waitingRoomDialog) {
+        waitingRoomDialog->deleteLater(); // Safer deletion
+        waitingRoomDialog = nullptr;
+    }
+
+    int waitingCount = 0;
+    QSqlDatabase db = QSqlDatabase::database();
+    if (db.isOpen()) {
+        QSqlQuery query;
+        query.prepare("SELECT WR FROM AHMED.MEETING WHERE ID = 1");
+        if (query.exec() && query.next()) {
+            bool ok;
+            waitingCount = query.value("WR").toInt(&ok);
+            if (!ok || waitingCount < 0) {
+                qDebug() << "Invalid waiting room count value";
+                QMessageBox::warning(nullptr, QStringLiteral("Error"), QStringLiteral("Invalid waiting room count."));
+                return;
+            }
+        } else {
+            qDebug() << "Failed to retrieve waiting room count:" << query.lastError().text();
+            QMessageBox::warning(nullptr, QStringLiteral("Error"), QStringLiteral("Failed to retrieve waiting room count: ") + query.lastError().text());
+            return;
+        }
+    } else {
+        qDebug() << "Database not connected";
+        QMessageBox::warning(nullptr, QStringLiteral("Error"), QStringLiteral("Database not connected."));
+        return;
+    }
+
+    // Create a new dialog
+    waitingRoomDialog = new WaitingRoomDialog(waitingCount, false, nullptr); // nullptr as parent
+
+    // Connect finished signal to handle cleanup
+    connect(waitingRoomDialog, &QDialog::finished, this, [this]() {
+        qDebug() << "Dialog finished signal received";
+        if (waitingRoomDialog) {
+            waitingRoomDialog->deleteLater();
+            waitingRoomDialog = nullptr;
+        }
+    });
+
+    // Show the dialog
+    waitingRoomDialog->show();
+}
+void TrainingManager::initializeArduino()
+{
+    if (arduino->connectArduino() == 0) {
+        qDebug() << "Arduino connected successfully";
+    } else {
+        qDebug() << "Failed to connect to Arduino";
+    }
 }
 
 void TrainingManager::refresh()
 {
     refreshTrainingTable();
+    updateWaitingRoomCount();
 }
+void TrainingManager::on_trainingDeleteButton_clicked()
+{
+    if (!m_dbConnected) {
+        QMessageBox::warning(nullptr, "Database Error", "Cannot delete training: Database is not connected.");
+        return;
+    }
+    QModelIndexList selectedIndexes = ui->trainingTableView->selectionModel()->selectedRows();
+    if (selectedIndexes.isEmpty()) {
+        QMessageBox::warning(nullptr, "Selection Error", "Please select a training to delete.");
+        return;
+    }
+    int row = selectedIndexes.first().row();
+    QString trainingName = trainingProxyModel->data(trainingProxyModel->index(row, 0)).toString();
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        nullptr,
+        "Confirm Deletion",
+        QString("Are you sure you want to delete the training '%1'?").arg(trainingName),
+        QMessageBox::Yes | QMessageBox::No
+        );
+    if (reply == QMessageBox::Yes) {
+        if (formations->supprimer(trainingName)) {
+            QMessageBox::information(nullptr, "Success", "Training deleted successfully!");
+            if (notificationManager) {
+                notificationManager->addNotification("Deleted Training", "Training Section", QString("Training: %1").arg(trainingName), row);
+            }
+            refreshTrainingTable();
+            trainingProxyModel->setFilterRegularExpression("");
+            trainingProxyModel->sort(-1);
+            ui->trainingTableView->viewport()->update();
+        } else {
+            QMessageBox::critical(nullptr, "Error", "Failed to delete training.");
+        }
+    }
+}
+void TrainingManager::updateWaitingRoomCount()
+{
+    if (!m_dbConnected) {
+        qDebug() << "Cannot update waiting room count: Database not connected";
+        return;
+    }
+    QSqlQuery query;
+    query.prepare("SELECT WR FROM AHMED.MEETING WHERE ID = 1");
+    if (query.exec() && query.next()) {
+        int count = query.value("WR").toInt();
+        qDebug() << "Emitting waitingRoomCountChanged with count:" << count;
+        emit waitingRoomCountChanged(count);
+    } else {
+        qDebug() << "Failed to retrieve waiting room count:" << query.lastError().text();
+    }
+}
+
+
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QSettings>
 
 void TrainingManager::on_trainingAddButton_clicked()
 {
@@ -121,6 +257,14 @@ void TrainingManager::on_trainingAddButton_clicked()
     int clientId = ui->trainingClientComboBox->currentData().toInt();
     int time = ui->trainingTimeSpinBox->value();
     double prix = ui->trainingPriceSpinBox->value();
+    QString phoneNumber = ui->trainingPhoneNumberInput->text().trimmed();
+
+    // Validate phone number
+    QRegularExpression phoneRegex("^\\+?[1-9]\\d{1,14}$");
+    if (!phoneRegex.match(phoneNumber).hasMatch()) {
+        QMessageBox::warning(nullptr, "Input Error", "Phone number must be in international format (e.g., +1234567890).");
+        return;
+    }
 
     // Collect selected resources and their quantities
     QList<QPair<int, int>> selectedResources; // (resourceId, quantity)
@@ -161,9 +305,60 @@ void TrainingManager::on_trainingAddButton_clicked()
             linkQuery.bindValue(":tid", newTrainingId);
             linkQuery.bindValue(":rid", resourceId);
             linkQuery.bindValue(":qty", quantity);
-            linkQuery.exec(); // Error handling can be added
+            linkQuery.exec();
         }
-        QMessageBox::information(nullptr, "Success", "Training added successfully!");
+
+        // Send SMS notification
+        QString timeDisplay = QString("%1 hours").arg(time);
+        QString message = QString("New Training Added: ID=%1, Name=%2, Desc=%3, Trainer=%4, Date=%5, Time=%6, Price=%7 DT")
+                              .arg(newTrainingId)
+                              .arg(name)
+                              .arg(description)
+                              .arg(trainerName)
+                              .arg(date.toString("yyyy-MM-dd"))
+                              .arg(timeDisplay)
+                              .arg(prix);
+
+        const int maxSmsLength = 160;
+        if (message.length() > maxSmsLength) {
+            message = message.left(maxSmsLength - 3) + "...";
+        }
+
+        QSettings settings("config.ini", QSettings::IniFormat);
+        QString apiKey = settings.value("Infobip/ApiKey", "08a7928d0d8d19a1ebbaa2f3c09a96a6-dab070dd-8d76-4da4-9148-1e6ac4c84434").toString();
+        QString baseUrl = "ype9p9.api.infobip.com";
+        QString sender = "447491163443";
+        QString apiUrl = QString("https://%1/sms/2/text/advanced").arg(baseUrl);
+
+        QJsonObject messageObj;
+        messageObj["text"] = message;
+        QJsonObject destinationObj;
+        destinationObj["to"] = phoneNumber;
+        QJsonArray destinationsArray;
+        destinationsArray.append(destinationObj);
+        messageObj["destinations"] = destinationsArray;
+        messageObj["from"] = sender;
+
+        QJsonArray messagesArray;
+        messagesArray.append(messageObj);
+        QJsonObject requestBody;
+        requestBody["messages"] = messagesArray;
+
+        QJsonDocument jsonDoc(requestBody);
+        QByteArray jsonData = jsonDoc.toJson();
+
+        QNetworkRequest request{QUrl(apiUrl)};
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        request.setRawHeader("Authorization", QString("App %1").arg(apiKey).toUtf8());
+
+        qDebug() << "SMS Request JSON:" << jsonData;
+        QNetworkReply *reply = networkManager->post(request, jsonData);
+        connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+            onSmsRequestFinished(reply);
+        });
+
+        // Update UI and notifications
+        QMessageBox::information(nullptr, "Success", "Training added successfully! SMS notification queued.");
         refreshTrainingTable();
         trainingProxyModel->setFilterRegularExpression("");
         trainingProxyModel->sort(-1);
@@ -178,39 +373,44 @@ void TrainingManager::on_trainingAddButton_clicked()
     }
 }
 
-void TrainingManager::on_trainingDeleteButton_clicked()
+void TrainingManager::onSmsRequestFinished(QNetworkReply *reply)
 {
-    if (!m_dbConnected) {
-        QMessageBox::warning(nullptr, "Database Error", "Cannot delete training: Database is not connected.");
+    if (reply->error() != QNetworkReply::NoError) {
+        qDebug() << "SMS Network Error:" << reply->errorString();
+        QMessageBox::critical(nullptr, "SMS Error", "Failed to send SMS: " + reply->errorString());
+        reply->deleteLater();
         return;
     }
-    QModelIndexList selectedIndexes = ui->trainingTableView->selectionModel()->selectedRows();
-    if (selectedIndexes.isEmpty()) {
-        QMessageBox::warning(nullptr, "Selection Error", "Please select a training to delete.");
-        return;
-    }
-    int row = selectedIndexes.first().row();
-    QString trainingName = trainingProxyModel->data(trainingProxyModel->index(row, 0)).toString();
-    QMessageBox::StandardButton reply = QMessageBox::question(
-        nullptr,
-        "Confirm Deletion",
-        QString("Are you sure you want to delete the training '%1'?").arg(trainingName),
-        QMessageBox::Yes | QMessageBox::No
-        );
-    if (reply == QMessageBox::Yes) {
-        if (formations->supprimer(trainingName)) {
-            QMessageBox::information(nullptr, "Success", "Training deleted successfully!");
-            if (notificationManager) {
-                notificationManager->addNotification("Deleted Training", "Training Section", QString("Training: %1").arg(trainingName), row);
+
+    QByteArray responseData = reply->readAll();
+    qDebug() << "SMS Response:" << responseData;
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+    QJsonObject responseObj = doc.object();
+
+    if (responseObj.contains("messages")) {
+        QJsonArray messages = responseObj["messages"].toArray();
+        if (!messages.isEmpty()) {
+            QJsonObject message = messages[0].toObject();
+            QJsonObject status = message["status"].toObject();
+            QString statusName = status["name"].toString();
+            QString statusDesc = status["description"].toString();
+
+            if (statusName == "PENDING" || statusName == "DELIVERED") {
+                qDebug() << "SMS sent successfully! Status:" << statusName;
+            } else {
+                qDebug() << "SMS Status:" << statusName << "Description:" << statusDesc;
+                QMessageBox::warning(nullptr, "SMS Warning", "SMS status: " + statusName + " (" + statusDesc + ")");
             }
-            refreshTrainingTable();
-            trainingProxyModel->setFilterRegularExpression(""); // Reset filter
-            trainingProxyModel->sort(-1); // Reset sorting
-            ui->trainingTableView->viewport()->update(); // Force repaint
         } else {
-            QMessageBox::critical(nullptr, "Error", "Failed to delete training.");
+            qDebug() << "Empty messages array in response";
+            QMessageBox::critical(nullptr, "SMS Error", "Invalid SMS response: No message data.");
         }
+    } else {
+        qDebug() << "Invalid SMS response structure:" << responseData;
+        QMessageBox::critical(nullptr, "SMS Error", "Failed to send SMS: Invalid response from server.");
     }
+
+    reply->deleteLater();
 }
 
 void TrainingManager::on_trainingUpdateButton_clicked()
@@ -234,7 +434,6 @@ void TrainingManager::on_trainingUpdateButton_clicked()
 
     UpdateTrainingDialog dialog(nullptr);
     dialog.setTrainingData(name, description, trainer, date, time, prix);
-    // Find the training ID (assume FORMATION is unique, otherwise adjust logic)
     QSqlQuery idQuery;
     idQuery.prepare("SELECT IDFORM FROM AHMED.FORMATIONS WHERE FORMATION = :formation");
     idQuery.bindValue(":formation", name);
@@ -244,7 +443,7 @@ void TrainingManager::on_trainingUpdateButton_clicked()
     }
     if (trainingId != -1) {
         dialog.setResourceData(trainingId);
-        dialog.setTrainingId(trainingId); // Ajout pour garantir la bonne initialisation
+        dialog.setTrainingId(trainingId);
     }
     if (dialog.exec() == QDialog::Accepted) {
         QString newName = dialog.getName();
@@ -253,7 +452,6 @@ void TrainingManager::on_trainingUpdateButton_clicked()
         QDate newDate = dialog.getDate();
         int newTime = dialog.getTime();
         double newPrix = dialog.getPrix();
-        // --- Update resources in DB ---
         if (trainingId != -1) {
             QSqlQuery delQuery;
             delQuery.prepare("DELETE FROM AHMED.TRAINING_RESOURCES WHERE TRAINING_ID = :tid");
@@ -276,9 +474,9 @@ void TrainingManager::on_trainingUpdateButton_clicked()
                 notificationManager->addNotification("Updated Training", "Training Section", QString("Training: %1 updated to %2").arg(name, newName), row);
             }
             refreshTrainingTable();
-            trainingProxyModel->setFilterRegularExpression(""); // Reset filter
-            trainingProxyModel->sort(-1); // Reset sorting
-            ui->trainingTableView->viewport()->update(); // Force repaint
+            trainingProxyModel->setFilterRegularExpression("");
+            trainingProxyModel->sort(-1);
+            ui->trainingTableView->viewport()->update();
         } else {
             QMessageBox::critical(nullptr, "Error", "Failed to update training.");
         }
@@ -295,7 +493,6 @@ bool TrainingManager::validateTrainingInputs()
     int time = ui->trainingTimeSpinBox->value();
     QString prixStr = ui->trainingPhoneNumberInput->text().trimmed();
 
-    // Validate at least one resource is selected
     bool resourceSelected = false;
     QLayout* resourceLayout = ui->trainingResourceVBoxLayout;
     for (int i = 0; i < resourceLayout->count(); ++i) {
@@ -348,7 +545,6 @@ void TrainingManager::clearTrainingInputs()
     ui->trainingClientComboBox->setCurrentIndex(-1);
     ui->trainingTimeSpinBox->setValue(0);
     ui->trainingPhoneNumberInput->clear();
-    // Uncheck all resource checkboxes and reset spinboxes
     QLayout* resourceLayout = ui->trainingResourceVBoxLayout;
     for (int i = 0; i < resourceLayout->count(); ++i) {
         QWidget* rowWidget = resourceLayout->itemAt(i)->widget();
@@ -436,11 +632,11 @@ void TrainingManager::on_trainingResetSearchButton_clicked()
         return;
     }
     ui->trainingSearchInput->clear();
-    ui->trainingSearchCriteriaComboBox->setCurrentIndex(0); // Reset to first item
+    ui->trainingSearchCriteriaComboBox->setCurrentIndex(0);
     trainingProxyModel->setFilterRegularExpression("");
-    trainingProxyModel->sort(-1); // Reset sorting
+    trainingProxyModel->sort(-1);
     refreshTrainingTable();
-    ui->trainingTableView->viewport()->update(); // Force repaint
+    ui->trainingTableView->viewport()->update();
 }
 
 void TrainingManager::on_trainingTableViewHeader_clicked(int logicalIndex)
@@ -474,33 +670,33 @@ void TrainingManager::exportTrainingsToPdf()
     }
     QPdfWriter pdfWriter(fileName);
     pdfWriter.setPageSize(QPageSize(QPageSize::A4));
-    pdfWriter.setPageMargins(QMarginsF(50, 50, 50, 50)); // Increased margins
+    pdfWriter.setPageMargins(QMarginsF(50, 50, 50, 50));
     QPainter painter(&pdfWriter);
-    QFont regularFont("Arial", 16); // Larger font
-    QFont headerFont("Arial", 20, QFont::Bold); // Larger header font
-    QFont titleFont("Arial", 32, QFont::Bold); // Larger title font
+    QFont regularFont("Arial", 16);
+    QFont headerFont("Arial", 20, QFont::Bold);
+    QFont titleFont("Arial", 32, QFont::Bold);
     int pageWidth = pdfWriter.width();
-    int tableWidth = pageWidth - 100; // Adjusted for larger margins
-    int rowHeight = 80; // Increased row height
-    int cellPadding = 24; // Increased padding
+    int tableWidth = pageWidth - 100;
+    int rowHeight = 80;
+    int cellPadding = 24;
     painter.setFont(titleFont);
-    painter.drawText(50, 100, "Training List"); // Adjusted Y position
+    painter.drawText(50, 100, "Training List");
     painter.setFont(headerFont);
-    painter.drawText(50, 160, QString("Generated on %1").arg(QDate::currentDate().toString("yyyy-MM-dd"))); // Adjusted Y position
+    painter.drawText(50, 160, QString("Generated on %1").arg(QDate::currentDate().toString("yyyy-MM-dd")));
     QStringList headers = {"Name", "Description", "Trainer", "Date", "Duration", "Price"};
     QVector<qreal> columnWidths = {0.2, 0.2, 0.15, 0.15, 0.15, 0.15};
-    int y = 220; // Adjusted starting Y position
+    int y = 220;
     painter.setFont(headerFont);
-    int x = 50; // Adjusted X position
+    int x = 50;
     QRect headerRect(50, y, tableWidth, rowHeight);
     painter.fillRect(headerRect, QColor(230, 230, 230));
-    painter.setPen(QPen(Qt::black, 2)); // Slightly thicker border
+    painter.setPen(QPen(Qt::black, 2));
     painter.drawRect(headerRect);
     for (int i = 0; i < headers.size(); ++i) {
         int colWidth = tableWidth * columnWidths[i];
         QRect cellRect(x, y, colWidth, rowHeight);
         painter.drawRect(cellRect);
-        painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]); // Left-aligned headers
+        painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]);
         x += colWidth;
     }
     y += rowHeight;
@@ -537,13 +733,13 @@ void TrainingManager::exportTrainingsToPdf()
             if (col == 5) {
                 text = QString("$%1").arg(text);
             }
-            painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, text); // Increased padding
+            painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, text);
             x += colWidth;
         }
         y += rowHeight;
-        if (y > pdfWriter.height() - 120) { // Adjusted for larger margins
+        if (y > pdfWriter.height() - 120) {
             pdfWriter.newPage();
-            y = 100; // Reset Y position
+            y = 100;
             painter.setFont(headerFont);
             x = 50;
             QRect headerRect(50, y, tableWidth, rowHeight);
@@ -553,7 +749,7 @@ void TrainingManager::exportTrainingsToPdf()
                 int colWidth = tableWidth * columnWidths[i];
                 QRect cellRect(x, y, colWidth, rowHeight);
                 painter.drawRect(cellRect);
-                painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]); // Left-aligned headers
+                painter.drawText(cellRect.adjusted(cellPadding, 0, -cellPadding, 0), Qt::AlignVCenter | Qt::AlignLeft, headers[i]);
                 x += colWidth;
             }
             y += rowHeight;

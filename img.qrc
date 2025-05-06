@@ -3,5 +3,7 @@
         <file>file.ico</file>
         <file>delete.ico</file>
         <file>background.jpg</file>
+        <file>chair_green.png</file>
+        <file>chair_red.png</file>
     </qresource>
 </RCC>

@@ -13,6 +13,7 @@ debug/employee.o
 debug/employeemanager.o
 debug/resource.o
 debug/resourcemanager.o
+debug/waitingroomdialog.o
 debug/chartwindow.o
 debug/mainwindow.o
 debug/updateclientdialog.o
@@ -24,6 +25,7 @@ debug/qrcodegen.o
 debug/sign.o
 debug/searchdialog.o
 debug/arduino.o
+debug/arduinoy.o
 debug/qrc_img.o
 debug/moc_emailsender.o
 debug/moc_notificationmanager.o
@@ -32,6 +34,7 @@ debug/moc_trainingmanager.o
 debug/moc_meetingmanager.o
 debug/moc_employeemanager.o
 debug/moc_resourcemanager.o
+debug/moc_waitingroomdialog.o
 debug/moc_chartwindow.o
 debug/moc_mainwindow.o
 debug/moc_updateclientdialog.o
@@ -42,3 +45,4 @@ debug/moc_updateresourcesdialog.o
 debug/moc_sign.o
 debug/moc_searchdialog.o
 debug/moc_arduino.o
+debug/moc_arduinoy.o
