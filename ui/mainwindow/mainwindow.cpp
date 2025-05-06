@@ -336,9 +336,14 @@ void MainWindow::validateSalary(const QString &text)
 
 bool MainWindow::validateEmployeeInput()
 {
-    // CIN validation: Should be 8 digits and unique
-    QString cin = ui->lineEdit_CIN->text();
-    // Check uniqueness of CIN
+    // CIN validation: Should be exactly 8 digits and unique
+    QString cin = ui->lineEdit_CIN->text().simplified().trimmed();
+    qDebug() << "Validating CIN:" << cin << "Length:" << cin.length();
+    QRegularExpression cinRegex("^\\d{8}$");
+    if (!cinRegex.match(cin).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "CIN must be exactly 8 digits (numbers only).");
+        return false;
+    }
     QSqlQuery cinQuery;
     cinQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE CIN = :cin");
     cinQuery.bindValue(":cin", cin);
@@ -346,28 +351,35 @@ bool MainWindow::validateEmployeeInput()
         QMessageBox::warning(this, "Input Error", "CIN already exists. Please enter a unique CIN.");
         return false;
     }
-    // Name validation: Should not be empty and contain only letters
-    QString lastName = ui->lineEdit_Nom->text();
-    QString firstName = ui->lineEdit_Prenom->text();
-    QRegularExpression nameRegex("^[A-Za-z\\s-]+$");
+
+    // Name validation: Should not be empty and contain only letters, spaces, hyphens, or apostrophes
+    QString lastName = ui->lineEdit_Nom->text().simplified().trimmed();
+    QString firstName = ui->lineEdit_Prenom->text().simplified().trimmed();
+    QRegularExpression nameRegex("^[\\p{L}\\s'-]+$");
+    qDebug() << "Validating Last Name:" << lastName;
     if (lastName.isEmpty() || !nameRegex.match(lastName).hasMatch()) {
-        QMessageBox::warning(this, "Input Error", "Last name should contain only letters and spaces.");
+        QMessageBox::warning(this, "Input Error", "Last name should contain only letters, spaces, hyphens, or apostrophes.");
         return false;
     }
+    qDebug() << "Validating First Name:" << firstName;
     if (firstName.isEmpty() || !nameRegex.match(firstName).hasMatch()) {
-        QMessageBox::warning(this, "Input Error", "First name should contain only letters and spaces.");
+        QMessageBox::warning(this, "Input Error", "First name should contain only letters, spaces, hyphens, or apostrophes.");
         return false;
     }
+
     // Phone validation: Should be a valid phone number
-    QString phone = ui->lineEdit_phone->text();
+    QString phone = ui->lineEdit_phone->text().simplified().trimmed();
     QRegularExpression phoneRegex("^\\d{8}$");
+    qDebug() << "Validating Phone:" << phone;
     if (!phoneRegex.match(phone).hasMatch()) {
         QMessageBox::warning(this, "Input Error", "Phone number must be 8 digits.");
         return false;
     }
+
     // Email validation and uniqueness
-    QString email = ui->lineEdit_email->text();
+    QString email = ui->lineEdit_email->text().simplified().trimmed();
     QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    qDebug() << "Validating Email:" << email;
     if (!emailRegex.match(email).hasMatch()) {
         QMessageBox::warning(this, "Input Error", "Please enter a valid email address.");
         return false;
@@ -379,28 +391,34 @@ bool MainWindow::validateEmployeeInput()
         QMessageBox::warning(this, "Input Error", "Email already exists. Please enter a unique email.");
         return false;
     }
+
     // Salary validation: Minimum 1000
-    QString salaryText = ui->lineEdit_salaire->text();
+    QString salaryText = ui->lineEdit_salaire->text().simplified().trimmed();
+    qDebug() << "Validating Salary:" << salaryText;
     bool ok;
     int salary = salaryText.toInt(&ok);
     if (!ok || salary < 1000) {
         QMessageBox::warning(this, "Input Error", "Salary must be at least 1000.");
         return false;
     }
+
     // Date validations
     QDate birthDate = ui->dateEdit_birth->date();
     QDate currentDate = QDate::currentDate();
+    qDebug() << "Validating Birth Date:" << birthDate.toString();
     if (birthDate > currentDate.addYears(-18)) {
         QMessageBox::warning(this, "Input Error", "Employee must be at least 18 years old.");
         return false;
     }
-    // Date d'embauche déjà fixée à aujourd'hui et non modifiable
-    // Image path validation (optionnel)
-    QString imagePath = ui->imagePathLineEdit->text();
+
+    // Image path validation (optional)
+    QString imagePath = ui->imagePathLineEdit->text().simplified().trimmed();
+    qDebug() << "Validating Image Path:" << imagePath;
     if (!imagePath.isEmpty() && !QFile::exists(imagePath)) {
         QMessageBox::warning(this, "Input Error", "Image file does not exist at the specified path.");
         return false;
     }
+
     return true;
 }
 
