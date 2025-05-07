@@ -31,6 +31,8 @@
 #include <QSqlRecord>
 #include <QInputDialog>
 #include <QPrinter>
+#include "waitingroomdialog.h"
+#include "trainingmanager.h"
 // Inline delegate for image thumbnail in the employee table
 class InlineImageDelegate : public QStyledItemDelegate {
 public:
@@ -3456,7 +3458,7 @@ void MainWindow::on_clearHistoryButton_clicked()
     }
 }
 
-void MainWindow::on_btnLookForResource_clicked()
+/*void MainWindow::on_btnLookForResource_clicked()
 {
     // Open the SearchDialog and refresh the resource table if a resource was updated
     SearchDialog searchDialog(this);
@@ -3465,7 +3467,7 @@ void MainWindow::on_btnLookForResource_clicked()
         updateResourceChart();
     });
     searchDialog.exec();
-}
+}*/
 
 void MainWindow::setLoggedInRole(const QString &role)
 {

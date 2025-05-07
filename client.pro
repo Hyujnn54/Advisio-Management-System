@@ -1,7 +1,7 @@
 # client.pro
 QT += core gui sql printsupport network charts serialport widgets
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
+QT += core serialport
 TARGET = TrainingManagement
 TEMPLATE = app
 QT += core gui widgets sql

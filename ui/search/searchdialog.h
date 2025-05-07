@@ -1,4 +1,4 @@
-#ifndef SEARCHDIALOG_H
+/*#ifndef SEARCHDIALOG_H
 #define SEARCHDIALOG_H
 
 #include <QDialog>
@@ -33,3 +33,4 @@ private:
 };
 
 #endif // SEARCHDIALOG_H
+*/

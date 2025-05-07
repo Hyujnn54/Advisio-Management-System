@@ -94,7 +94,7 @@ private slots:
     void on_resetResourceSearchButton_clicked(); // Corrected from resetSearchButton_2
     void on_downloadHistoryButton_clicked();
     void on_clearHistoryButton_clicked();
-    void on_btnLookForResource_clicked();
+    //void on_btnLookForResource_clicked();
     void on_searchTimeout();
     void on_resourceSearchColumnChanged(int index);
     void on_resourceTableSelectionChanged();

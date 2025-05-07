@@ -54,6 +54,7 @@ void TrainingManager::setNotificationManager(NotificationManager *manager)
 
 void TrainingManager::initialize(Ui::MainWindow *ui)
 {
+    Q_ASSERT(ui);
     this->ui = ui;
     trainingProxyModel->setSourceModel(trainingTableModel);
     ui->trainingTableView->setModel(trainingProxyModel);
@@ -117,23 +118,28 @@ void TrainingManager::initialize(Ui::MainWindow *ui)
 }
 void TrainingManager::on_viewWaitingRoomButton_clicked()
 {
-    // If dialog already exists, just show it
+
+    qDebug() << "Entering on_viewWaitingRoomButton_clicked";
+    if (!ui) {
+        qDebug() << "Error: ui is null";
+        return;
+    }
+
     if (waitingRoomDialog && waitingRoomDialog->isVisible()) {
         waitingRoomDialog->activateWindow();
         waitingRoomDialog->raise();
         return;
     }
 
-    // Clean up any existing dialog
     if (waitingRoomDialog) {
-        waitingRoomDialog->deleteLater(); // Safer deletion
+        waitingRoomDialog->deleteLater();
         waitingRoomDialog = nullptr;
     }
 
     int waitingCount = 0;
     QSqlDatabase db = QSqlDatabase::database();
     if (db.isOpen()) {
-        QSqlQuery query;
+        QSqlQuery query(db);
         query.prepare("SELECT WR FROM AHMED.MEETING WHERE ID = 1");
         if (query.exec() && query.next()) {
             bool ok;
@@ -154,10 +160,7 @@ void TrainingManager::on_viewWaitingRoomButton_clicked()
         return;
     }
 
-    // Create a new dialog
-    waitingRoomDialog = new WaitingRoomDialog(waitingCount, false, nullptr); // nullptr as parent
-
-    // Connect finished signal to handle cleanup
+    waitingRoomDialog = new WaitingRoomDialog(waitingCount, false, nullptr);
     connect(waitingRoomDialog, &QDialog::finished, this, [this]() {
         qDebug() << "Dialog finished signal received";
         if (waitingRoomDialog) {
@@ -166,15 +169,17 @@ void TrainingManager::on_viewWaitingRoomButton_clicked()
         }
     });
 
-    // Show the dialog
     waitingRoomDialog->show();
+    emit waitingRoomCountChanged(waitingCount);
 }
 void TrainingManager::initializeArduino()
 {
-    if (arduino->connectArduino() == 0) {
-        qDebug() << "Arduino connected successfully";
-    } else {
+    qDebug() << "Initializing Arduino";
+    arduino = new Arduinoy(this);
+    if (arduino->connectArduino() != 0) {
         qDebug() << "Failed to connect to Arduino";
+    } else {
+        qDebug() << "Arduino connected successfully";
     }
 }
 

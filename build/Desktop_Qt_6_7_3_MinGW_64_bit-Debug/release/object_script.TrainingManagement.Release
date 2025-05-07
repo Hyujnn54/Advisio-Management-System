@@ -43,6 +43,5 @@ release/moc_updatemeeting.o
 release/moc_updateemployeedialog.o
 release/moc_updateresourcesdialog.o
 release/moc_sign.o
-release/moc_searchdialog.o
 release/moc_arduino.o
 release/moc_arduinoy.o

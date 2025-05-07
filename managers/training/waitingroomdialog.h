@@ -6,24 +6,23 @@
 #include <QGridLayout>
 #include <QTimer>
 #include <QPointer>
-#include <QSqlQuery> // Added for database
+#include <QSqlQuery>
 
 class TrainingManager;
-
-class Arduino; // Forward declaration
 
 class WaitingRoomDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit WaitingRoomDialog(int waitingCount, bool isDarkTheme, QWidget *parent = nullptr);
+    explicit WaitingRoomDialog(int waitingCount, bool isDarkTheme, TrainingManager *manager, QWidget *parent = nullptr);
     ~WaitingRoomDialog();
     void updateChairs(int waitingCount);
 
 public slots:
     void onWaitingRoomCountChanged(int count);
-    void onWrrButtonClicked(); // New slot for wrr button
+    void onWrrButtonClicked();
+    void onArduinoDataReceived(); // Slot to handle IR sensor data
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -31,17 +30,18 @@ protected:
 private:
     void setupUI(int waitingCount);
     void applyStylesheet();
-    bool updateMeetingWR(int count); // New method to update database
-    void updateLedState(int count); // New method to control LED
+    bool updateMeetingWR(int count);
+    void updateLedState(int count);
 
     QGridLayout *chairLayout;
     QList<QLabel*> chairLabels;
     bool isDarkTheme;
     QLabel *clockLabel;
-    QLabel *countLabel; // Added count label
     QTimer *clockTimer;
-    bool isClosing;
+    QLabel *countLabel;
     QPointer<WaitingRoomDialog> self;
+    TrainingManager *trainingManager;
+    bool isClosing;
     static const int MAX_CHAIRS = 5;
 };
 

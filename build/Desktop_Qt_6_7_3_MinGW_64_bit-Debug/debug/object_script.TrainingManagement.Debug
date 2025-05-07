@@ -43,6 +43,5 @@ debug/moc_updatemeeting.o
 debug/moc_updateemployeedialog.o
 debug/moc_updateresourcesdialog.o
 debug/moc_sign.o
-debug/moc_searchdialog.o
 debug/moc_arduino.o
 debug/moc_arduinoy.o

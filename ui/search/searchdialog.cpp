@@ -1,4 +1,4 @@
-#include "searchdialog.h"
+/*#include "searchdialog.h"
 #include "ui_searchdialog.h"
 #include <QMessageBox>
 #include <QSerialPortInfo>
@@ -152,4 +152,4 @@ void SearchDialog::sendToArduino(bool resourceExists)
         ui->lblStatus->setText("Simulated command: " + QString(resourceExists ? "Play 'Resource exists'" : "Play 'Resource does not exist'"));
         QMessageBox::information(this, "Simulation", "Please send command '" + command + "' to Arduino Serial Monitor.");
     }
-}
+}*/

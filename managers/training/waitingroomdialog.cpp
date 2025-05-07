@@ -10,18 +10,32 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 
-WaitingRoomDialog::WaitingRoomDialog(int waitingCount, bool isDarkTheme, QWidget *parent)
-    : QDialog(parent), chairLayout(nullptr), chairLabels(), isDarkTheme(isDarkTheme),
-    clockLabel(nullptr), clockTimer(new QTimer(this)), isClosing(false), self(this), countLabel(nullptr)
+// Define static member after includes
+const int WaitingRoomDialog::MAX_CHAIRS;
+
+WaitingRoomDialog::WaitingRoomDialog(int waitingCount, bool isDarkTheme, TrainingManager *manager, QWidget *parent)
+    : QDialog(parent),
+    chairLayout(nullptr),
+    chairLabels(),
+    isDarkTheme(isDarkTheme),
+    clockLabel(nullptr),
+    clockTimer(new QTimer(this)),
+    countLabel(nullptr),
+    self(this),
+    trainingManager(manager),
+    isClosing(false)
 {
-    qDebug() << "Constructing WaitingRoomDialog";
+    qDebug() << "Entering WaitingRoomDialog constructor";
+    if (!manager) {
+        qDebug() << "Warning: TrainingManager is null";
+    }
+
     setWindowTitle("Waiting Room Overview");
     setModal(false);
     setMinimumSize(400, 300);
 
     setupUI(waitingCount);
     applyStylesheet();
-
     updateLedState(waitingCount);
 
     connect(clockTimer, &QTimer::timeout, this, [=]() {
@@ -30,20 +44,26 @@ WaitingRoomDialog::WaitingRoomDialog(int waitingCount, bool isDarkTheme, QWidget
             return;
         }
         if (clockLabel) {
-            qDebug() << "Clock timer ticked, updating clock";
             clockLabel->setText(QTime::currentTime().toString("hh:mm:ss"));
         }
     });
     clockTimer->start(1000);
 
-    TrainingManager *trainingManager = qobject_cast<TrainingManager*>(parent);
     if (trainingManager) {
-        qDebug() << "Connecting to waitingRoomCountChanged signal";
         connect(trainingManager, &TrainingManager::waitingRoomCountChanged,
                 this, &WaitingRoomDialog::onWaitingRoomCountChanged, Qt::UniqueConnection);
-    } else {
-        qDebug() << "Failed to cast parent to TrainingManager";
+
+        // Connect to Arduino serial data for IR sensor detection
+        Arduinoy *arduino = trainingManager->getArduino();
+        if (arduino && arduino->getSerial()) {
+            connect(arduino->getSerial(), &QSerialPort::readyRead, this, &WaitingRoomDialog::onArduinoDataReceived);
+            qDebug() << "Connected to Arduino readyRead signal";
+        } else {
+            qDebug() << "Cannot connect to Arduino readyRead signal: Arduino or serial port is null";
+        }
     }
+
+    qDebug() << "Exiting WaitingRoomDialog constructor";
 }
 
 WaitingRoomDialog::~WaitingRoomDialog()
@@ -130,7 +150,7 @@ void WaitingRoomDialog::applyStylesheet()
                 padding: 10px;
                 margin-bottom: 10px;
                 text-align: center;
-               AED border-bottom: 2px solid rgba(231, 76, 60, 0.3);
+                border-bottom: 2px solid rgba(231, 76, 60, 0.3);
             }
             QLabel#clockLabel {
                 font-size: 16pt;
@@ -265,7 +285,7 @@ void WaitingRoomDialog::applyStylesheet()
             QLabel#chairLabel {
                 border: 2px solid #3498DB;
                 border-radius: 15px;
-                background-color: rgba(236 erbij, 240, 241, 0.5);
+                background-color: rgba(236, 240, 241, 0.5);
                 padding: 5px;
                 margin: 8px;
             }
@@ -346,17 +366,6 @@ void WaitingRoomDialog::closeEvent(QCloseEvent *event)
 
     clockTimer->stop();
     clockTimer->blockSignals(true);
-    clockTimer->disconnect();
-
-    blockSignals(true);
-    disconnect();
-
-    TrainingManager *trainingManager = qobject_cast<TrainingManager*>(parent());
-    if (trainingManager) {
-        qDebug() << "Disconnecting waitingRoomCountChanged signal";
-        disconnect(trainingManager, &TrainingManager::waitingRoomCountChanged,
-                   this, &WaitingRoomDialog::onWaitingRoomCountChanged);
-    }
 
     QDialog::closeEvent(event);
     qDebug() << "Close event completed";
@@ -364,18 +373,29 @@ void WaitingRoomDialog::closeEvent(QCloseEvent *event)
 
 void WaitingRoomDialog::updateChairs(int waitingCount)
 {
-    qDebug() << "Updating chairs with count:" << waitingCount;
+    qDebug() << "Entering updateChairs with count:" << waitingCount;
     if (isClosing || !self) {
         qDebug() << "Ignoring chair update due to closing or deleted object";
         return;
     }
 
-    if (countLabel) {
-        countLabel->setText(QString("Current Count: %1").arg(waitingCount));
+    if (!countLabel) {
+        qDebug() << "Error: countLabel is null";
+        return;
     }
+    countLabel->setText(QString("Current Count: %1").arg(waitingCount));
+    countLabel->update();
 
     for (int i = 0; i < MAX_CHAIRS; ++i) {
+        if (i >= chairLabels.size()) {
+            qDebug() << "Error: chairLabels index out of range:" << i;
+            return;
+        }
         QLabel *chair = chairLabels[i];
+        if (!chair) {
+            qDebug() << "Error: chair label is null at index:" << i;
+            return;
+        }
         bool isOccupied = i < waitingCount;
         QPixmap pixmap(isOccupied ? ":/imgs/chair_red.png" : ":/imgs/chair_green.png");
         if (pixmap.isNull()) {
@@ -391,7 +411,11 @@ void WaitingRoomDialog::updateChairs(int waitingCount)
             chair->setText("");
         }
         chair->setToolTip(QString("Chair %1: %2").arg(i + 1).arg(isOccupied ? "Occupied" : "Empty"));
+        chair->update();
     }
+
+    update();
+    qDebug() << "Exiting updateChairs";
 }
 
 void WaitingRoomDialog::onWaitingRoomCountChanged(int count)
@@ -407,13 +431,21 @@ void WaitingRoomDialog::onWaitingRoomCountChanged(int count)
     }
     updateChairs(count);
     updateLedState(count);
+    qDebug() << "Completed waitingRoomCountChanged handling";
 }
 
 void WaitingRoomDialog::onWrrButtonClicked()
 {
     qDebug() << "wrr button clicked in WaitingRoomDialog";
 
-    QSqlQuery query;
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) {
+        qDebug() << "Database not connected";
+        QMessageBox::critical(this, "Error", "Database not connected.");
+        return;
+    }
+
+    QSqlQuery query(db);
     query.prepare("SELECT WR FROM AHMED.MEETING WHERE ID = 1");
     if (!query.exec() || !query.next()) {
         qDebug() << "Failed to retrieve WR count for ID 1:" << query.lastError().text();
@@ -422,7 +454,7 @@ void WaitingRoomDialog::onWrrButtonClicked()
     }
 
     int currentCount = query.value("WR").toInt();
-    qDebug() << "Current waiting room count:" << currentCount;
+    qDebug() << "Current waiting room count for ID 1:" << currentCount;
 
     if (currentCount <= 0) {
         QMessageBox::information(this, "Waiting Room", "The waiting room is already empty!");
@@ -432,57 +464,140 @@ void WaitingRoomDialog::onWrrButtonClicked()
     int newCount = currentCount - 1;
 
     blockSignals(true);
-
     if (updateMeetingWR(newCount)) {
         updateChairs(newCount);
         updateLedState(newCount);
 
-        TrainingManager *trainingManager = qobject_cast<TrainingManager*>(parent());
         if (trainingManager) {
-            trainingManager->updateWaitingRoomCount();
-            qDebug() << "Called updateWaitingRoomCount directly";
+            emit trainingManager->waitingRoomCountChanged(newCount);
+            qDebug() << "Emitted waitingRoomCountChanged with count:" << newCount;
+        } else {
+            qDebug() << "TrainingManager is null, cannot emit signal";
         }
-        qDebug() << "Waiting room count updated to:" << newCount;
     } else {
-        qDebug() << "Failed to update waiting room count in database";
+        qDebug() << "Failed to update waiting room count in database for ID 1";
         QMessageBox::critical(this, "Error", "Failed to update waiting room count in database.");
     }
-
     blockSignals(false);
 }
 
 bool WaitingRoomDialog::updateMeetingWR(int count)
 {
-    QSqlQuery query;
-    query.prepare("UPDATE AHMED.MEETING SET WR = :count WHERE ID = 1");
-    query.bindValue(":count", count);
-    if (!query.exec()) {
-        qDebug() << "Database update error:" << query.lastError().text();
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) {
+        qDebug() << "Database not open";
         return false;
     }
+
+    if (!db.transaction()) {
+        qDebug() << "Failed to start transaction";
+        return false;
+    }
+
+    QSqlQuery query(db);
+    query.prepare("UPDATE AHMED.MEETING SET WR = :count WHERE ID = 1");
+    query.bindValue(":count", qMin(count, MAX_CHAIRS)); // Ensure count doesn't exceed 5
+
+    if (!query.exec()) {
+        qDebug() << "Database update error for ID 1:" << query.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    if (query.numRowsAffected() == 0) {
+        qDebug() << "No rows updated for ID 1";
+        db.rollback();
+        return false;
+    }
+
+    if (!db.commit()) {
+        qDebug() << "Failed to commit transaction for ID 1";
+        db.rollback();
+        return false;
+    }
+
+    qDebug() << "Updated WR to" << qMin(count, MAX_CHAIRS) << "for ID 1";
     return true;
 }
 
 void WaitingRoomDialog::updateLedState(int count)
 {
-    TrainingManager *trainingManager = qobject_cast<TrainingManager*>(parent());
-    if (trainingManager && trainingManager->getArduino() && trainingManager->getArduino()->getSerial()->isOpen()) {
-        if (count < 5) {
-            QString ledCommand = "GREENLED:ON\n";
-            if (trainingManager->getArduino()->writeToArduino(ledCommand.toUtf8())) {
-                qDebug() << "Sent command to turn ON green LED from dialog (WR=" << count << ")";
+    if (!trainingManager) {
+        qDebug() << "Skipping updateLedState: trainingManager is null";
+        return;
+    }
+    if (!trainingManager->getArduino()) {
+        qDebug() << "Skipping updateLedState: Arduino is null";
+        return;
+    }
+    Arduinoy *arduino = trainingManager->getArduino();
+    if (!arduino->getSerial()) {
+        qDebug() << "Skipping updateLedState: Serial port is null";
+        return;
+    }
+    if (!arduino->getSerial()->isOpen()) {
+        qDebug() << "Arduino serial port not open, attempting to reconnect";
+        if (arduino->connectArduino() != 0) {
+            qDebug() << "Failed to reconnect to Arduino";
+            return;
+        }
+    }
+    QString ledCommand = (count < 5) ? "GREENLED:ON\n" : "GREENLED:OFF\n";
+    if (arduino->writeToArduino(ledCommand.toUtf8())) {
+        qDebug() << "Sent command to Arduino:" << ledCommand.trimmed();
+    } else {
+        qDebug() << "Failed to send command to Arduino:" << ledCommand.trimmed();
+    }
+}
+
+void WaitingRoomDialog::onArduinoDataReceived()
+{
+    if (!trainingManager) {
+        qDebug() << "Skipping onArduinoDataReceived: trainingManager is null";
+        return;
+    }
+    Arduinoy *arduino = trainingManager->getArduino();
+    if (!arduino || !arduino->getSerial()) {
+        qDebug() << "Skipping onArduinoDataReceived: Arduino or serial port is null";
+        return;
+    }
+
+    QByteArray data = arduino->readFromArduino();
+    if (data.isEmpty()) {
+        qDebug() << "No data received from Arduino";
+        return;
+    }
+
+    QString received = QString::fromUtf8(data).trimmed();
+    qDebug() << "Received from Arduino:" << received;
+
+    // Parse Arduino message for IR sensor detection
+    if (received.startsWith("Person detected. Total: ")) {
+        QStringList parts = received.split("Total: ");
+        if (parts.size() > 1) {
+            QString countStr = parts[1].split(" ")[0];
+            bool ok;
+            int count = countStr.toInt(&ok);
+            if (ok && count >= 0) {
+                // Ensure count doesn't exceed MAX_CHAIRS (5) and update only ID = 1
+                if (count <= MAX_CHAIRS) {
+                    if (updateMeetingWR(count)) {
+                        qDebug() << "Updated WR in database to:" << count << "for ID 1";
+                        updateChairs(count); // Update UI to show red chairs
+                        updateLedState(count);
+                        if (trainingManager) {
+                            emit trainingManager->waitingRoomCountChanged(count);
+                        }
+                    } else {
+                        qDebug() << "Failed to update WR in database for ID 1";
+                        QMessageBox::critical(this, "Error", "Failed to update waiting room count in database.");
+                    }
+                } else {
+                    qDebug() << "Count exceeds maximum (" << MAX_CHAIRS << "), not updating database for ID 1";
+                }
             } else {
-                qDebug() << "Failed to send green LED ON command to Arduino from dialog";
-            }
-        } else {
-            QString ledCommand = "GREENLED:OFF\n";
-            if (trainingManager->getArduino()->writeToArduino(ledCommand.toUtf8())) {
-                qDebug() << "Sent command to turn OFF green LED from dialog (WR=" << count << ")";
-            } else {
-                qDebug() << "Failed to send green LED OFF command to Arduino from dialog";
+                qDebug() << "Invalid count received from Arduino:" << countStr;
             }
         }
-    } else {
-        qDebug() << "Cannot update LED state: Arduino not available or not connected";
     }
 }
