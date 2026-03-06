@@ -1,0 +1,34 @@
+#ifndef UPDATEEMPLOYEEDIALOG_H
+#define UPDATEEMPLOYEEDIALOG_H
+
+#include <QDialog>
+#include "managers/employee/Employee.h"  // Correction du chemin d'inclusion
+
+namespace Ui {
+class UpdateEmployeeDialog;
+}
+
+class UpdateEmployeeDialog : public QDialog
+{
+    Q_OBJECT
+
+public:
+    explicit UpdateEmployeeDialog(int employeeId, QWidget *parent = nullptr);
+    ~UpdateEmployeeDialog();
+
+private slots:
+    void on_confirmButton_clicked();
+    void on_cancelButton_clicked();
+    void on_selectImageButton_clicked();
+
+private:
+    Ui::UpdateEmployeeDialog *ui;
+    int m_employeeId;
+    Employee *employee;
+    QString m_imagePath;
+
+    void loadEmployeeData();
+    bool validateInput();
+};
+
+#endif // UPDATEEMPLOYEEDIALOG_H

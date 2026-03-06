@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ChartWindow</class>
+ <widget class="QMainWindow" name="ChartWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Advanced Statistics</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+    QMainWindow { background-color: #f5f5f5; }
+    QGroupBox { 
+        font-weight: bold; 
+        border: 1px solid #d3d3d3; 
+        border-radius: 5px; 
+        margin-top: 10px; 
+    }
+    QGroupBox::title { 
+        subcontrol-origin: margin; 
+        subcontrol-position: top left; 
+        padding: 0 5px; 
+        color: #333; 
+    }
+    QComboBox { 
+        padding: 5px; 
+        border: 1px solid #d3d3d3; 
+        border-radius: 3px; 
+        background: white; 
+    }
+    QComboBox:hover { border: 1px solid #a0a0a0; }
+    QPushButton { 
+        padding: 5px 10px; 
+        border: 1px solid #d3d3d3; 
+        border-radius: 3px; 
+        background: #e0e0e0; 
+    }
+    QPushButton:hover { background: #d0d0d0; }
+    QCheckBox { padding: 5px; }
+    QLabel#hoverDescriptionLabel { 
+        background-color: #e8e8e8; 
+        border-radius: 3px; 
+        padding: 5px; 
+        font-style: italic; 
+    }
+    QLabel#percentageLabel {
+        font-weight: bold;
+        font-size: 14px;
+        color: #333;
+        background-color: rgba(255, 255, 255, 0.7);
+        border-radius: 5px;
+        padding: 5px;
+    }
+   </string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>10</number>
+    </property>
+    <property name="leftMargin">
+     <number>10</number>
+    </property>
+    <property name="topMargin">
+     <number>10</number>
+    </property>
+    <property name="rightMargin">
+     <number>10</number>
+    </property>
+    <property name="bottomMargin">
+     <number>10</number>
+    </property>
+    <item>
+     <widget class="QGroupBox" name="chartGroupBox">
+      <property name="title">
+       <string>Advanced Statistics Dashboard</string>
+      </property>
+      <layout class="QVBoxLayout" name="chartLayout">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="controlLayout">
+         <property name="spacing">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="statsTypeLabel">
+           <property name="text">
+            <string>Data Source:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="statsTypeComboBox">
+           <item>
+            <property name="text">
+             <string>Client Statistics</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Training Statistics</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Meeting Statistics</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="chartDetailLabel">
+           <property name="text">
+            <string>Analyze by:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="chartDetailComboBox"/>
+         </item>
+         <item>
+          <widget class="QLabel" name="chartTypeLabel">
+           <property name="text">
+            <string>Chart Type:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="chartTypeComboBox">
+           <item>
+            <property name="text">
+             <string>Bar Chart</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Pie Chart</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="toggleLegendCheckBox">
+           <property name="text">
+            <string>Show Legend</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="buttonLayout">
+         <property name="spacing">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="refreshButton">
+           <property name="text">
+            <string>Refresh Data</string>
+           </property>
+           <property name="icon">
+            <iconset theme="view-refresh"/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="resetButton">
+           <property name="text">
+            <string>Reset View</string>
+           </property>
+           <property name="icon">
+            <iconset theme="edit-clear"/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="percentageLabel">
+           <property name="text">
+            <string/>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="buttonSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QChartView" name="statsChartView" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>450</height>
+          </size>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="hoverDescriptionLabel">
+         <property name="text">
+          <string>Hover over a chart element to see details</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignCenter</set>
+         </property>
+         <property name="minimumHeight">
+          <number>40</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QChartView</class>
+   <extends>QWidget</extends>
+   <header>qchartview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

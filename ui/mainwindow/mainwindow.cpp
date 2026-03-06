@@ -1,0 +1,3722 @@
+// ui/mainwindow/mainwindow.cpp
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include "managers/meeting/meeting.h"
+#include "dialog/updateemployee/updateemployeedialog.h"  // Updated include path
+#include "dialog/updateresourcesdialog/updateresourcesdialog.h"  // Include for UpdateResourceDialog
+#include "lib/qrcodegen/qrcodegen.hpp"  // Ajout de l'inclusion qrcodegen
+#include "ui/employeeArd/arduino.h"  // Include for Arduino integration
+#include <QMessageBox>
+#include <QRegularExpression>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QDebug>
+#include <QtCharts/QChart>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QChartView>
+#include <QHeaderView>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
+#include <QDoubleValidator>
+#include "ui/search/searchdialog.h"
+#include <QStyledItemDelegate>
+#include <QPainter>
+#include <QSqlRecord>
+#include <QInputDialog>
+#include <QPrinter>
+#include "waitingroomdialog.h"
+#include "trainingmanager.h"
+// Inline delegate for image thumbnail in the employee table
+class InlineImageDelegate : public QStyledItemDelegate {
+public:
+    InlineImageDelegate(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override {
+        if (index.column() == 11) { // Image column
+            QByteArray imageData = index.model()->data(index, Qt::DisplayRole).toByteArray();
+            QImage image;
+            if (image.loadFromData(imageData)) {
+                QPixmap pixmap = QPixmap::fromImage(image);
+                QPixmap scaled = pixmap.scaled(option.rect.size() - QSize(8,8), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                int x = option.rect.x() + (option.rect.width() - scaled.width()) / 2;
+                int y = option.rect.y() + (option.rect.height() - scaled.height()) / 2;
+                painter->drawPixmap(x, y, scaled);
+            } else {
+                painter->drawText(option.rect, Qt::AlignCenter, "No Image");
+            }
+        } else {
+            QStyledItemDelegate::paint(painter, option, index);
+        }
+    }
+};
+
+MainWindow::MainWindow(bool dbConnected, QWidget *parent)
+    : QMainWindow(parent),
+    ui(new Ui::MainWindow),
+    m_dbConnected(dbConnected),
+    clientManager(new ClientManager(dbConnected, this)),
+    trainingManager(new TrainingManager(dbConnected, this)),
+    meetingManager(new MeetingManager(dbConnected, this)),
+    employeeManager(new EmployeeManager(this)),
+    resourceManager(new ResourceManager(this)),
+    notificationManager(new NotificationManager(this)),
+    networkManager(new QNetworkAccessManager(this))
+{
+    qDebug() << "Entering MainWindow constructor";
+
+    // Block signals during UI setup
+    this->blockSignals(true);
+
+    ui->setupUi(this);
+    applyLightTheme();
+    setAttribute(Qt::WA_DeleteOnClose);
+
+    m_loggedInRole = "";
+
+    clientManager->setNotificationManager(notificationManager);
+    trainingManager->setNotificationManager(notificationManager);
+    meetingManager->setNotificationManager(notificationManager);
+
+    setupInputValidators();
+
+    // Initialize resource-specific variables
+    selectedResourceId = -1;
+    imageData = QByteArray();
+    currentSortColumn = 0;
+    currentSortOrder = Qt::AscendingOrder;
+    searchTimer = new QTimer(this);
+    searchTimer->setSingleShot(true);
+    connect(searchTimer, &QTimer::timeout, this, &MainWindow::on_searchTimeout);
+    pieSeries = new QPieSeries(this);
+    barSeries = new QBarSeries(this);
+
+    // CRITICAL FIX: Direct connection to employeeSectionButton before other connections
+    if (ui->employeeSectionButton) {
+        qDebug() << "Setting up direct connection for employeeSectionButton";
+        
+        // Disconnect any existing connections to ensure clean state
+        ui->employeeSectionButton->disconnect();
+        
+        // Make sure the button is enabled and visible
+        ui->employeeSectionButton->setEnabled(true);
+        ui->employeeSectionButton->setVisible(true);
+        ui->employeeSectionButton->setAutoRepeat(false);
+        ui->employeeSectionButton->setAutoRepeatDelay(0);
+        ui->employeeSectionButton->setAutoRepeatInterval(0);
+        ui->employeeSectionButton->setAutoExclusive(false);
+        
+        // Directly connect the clicked signal to our slot using lambda to ensure connection
+        connect(ui->employeeSectionButton, &QPushButton::clicked, this, [=]() {
+            qDebug() << "DIRECT employeeSectionButton clicked handler invoked";
+            ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
+            this->on_employeeSectionButton_clicked();
+        });
+    } else {
+        qDebug() << "ERROR: employeeSectionButton not found in UI!";
+    }
+
+    // Now set up the rest of the UI connections
+    setupUiConnections();
+    setupChartConnections();
+
+    // Connect networkManager and AI chat signals after UI setup
+    //connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onAIResponseReceived);
+    connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::on_imageAnalysisFinished);
+    connect(ui->trainingNotificationLabel, &QPushButton::clicked, this, &MainWindow::handleNotificationLabelClicked);
+    
+    // Important: Connect notification count changes to update the label
+    connect(notificationManager, &NotificationManager::notificationCountChanged, 
+            this, &MainWindow::updateNotificationLabel);
+    
+    // Initialize notification label with 0 count
+    updateNotificationLabel(0);
+
+    // Move appendChatMessage after all setup
+    appendChatMessage("Hello! I'm your Meeting Assistant. How can I help you today?", true);
+
+    if (!m_dbConnected) {
+        ui->clientSectionButton->setEnabled(false);
+        ui->trainingSectionButton->setEnabled(false);
+        ui->meetingSectionButton->setEnabled(false);
+        ui->employeeSectionButton->setEnabled(false);
+        ui->resourceSectionButton->setEnabled(false);
+        statusBar()->showMessage("Database not connected. Some features are disabled.");
+    } else {
+        clientManager->initialize(ui);
+        trainingManager->initialize(ui);
+        meetingManager->initialize(ui);
+        employeeManager->initialize(this); // Correction: passage de 'this' au lieu de 'ui'
+        
+        // Apply improved table styling to all tables right after initialization
+        if (ui->clientTableView) improveTableDisplay(ui->clientTableView);
+        if (ui->clientDateConsultationsView) improveTableDisplay(ui->clientDateConsultationsView);
+        if (ui->trainingTableView) improveTableDisplay(ui->trainingTableView);
+        if (ui->meetingTableWidget) improveTableWidgetDisplay(ui->meetingTableWidget);
+        if (ui->employeeTableWidget) improveTableWidgetDisplay(ui->employeeTableWidget);
+        
+        // Initialize charts for each section
+        setupClientChart();
+        setupTrainingChart();
+        setupMeetingChart();
+        setupEmployeeChart();
+        setupResourceChart();
+        
+        on_meetingSectionButton_clicked();
+    }
+
+    // Re-enable signals after all setup
+    this->blockSignals(false);
+
+    // Final verification of employeeSectionButton state
+    if (ui->employeeSectionButton) {
+        qDebug() << "FINAL CHECK - employeeSectionButton state: enabled=" 
+                 << ui->employeeSectionButton->isEnabled() 
+                 << ", visible=" << ui->employeeSectionButton->isVisible()
+                 << ", signalsBlocked=" << ui->employeeSectionButton->signalsBlocked();
+                 
+        // Verify the button can actually receive events
+        ui->employeeSectionButton->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+        ui->employeeSectionButton->setFocusPolicy(Qt::StrongFocus);
+    }
+
+    // --- Arduino integration for employee RFID ---
+    // Initialisation Arduino pour RFID employé
+    arduino = new Arduino();
+    serialBuffer = "";
+    {
+        QString portName = "COM4"; // À adapter selon le port réel
+        if (arduino->connectArduino(portName)) {
+            qDebug() << "Arduino connecté avec succès";
+            connect(arduino, &Arduino::dataAvailable, this, &MainWindow::handleSerialData);
+        } else {
+            qDebug() << "Échec de connexion à Arduino";
+            QMessageBox::warning(this, "Erreur Arduino", "Impossible de se connecter à Arduino sur le port " + portName);
+        }
+    }
+
+    qDebug() << "Exiting MainWindow constructor";
+}
+
+MainWindow::~MainWindow()
+{
+    delete clientManager;
+    delete trainingManager;
+    delete arduino; // Clean up Arduino instance
+    // Configurer les validateurs d'entrée
+    setupInputValidators();
+}
+
+void MainWindow::setupInputValidators()
+{
+    // CIN: 8 digits strictly
+    QRegularExpression cinRegex("^[0-9]{8}$");
+    QRegularExpressionValidator* cinValidator = new QRegularExpressionValidator(cinRegex, this);
+    ui->lineEdit_CIN->setValidator(cinValidator);
+    ui->lineEdit_CIN->setMaxLength(8);  // Strictly limit to 8 characters
+
+    // Name/First Name: letters, spaces, hyphens only
+    QRegularExpression nameRegex("^[A-Za-zÀ-ÖØ-öø-ÿ\\s-]+$");
+    QValidator* nameValidator = new QRegularExpressionValidator(nameRegex, this);
+    ui->lineEdit_Nom->setValidator(nameValidator);
+    ui->lineEdit_Prenom->setValidator(nameValidator);
+    ui->lineEdit_Nom->setMaxLength(50);    // Reasonable limit for last name
+    ui->lineEdit_Prenom->setMaxLength(50); // Reasonable limit for first name
+
+    // Phone: 8 digits
+    QRegularExpression phoneRegex("^[0-9]{8}$");
+    QRegularExpressionValidator* phoneValidator = new QRegularExpressionValidator(phoneRegex, this);
+    ui->lineEdit_phone->setValidator(phoneValidator);
+    ui->lineEdit_phone->setMaxLength(8);  // Strictly limit to 8 digits
+
+    // Email: format email
+    QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    QRegularExpressionValidator* emailValidator = new QRegularExpressionValidator(emailRegex, this);
+    ui->lineEdit_email->setValidator(emailValidator);
+    ui->lineEdit_email->setMaxLength(100);  // Reasonable limit for email
+
+    // Salary: integer >= 1000
+    QIntValidator* salaryValidator = new QIntValidator(1000, 1000000, this);
+    ui->lineEdit_salaire->setValidator(salaryValidator);
+    ui->lineEdit_salaire->setMaxLength(7);  // Max 7 digits (up to 1000000)
+
+    // Date of hire: fixed to today, non-editable
+    QDate currentDate = QDate::currentDate();
+    ui->dateEdit_hiring->setDate(currentDate);
+    ui->dateEdit_hiring->setMinimumDate(currentDate);
+    ui->dateEdit_hiring->setMaximumDate(currentDate);
+    ui->dateEdit_hiring->setEnabled(false);  // Ensure it’s non-editable
+    ui->dateEdit_hiring->setCalendarPopup(false);  // Disable calendar popup to prevent changes
+
+    // Date of birth: max = today - 18 years
+    QDate maxBirth = QDate::currentDate().addYears(-18);
+    ui->dateEdit_birth->setMaximumDate(maxBirth);
+    ui->dateEdit_birth->setDate(maxBirth);
+
+    // Debug to confirm validators are set
+    qDebug() << "Validators set for CIN, Name, Phone, Email, Salary, and Dates";
+}
+
+void MainWindow::validateCIN(const QString &text)
+{
+    QRegularExpression cinRegex("^[0-9]{8}$");
+    bool isValid = cinRegex.match(text).hasMatch();
+    if (text.isEmpty()) {
+        ui->lineEdit_CIN->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
+        ui->lineEdit_CIN->setStyleSheet("border: 1px solid green;");
+    } else {
+        ui->lineEdit_CIN->setStyleSheet("border: 1px solid red;");
+    }
+    qDebug() << "CIN validation: text=" << text << ", isValid=" << isValid;
+}
+
+void MainWindow::validateName(const QString &text)
+{
+    QLineEdit* senderLineEdit = qobject_cast<QLineEdit*>(sender());
+    if (!senderLineEdit) return;
+
+    QRegularExpression nameRegex("^[A-Za-zÀ-ÖØ-öø-ÿ\\s-]+$");
+    bool isValid = !text.isEmpty() && nameRegex.match(text).hasMatch();
+    if (text.isEmpty()) {
+        senderLineEdit->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
+        senderLineEdit->setStyleSheet("border: 1px solid green;");
+    } else {
+        senderLineEdit->setStyleSheet("border: 1px solid red;");
+    }
+    qDebug() << "Name validation: text=" << text << ", isValid=" << isValid << ", sender=" << senderLineEdit->objectName();
+}
+
+void MainWindow::validatePhone(const QString &text)
+{
+    QRegularExpression phoneRegex("^[0-9]{8}$");
+    bool isValid = phoneRegex.match(text).hasMatch();
+    if (text.isEmpty()) {
+        ui->lineEdit_phone->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
+        ui->lineEdit_phone->setStyleSheet("border: 1px solid green;");
+    } else {
+        ui->lineEdit_phone->setStyleSheet("border: 1px solid red;");
+    }
+    qDebug() << "Phone validation: text=" << text << ", isValid=" << isValid;
+}
+
+void MainWindow::validateEmail(const QString &text)
+{
+    QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    bool isValid = emailRegex.match(text).hasMatch();
+    if (text.isEmpty()) {
+        ui->lineEdit_email->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
+        ui->lineEdit_email->setStyleSheet("border: 1px solid green;");
+    } else {
+        ui->lineEdit_email->setStyleSheet("border: 1px solid red;");
+    }
+    qDebug() << "Email validation: text=" << text << ", isValid=" << isValid;
+}
+
+void MainWindow::validateSalary(const QString &text)
+{
+    bool ok;
+    int salary = text.toInt(&ok);
+    bool isValid = ok && salary >= 1000;
+    if (text.isEmpty()) {
+        ui->lineEdit_salaire->setStyleSheet("border: 1px solid gray;");
+    } else if (isValid) {
+        ui->lineEdit_salaire->setStyleSheet("border: 1px solid green;");
+    } else {
+        ui->lineEdit_salaire->setStyleSheet("border: 1px solid red;");
+    }
+    qDebug() << "Salary validation: text=" << text << ", isValid=" << isValid;
+}
+
+bool MainWindow::validateEmployeeInput()
+{
+    // CIN validation: Should be exactly 8 digits and unique
+    QString cin = ui->lineEdit_CIN->text().simplified().trimmed();
+    qDebug() << "Validating CIN:" << cin << "Length:" << cin.length();
+    QRegularExpression cinRegex("^\\d{8}$");
+    if (!cinRegex.match(cin).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "CIN must be exactly 8 digits (numbers only).");
+        return false;
+    }
+    QSqlQuery cinQuery;
+    cinQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE CIN = :cin");
+    cinQuery.bindValue(":cin", cin);
+    if (cinQuery.exec() && cinQuery.next() && cinQuery.value(0).toInt() > 0) {
+        QMessageBox::warning(this, "Input Error", "CIN already exists. Please enter a unique CIN.");
+        return false;
+    }
+
+    // Name validation: Should not be empty and contain only letters, spaces, hyphens, or apostrophes
+    QString lastName = ui->lineEdit_Nom->text().simplified().trimmed();
+    QString firstName = ui->lineEdit_Prenom->text().simplified().trimmed();
+    QRegularExpression nameRegex("^[\\p{L}\\s'-]+$");
+    qDebug() << "Validating Last Name:" << lastName;
+    if (lastName.isEmpty() || !nameRegex.match(lastName).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Last name should contain only letters, spaces, hyphens, or apostrophes.");
+        return false;
+    }
+    qDebug() << "Validating First Name:" << firstName;
+    if (firstName.isEmpty() || !nameRegex.match(firstName).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "First name should contain only letters, spaces, hyphens, or apostrophes.");
+        return false;
+    }
+
+    // Phone validation: Should be a valid phone number
+    QString phone = ui->lineEdit_phone->text().simplified().trimmed();
+    QRegularExpression phoneRegex("^\\d{8}$");
+    qDebug() << "Validating Phone:" << phone;
+    if (!phoneRegex.match(phone).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Phone number must be 8 digits.");
+        return false;
+    }
+
+    // Email validation and uniqueness
+    QString email = ui->lineEdit_email->text().simplified().trimmed();
+    QRegularExpression emailRegex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    qDebug() << "Validating Email:" << email;
+    if (!emailRegex.match(email).hasMatch()) {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid email address.");
+        return false;
+    }
+    QSqlQuery emailQuery;
+    emailQuery.prepare("SELECT COUNT(*) FROM EMPLOYEE WHERE EMAIL = :email");
+    emailQuery.bindValue(":email", email);
+    if (emailQuery.exec() && emailQuery.next() && emailQuery.value(0).toInt() > 0) {
+        QMessageBox::warning(this, "Input Error", "Email already exists. Please enter a unique email.");
+        return false;
+    }
+
+    // Salary validation: Minimum 1000
+    QString salaryText = ui->lineEdit_salaire->text().simplified().trimmed();
+    qDebug() << "Validating Salary:" << salaryText;
+    bool ok;
+    int salary = salaryText.toInt(&ok);
+    if (!ok || salary < 1000) {
+        QMessageBox::warning(this, "Input Error", "Salary must be at least 1000.");
+        return false;
+    }
+
+    // Date validations
+    QDate birthDate = ui->dateEdit_birth->date();
+    QDate currentDate = QDate::currentDate();
+    qDebug() << "Validating Birth Date:" << birthDate.toString();
+    if (birthDate > currentDate.addYears(-18)) {
+        QMessageBox::warning(this, "Input Error", "Employee must be at least 18 years old.");
+        return false;
+    }
+
+    // Image path validation (optional)
+    QString imagePath = ui->imagePathLineEdit->text().simplified().trimmed();
+    qDebug() << "Validating Image Path:" << imagePath;
+    if (!imagePath.isEmpty() && !QFile::exists(imagePath)) {
+        QMessageBox::warning(this, "Input Error", "Image file does not exist at the specified path.");
+        return false;
+    }
+
+    return true;
+}
+
+void MainWindow::on_clientSectionButton_clicked()
+{
+    ui->mainStackedWidget->setCurrentWidget(ui->clientPage);
+    clientManager->refresh();
+    
+    // Apply improved table styling for better readability
+    improveTableDisplay(ui->clientTableView);
+    improveTableDisplay(ui->clientDateConsultationsView);
+}
+
+void MainWindow::on_trainingSectionButton_clicked()
+{
+    ui->mainStackedWidget->setCurrentWidget(ui->trainingPage);
+    trainingManager->refresh();
+    
+    // Apply improved table styling for better readability
+    improveTableDisplay(ui->trainingTableView);
+}
+
+void MainWindow::on_meetingSectionButton_clicked()
+{
+    ui->mainStackedWidget->setCurrentWidget(ui->meetingPage);
+    meetingManager->refreshTableWidget();
+    
+    // Apply specific styling to the meeting table widget
+    ui->meetingTableWidget->setStyleSheet("QTableWidget { gridline-color: #E5E5E5; }");
+    
+    // Configure column widths and resizing
+    ui->meetingTableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    ui->meetingTableWidget->horizontalHeader()->setStretchLastSection(true);
+    
+    // Improve meeting table display
+    improveTableWidgetDisplay(ui->meetingTableWidget);
+}
+
+/*void MainWindow::on_employeeSectionButton_clicked()
+{
+    qDebug() << "employeeSectionButton clicked - handler activated";
+    ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
+
+    QList<QList<QVariant>> employees;
+    QSqlQuery query("SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY, IMAGE, ROLE, RFID_UID FROM EMPLOYEE");
+    while (query.next()) {
+        QList<QVariant> row;
+        for (int i = 0; i < query.record().count(); ++i) {
+            row << query.value(i);
+        }
+        employees << row;
+    }
+
+    QTableWidget* table = ui->employeeTableWidget;
+    table->blockSignals(true);
+    table->clear();
+    table->setColumnCount(14);
+    QStringList headers = {"ID", "CIN", "Last Name", "First Name", "Date of Birth", "Phone", "Email", "Gender", "Salary", "Date of Hiring", "Speciality", "Image", "Role", "RFID UID"};
+    table->setHorizontalHeaderLabels(headers);
+    populateEmployeeTable(employees);
+    table->setSortingEnabled(true);
+    improveTableWidgetDisplay(table);
+    table->blockSignals(false);
+
+    connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_employeeSearchChanged);
+}*/
+void MainWindow::on_employeeSectionButton_clicked()
+{
+    qDebug() << "employeeSectionButton clicked - handler activated";
+    ui->mainStackedWidget->setCurrentWidget(ui->employeePage);
+
+    QList<QList<QVariant>> employees;
+    QSqlQuery query("SELECT ID, CIN, LAST_NAME, FIRST_NAME, DATE_BIRTH, PHONE, EMAIL, GENDER, SALARY, DATE_HIRING, SPECIALITY, IMAGE, ROLE, RFID_UID FROM EMPLOYEE");
+    while (query.next()) {
+        QList<QVariant> row;
+        for (int i = 0; i < query.record().count(); ++i) {
+            row << query.value(i);
+        }
+        employees << row;
+    }
+
+    QTableWidget* table = ui->employeeTableWidget;
+    table->blockSignals(true);
+    table->clear();
+    table->setRowCount(employees.size());
+    table->setColumnCount(14);
+    QStringList headers = {"ID", "CIN", "Last Name", "First Name", "Date of Birth", "Phone", "Email", "Gender", "Salary", "Date of Hiring", "Speciality", "Image", "Role", "RFID UID"};
+    table->setHorizontalHeaderLabels(headers);
+
+    // Populate the table, converting image BLOB to base64 and displaying as image
+    for (int row = 0; row < employees.size(); ++row) {
+        const QList<QVariant>& employee = employees[row];
+        for (int col = 0; col < employee.size(); ++col) {
+            if (headers[col].toLower() == "image") {
+                QTableWidgetItem *imageItem = new QTableWidgetItem();
+                QByteArray imageBytes = employee[col].toByteArray();
+                QString base64 = QString::fromLatin1(imageBytes.toBase64());
+                // Store base64 string in Qt::UserRole for PDF export
+                imageItem->setData(Qt::UserRole, base64);
+                // Convert to QPixmap for display in the table
+                QPixmap pixmap;
+                if (pixmap.loadFromData(QByteArray::fromBase64(base64.toUtf8()))) {
+                    imageItem->setData(Qt::DecorationRole, pixmap.scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                } else {
+                    imageItem->setText("Image Load Failed");
+                }
+                table->setItem(row, col, imageItem);
+            } else {
+                table->setItem(row, col, new QTableWidgetItem(employee[col].toString()));
+            }
+        }
+    }
+
+    table->setSortingEnabled(true);
+    improveTableWidgetDisplay(table);
+    table->blockSignals(false);
+
+    connect(ui->searchInput, &QLineEdit::textChanged, this, &MainWindow::on_employeeSearchChanged);
+}
+
+void MainWindow::on_statisticsButton_clicked()
+{
+    if (!m_dbConnected) {
+        QMessageBox::warning(this, "Database Error", "Cannot open statistics: Database is not connected.");
+        return;
+    }
+    
+    // Navigate to the current section's statistics tab
+    QWidget* currentPage = ui->mainStackedWidget->currentWidget();
+    
+    if (currentPage == ui->clientPage) {
+        ui->clientTabWidget->setCurrentIndex(ui->clientTabWidget->indexOf(ui->clientStatisticsTab));
+        updateClientChart();
+    } 
+    else if (currentPage == ui->trainingPage) {
+        ui->trainingTabWidget->setCurrentIndex(ui->trainingTabWidget->indexOf(ui->trainingStatisticsTab));
+        updateTrainingChart();
+    } 
+    else if (currentPage == ui->meetingPage) {
+        ui->meetingTabWidget->setCurrentIndex(ui->meetingTabWidget->indexOf(ui->meetingStatisticsTab));
+        updateMeetingChart();
+    } 
+    else if (currentPage == ui->employeePage) {
+        ui->employeeTabWidget->setCurrentIndex(ui->employeeTabWidget->indexOf(ui->employeeStatsTab));
+        updateEmployeeChart();
+    }
+    else {
+        QMessageBox::information(this, "Statistics", "Please navigate to a section first (Clients, Training, Meetings, or Employees).");
+    }
+}
+
+void MainWindow::on_clientChartRefreshButton_clicked()
+{
+    updateClientChart();
+}
+
+void MainWindow::on_trainingChartRefreshButton_clicked()
+{
+    updateTrainingChart();
+}
+
+void MainWindow::on_meetingChartRefreshButton_clicked()
+{
+    updateMeetingChart();
+}
+
+void MainWindow::on_clientChartTypeComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateClientChart();
+}
+
+void MainWindow::on_trainingChartTypeComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateTrainingChart();
+}
+
+void MainWindow::on_meetingChartTypeComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateMeetingChart();
+}
+
+void MainWindow::on_clientChartFilterComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateClientChart();
+}
+
+void MainWindow::on_trainingChartFilterComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateTrainingChart();
+}
+
+void MainWindow::on_meetingChartFilterComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateMeetingChart();
+}
+
+void MainWindow::toggleSidebar()
+{
+    bool isVisible = ui->sideMenu->isVisible();
+    ui->sideMenu->setVisible(!isVisible);
+}
+
+void MainWindow::toggleTheme()
+{
+    if (ui->themeButton->text() == "Dark Theme") {
+        applyDarkTheme();
+        ui->themeButton->setText("Light Theme");
+    } else {
+        applyLightTheme();
+        ui->themeButton->setText("Dark Theme");
+    }
+}
+
+void MainWindow::applyLightTheme()
+{
+    qApp->setStyleSheet(R"(
+        QWidget { 
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F8FF, stop:1 #C4D7ED); 
+            color: #333333; 
+            font-family: 'Arial', 'Tahoma', 'Segoe UI', 'sans-serif';
+        }
+        QPushButton { 
+            background-color: #3A5DAE; 
+            color: white; 
+            border: 1px solid #2A4682; 
+            border-radius: 5px; 
+            padding: 6px; 
+            font-weight: bold; 
+        }
+        QPushButton:hover { 
+            background-color: #4A70C2; 
+        }
+        QPushButton:pressed { 
+            background-color: #2A4682; 
+        }
+        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { 
+            background-color: #F5F7FA; 
+            border: 1px solid #3A5DAE; 
+            border-radius: 4px; 
+            padding: 4px; 
+            color: #333333; 
+        }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { 
+            border: 2px solid #3A5DAE; 
+        }
+        /* Consistent table styles for all table views and widgets */
+        QTableView, QTableWidget { 
+            background-color: #FFFFFF; 
+            border: 1px solid #D3DCE6; 
+            border-radius: 4px; 
+            selection-background-color: #A1B8E6; 
+            selection-color: #333333;
+            gridline-color: #E5E5E5;
+            alternate-background-color: #F5F7FA;
+        }
+        QTableView::item, QTableWidget::item {
+            padding: 4px;
+            border: none;
+        }
+        QTableView::item:selected, QTableWidget::item:selected {
+            background-color: #A1B8E6;
+            color: #333333;
+        }
+        QHeaderView::section { 
+            background-color: #3A5DAE; 
+            color: white; 
+            padding: 6px; 
+            border: none; 
+            font-weight: bold;
+        }
+        QHeaderView::section:horizontal {
+            border-right: 1px solid #FFFFFF;
+        }
+        QHeaderView::section:vertical {
+            border-bottom: 1px solid #FFFFFF;
+        }
+        QCalendarWidget { 
+            background-color: #F5F7FA; 
+            border: 1px solid #3A5DAE; 
+            border-radius: 4px; 
+        }
+        QCalendarWidget QToolButton { 
+            background-color: #3A5DAE; 
+            color: white; 
+            border-radius: 3px; 
+        }
+        QCalendarWidget QAbstractItemView {
+            background-color: #FFFFFF;
+            selection-background-color: #3A5DAE;
+            selection-color: white;
+        }
+        QCalendarWidget QAbstractItemView:enabled {
+            color: #333333;
+        }
+        QCalendarWidget QAbstractItemView:disabled {
+            color: #A0A0A0;
+        }
+        QCalendarWidget QAbstractItemView:item {
+            color: #333333;
+        }
+        QCalendarWidget QWidget {
+            alternate-background-color: #F0F8FF;
+        }
+        QCalendarWidget QMenu {
+            background-color: #FFFFFF;
+        }
+        QCalendarWidget QSpinBox {
+            background-color: #FFFFFF;
+        }
+        QCalendarWidget QTableView {
+            border: none;
+            gridline-color: #FFFFFF;
+        }
+        QTabWidget::pane { 
+            border: 1px solid #3A5DAE; 
+            border-radius: 4px; 
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F8FF, stop:1 #C4D7ED);
+        }
+        QTabBar::tab { 
+            background-color: #D3DCE6; 
+            color: #333333; 
+            padding: 8px 12px; 
+            border-top-left-radius: 4px; 
+            border-top-right-radius: 4px;
+            margin-right: 2px;
+        }
+        QTabBar::tab:selected { 
+            background-color: #3A5DAE; 
+            color: white; 
+        }
+        QTextEdit { 
+            background-color: #F5F7FA; 
+            border: 1px solid #3A5DAE; 
+            border-radius: 4px; 
+            color: #333333; 
+        }
+        QChartView { 
+            background-color: #FFFFFF; 
+            border: 1px solid #D3DCE6; 
+            border-radius: 4px; 
+        }
+        QLabel { 
+            font-size: 10pt; 
+            padding: 2px;
+            background: transparent;
+        }
+        QGroupBox {
+            border: 1px solid #B0C4DE;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-weight: bold;
+            background-color: rgba(240, 248, 255, 150);
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 5px;
+            color: #3A5DAE;
+        }
+        QStatusBar {
+            background-color: #E6EEF8;
+            color: #333333;
+            border-top: 1px solid #B0C4DE;
+        }
+        #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
+        #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel,
+        #meetingTitleLabel, #meetingOrganiserLabel, #meetingParticipantLabel, #meetingAgendaLabel, #meetingDurationLabel, #meetingDateLabel {
+            font-size: 11pt; 
+            font-weight: bold; 
+            color: #3A5DAE; 
+            background: transparent;
+            padding: 2px; 
+            qproperty-alignment: AlignRight; 
+        }
+        #headerLabel { 
+            font-size: 18pt; 
+            font-weight: bold; 
+            color: #3A5DAE; 
+            qproperty-alignment: AlignCenter;
+            background: transparent;
+        }
+        #trainingNotificationLabel { 
+            font-size: 10pt; 
+            font-weight: bold; 
+            color: #3A5DAE;
+            background: transparent;
+        }
+        QFrame { 
+            background: transparent;
+        }
+        QFrame#header { 
+            border: 1px solid #B0C4DE; 
+            border-radius: 5px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E6F0FF, stop:1 #D3E5FA);
+        }
+        QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { 
+            border: 1px solid #B0C4DE; 
+            border-radius: 5px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E1EBFA, stop:1 #C4D7ED);
+        }
+        QScrollBar:vertical {
+            border: none;
+            background: #E6EEF8;
+            width: 12px;
+            margin: 12px 0 12px 0;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:vertical {
+            background: #3A5DAE;
+            min-height: 20px;
+            border-radius: 6px;
+        }
+        QScrollBar::add-line:vertical {
+            border: none;
+            background: #E6EEF8;
+            height: 12px;
+            subcontrol-position: bottom;
+            subcontrol-origin: margin;
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        QScrollBar::sub-line:vertical {
+            border: none;
+            background: #E6EEF8;
+            height: 12px;
+            subcontrol-position: top;
+            subcontrol-origin: margin;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        QScrollBar:horizontal {
+            border: none;
+            background: #E6EEF8;
+            height: 12px;
+            margin: 0 12px 0 12px;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:horizontal {
+            background: #3A5DAE;
+            min-width: 20px;
+            border-radius: 6px;
+        }
+        QScrollBar::add-line:horizontal {
+            border: none;
+            background: #E6EEF8;
+            width: 12px;
+            subcontrol-position: right;
+            subcontrol-origin: margin;
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        QScrollBar::sub-line:horizontal {
+            border: none;
+            background: #E6EEF8;
+            width: 12px;
+            subcontrol-position: left;
+            subcontrol-origin: margin;
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+    )");
+}
+
+void MainWindow::applyDarkTheme()
+{
+    qApp->setStyleSheet(R"(
+        QWidget { 
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3A3A3A, stop:1 #2A2A2A); 
+            color: #E0E0E0; 
+            font-family: 'Arial', 'Tahoma', 'Segoe UI', 'sans-serif'; 
+        }
+        QPushButton { 
+            background-color: #666666; 
+            color: white; 
+            border: 1px solid #555555; 
+            border-radius: 5px; 
+            padding: 6px; 
+            font-weight: bold; 
+        }
+        QPushButton:hover { 
+            background-color: #777777; 
+        }
+        QPushButton:pressed { 
+            background-color: #555555; 
+        }
+        QLineEdit, QComboBox, QDateTimeEdit, QDateEdit, QSpinBox, QDoubleSpinBox { 
+            background-color: #454545; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+            padding: 4px; 
+            color: #E0E0E0; 
+        }
+        QLineEdit:focus, QComboBox:focus, QDateTimeEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { 
+            border: 2px solid #777777; 
+        }
+        /* Consistent table styles for all table views and widgets */
+        QTableView, QTableWidget { 
+            background-color: #3A3A3A; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+            selection-background-color: #666666; 
+            selection-color: #FFFFFF;
+            gridline-color: #4A4A4A;
+            alternate-background-color: #333333;
+        }
+        QTableView::item, QTableWidget::item {
+            padding: 4px;
+            border: none;
+        }
+        QTableView::item:selected, QTableWidget::item:selected {
+            background-color: #666666;
+            color: #FFFFFF;
+        }
+        QHeaderView::section { 
+            background-color: #555555; 
+            color: white; 
+            padding: 6px; 
+            border: none; 
+            font-weight: bold;
+        }
+        QHeaderView::section:horizontal {
+            border-right: 1px solid #666666;
+        }
+        QHeaderView::section:vertical {
+            border-bottom: 1px solid #666666;
+        }
+        QCalendarWidget { 
+            background-color: #3A3A3A; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+        }
+        QCalendarWidget QToolButton { 
+            background-color: #555555; 
+            color: white; 
+            border-radius: 3px; 
+        }
+        QCalendarWidget QAbstractItemView {
+            background-color: #3A3A3A;
+            selection-background-color: #666666;
+            selection-color: white;
+        }
+        QCalendarWidget QAbstractItemView:enabled {
+            color: #E0E0E0;
+        }
+        QCalendarWidget QAbstractItemView:disabled {
+            color: #707070;
+        }
+        QCalendarWidget QAbstractItemView:item {
+            color: #E0E0E0;
+        }
+        QCalendarWidget QWidget {
+            alternate-background-color: #333333;
+        }
+        QCalendarWidget QMenu {
+            background-color: #3A3A3A;
+        }
+        QCalendarWidget QSpinBox {
+            background-color: #454545;
+        }
+        QCalendarWidget QTableView {
+            border: none;
+            gridline-color: #4A4A4A;
+        }
+        QTabWidget::pane { 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3A3A3A, stop:1 #2A2A2A);
+        }
+        QTabBar::tab { 
+            background-color: #454545; 
+            color: #E0E0E0; 
+            padding: 8px 12px; 
+            border-top-left-radius: 4px; 
+            border-top-right-radius: 4px;
+            margin-right: 2px;
+        }
+        QTabBar::tab:selected { 
+            background-color: #666666; 
+            color: white; 
+        }
+        QTextEdit { 
+            background-color: #454545; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+            color: #E0E0E0; 
+        }
+        QChartView { 
+            background-color: #3A3A3A; 
+            border: 1px solid #555555; 
+            border-radius: 4px; 
+        }
+        QLabel { 
+            font-size: 10pt; 
+            padding: 2px;
+            background: transparent;
+            color: #E0E0E0;
+        }
+        QGroupBox {
+            border: 1px solid #555555;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-weight: bold;
+            background-color: rgba(65, 65, 65, 150);
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 5px;
+            color: #AAAAAA;
+        }
+        QStatusBar {
+            background-color: #333333;
+            color: #E0E0E0;
+            border-top: 1px solid #555555;
+        }
+        #clientNameLabel, #clientSectorLabel, #clientContactLabel, #clientEmailLabel, #clientConsultationDateLabel, #clientConsultantLabel,
+        #trainingNameLabel, #trainingDescriptionLabel, #trainingTrainerLabel, #trainingDateLabel, #trainingTimeLabel, #trainingPriceLabel, #trainingPhoneLabel,
+        #meetingTitleLabel, #meetingOrganiserLabel, #meetingParticipantLabel, #meetingAgendaLabel, #meetingDurationLabel, #meetingDateLabel {
+            font-size: 11pt; 
+            font-weight: bold; 
+            color: #AAAAAA; 
+            background: transparent;
+            padding: 2px; 
+            qproperty-alignment: AlignRight; 
+        }
+        #headerLabel { 
+            font-size: 18pt; 
+            font-weight: bold; 
+            color: #AAAAAA; 
+            qproperty-alignment: AlignCenter;
+            background: transparent;
+        }
+        #trainingNotificationLabel { 
+            font-size: 10pt; 
+            font-weight: bold; 
+            color: #AAAAAA;
+            background: transparent;
+        }
+        QFrame { 
+            background: transparent;
+        }
+        QFrame#header { 
+            border: 1px solid #555555; 
+            border-radius: 5px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #404040, stop:1 #333333);
+        }
+        QFrame#sideMenu, QFrame#frame_2, QFrame#frame_4 { 
+            border: 1px solid #555555; 
+            border-radius: 5px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3A3A3A, stop:1 #333333);
+        }
+        QScrollBar:vertical {
+            border: none;
+            background: #333333;
+            width: 12px;
+            margin: 12px 0 12px 0;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:vertical {
+            background: #666666;
+            min-height: 20px;
+            border-radius: 6px;
+        }
+        QScrollBar::add-line:vertical {
+            border: none;
+            background: #333333;
+            height: 12px;
+            subcontrol-position: bottom;
+            subcontrol-origin: margin;
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        QScrollBar::sub-line:vertical {
+            border: none;
+            background: #333333;
+            height: 12px;
+            subcontrol-position: top;
+            subcontrol-origin: margin;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        QScrollBar:horizontal {
+            border: none;
+            background: #333333;
+            height: 12px;
+            margin: 0 12px 0 12px;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:horizontal {
+            background: #666666;
+            min-width: 20px;
+            border-radius: 6px;
+        }
+        QScrollBar::add-line:horizontal {
+            border: none;
+            background: #333333;
+            width: 12px;
+            subcontrol-position: right;
+            subcontrol-origin: margin;
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        QScrollBar::sub-line:horizontal {
+            border: none;
+            background: #333333;
+            width: 12px;
+            subcontrol-position: left;
+            subcontrol-origin: margin;
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+    )");
+}
+
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QScrollArea>
+#include <QLabel>
+#include <QPushButton>
+#include <QMessageBox>
+
+void MainWindow::handleNotificationLabelClicked()
+{
+    const QVector<NotificationManager::Notification>& notifications = notificationManager->getNotifications();
+    if (notifications.isEmpty()) {
+        QMessageBox::information(this, "Notifications", "No new notifications.");
+        return;
+    }
+
+    // Create a dialog to display notifications
+    QDialog dialog(this);
+    dialog.setWindowTitle("Notifications");
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+
+    // Add a scrollable area for notifications
+    QScrollArea *scrollArea = new QScrollArea(&dialog);
+    QWidget *scrollWidget = new QWidget();
+    QVBoxLayout *scrollLayout = new QVBoxLayout(scrollWidget);
+
+    for (const NotificationManager::Notification &notif : notifications) {
+        QString notificationText = QString("%1\n%2\n%3")
+        .arg(notif.title)
+            .arg(notif.description)
+            .arg(notif.details);
+        QLabel *label = new QLabel(notificationText, scrollWidget);
+        label->setWordWrap(true);
+        label->setStyleSheet("QLabel { border-bottom: 1px solid #d3d3d3; padding: 5px; }");
+        scrollLayout->addWidget(label);
+    }
+
+    scrollWidget->setLayout(scrollLayout);
+    scrollArea->setWidget(scrollWidget);
+    scrollArea->setWidgetResizable(true);
+    layout->addWidget(scrollArea);
+
+    // Add a "Clear Notifications" button
+    QPushButton *clearButton = new QPushButton("Clear Notifications", &dialog);
+    connect(clearButton, &QPushButton::clicked, this, [this, &dialog]() {
+        notificationManager->clearNotifications();
+        dialog.accept();
+    });
+    layout->addWidget(clearButton);
+
+    // Add a "Close" button
+    QPushButton *closeButton = new QPushButton("Close", &dialog);
+    connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    layout->addWidget(closeButton);
+
+    dialog.setLayout(layout);
+    dialog.resize(400, 300);
+    dialog.exec();
+
+    // Update the notification label after the dialog is closed
+    updateNotificationLabel(notificationManager->getNotificationCount());
+}
+
+void MainWindow::updateNotificationLabel(int count)
+{
+    // Create a clear and visible notification label
+    QString styleSheet;
+    
+    if (count > 0) {
+        // Make notification count more visible when there are notifications
+        styleSheet = QString(
+            "QPushButton {"
+            "  background-color: #3A5DAE;"
+            "  color: white;"
+            "  border-radius: 5px;"
+            "  padding: 5px 10px;"
+            "  font-weight: bold;"
+            "  min-width: 140px;"
+            "  max-width: 180px;"
+            "}"
+            "QPushButton:hover {"
+            "  background-color: #4A70C2;"
+            "}"
+            "QPushButton:pressed {"
+            "  background-color: #2A4682;"
+            "}"
+        );
+        
+        // Use plain text instead of HTML formatting to avoid display issues
+        ui->trainingNotificationLabel->setText(QString("Notifications (%1)").arg(count));
+    } else {
+        // Use more subtle styling when there are no notifications
+        styleSheet = QString(
+            "QPushButton {"
+            "  background-color: #808080;"
+            "  color: white;"
+            "  border-radius: 5px;"
+            "  padding: 5px 10px;"
+            "  min-width: 140px;"
+            "  max-width: 180px;"
+            "}"
+            "QPushButton:hover {"
+            "  background-color: #9A9A9A;"
+            "}"
+        );
+        ui->trainingNotificationLabel->setText("No Notifications");
+    }
+    
+    ui->trainingNotificationLabel->setStyleSheet(styleSheet);
+    
+    // Force an update to ensure the button is redrawn immediately
+    ui->trainingNotificationLabel->update();
+}
+
+void MainWindow::on_chatSendButton_clicked()
+{
+    QString input = ui->meetingChatInputLineEdit->text().trimmed();
+    if (input.isEmpty()) {
+        return;
+    }
+    appendChatMessage(input);
+    processUserInput(input);
+    ui->meetingChatInputLineEdit->clear();
+}
+
+void MainWindow::on_chatClearButton_clicked()
+{
+    ui->meetingChatInputLineEdit->clear();
+    ui->meetingChatTextEdit->clear();
+}
+
+void MainWindow::appendChatMessage(const QString &message, bool isBot)
+{
+    qDebug() << "Entering appendChatMessage, message:" << message << ", isBot:" << isBot;
+    if (!ui || !ui->meetingChatTextEdit) {
+        qDebug() << "Error: ui or meetingChatTextEdit is null";
+        return;
+    }
+
+    QString formattedMessage = isBot ? "<b>Assistant:</b> " + message : "<b>You:</b> " + message;
+    ui->meetingChatTextEdit->append(formattedMessage);
+    qDebug() << "Exiting appendChatMessage";
+}
+
+void MainWindow::processUserInput(const QString &input)
+{
+    // Check if the input matches the add meeting regex
+    static const QRegularExpression addMeetingRegex(R"(add meeting\s+(.+?)\s+by\s+(.+?)\s+with\s+(.+?)\s+about\s+(.+?)\s+for\s+(\d+)\s+min\s+on\s+(.+))", QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression deleteMeetingRegex(R"(delete meeting\s+(\d+))", QRegularExpression::CaseInsensitiveOption);
+
+    QRegularExpressionMatch addMatch = addMeetingRegex.match(input);
+    QRegularExpressionMatch deleteMatch = deleteMeetingRegex.match(input);
+
+    if (addMatch.hasMatch()) {
+        QStringList parts = addMatch.capturedTexts();
+        QString errorMessage;
+        if (!validateMeetingInput(parts, errorMessage)) {
+            appendChatMessage("Error: " + errorMessage, true);
+            return;
+        }
+
+        meeting m = createMeetingFromInput(input);
+        if (m.add()) {
+            meetingManager->refreshTableWidget();
+            appendChatMessage("Meeting added successfully! Here's the QR code:", true);
+            QPixmap qrCode = m.generateQRCode();
+            QMessageBox qrDialog(this);
+            qrDialog.setWindowTitle("Meeting QR Code");
+            qrDialog.setText("Scan this QR code for meeting details:");
+            qrDialog.setIconPixmap(qrCode.scaled(200, 200, Qt::KeepAspectRatio));
+            qrDialog.exec();
+            if (notificationManager) {
+                notificationManager->addNotification("Meeting Added", "Meeting: " + m.getTitle(), "Added meeting via chat", -1);
+            }
+        } else {
+            appendChatMessage("Failed to add meeting. Check database connection.", true);
+        }
+        return;
+    }
+
+    // Handle specific commands locally
+    QString trimmedInput = input.trimmed().toLower();
+    if (trimmedInput == "show meetings") {
+        meeting m;
+        QSqlQueryModel* model = m.afficher();
+        QString meetingList;
+        for (int row = 0; row < model->rowCount(); ++row) {
+            meetingList += QString("ID: %1, Title: %2, Organiser: %3, Participant: %4, Date: %5\n")
+            .arg(model->data(model->index(row, 0)).toString())
+                .arg(model->data(model->index(row, 1)).toString())
+                .arg(model->data(model->index(row, 2)).toString())
+                .arg(model->data(model->index(row, 3)).toString())
+                .arg(model->data(model->index(row, 6)).toDateTime().toString("yyyy-MM-dd hh:mm"));
+        }
+        appendChatMessage(meetingList.isEmpty() ? "No meetings found." : meetingList, true);
+        delete model;
+        return;
+    } else if (trimmedInput == "help") {
+        appendChatMessage("I can help with:\n"
+                          "- Adding a meeting: Use format 'add meeting <title> by <organiser> with <participant> about <agenda> for <duration> min on <date>' (e.g., 'add meeting Team Sync by Alice with Bob about Project Update for 30 min on 2025-05-07 14:00').\n"
+                          "- Listing meetings: Say 'show meetings'.\n"
+                          "- Deleting a meeting: Say 'delete meeting <ID>' (e.g., 'delete meeting 9').\n"
+                          "- Help: Say 'help' to see this message.\n"
+                          "- Clear chat: Say 'clear chat' to clear the chat.", true);
+        return;
+    } else if (trimmedInput == "clear chat") {
+        ui->meetingChatTextEdit->clear();
+        appendChatMessage("Chat cleared. How can I assist you now?", true);
+        return;
+    } else if (deleteMatch.hasMatch()) {
+        int id = deleteMatch.captured(1).toInt();
+        meeting m;
+        if (m.deleteMeeting(id)) { // Assuming deleteMeeting is the correct method name
+            meetingManager->refreshTableWidget();
+            appendChatMessage(QString("Meeting with ID %1 deleted successfully.").arg(id), true);
+            if (notificationManager) {
+                notificationManager->addNotification("Meeting Deleted", "Meeting ID: " + QString::number(id), "Deleted meeting via chat", -1);
+            }
+        } else {
+            appendChatMessage("Failed to delete meeting. Check database connection.", true);
+        }
+        return;
+    }
+
+    // For all other inputs, query the Hugging Face AI
+    QNetworkRequest request;
+    request.setUrl(QUrl("https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"));
+    if (!request.url().isValid()) {
+        qDebug() << "Error: Invalid URL in processUserInput:" << request.url().toString();
+        appendChatMessage("Error: Invalid API URL. Please check the configuration.", true);
+        return;
+    }
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer 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"); // Your new token // Replace with your valid API key
+
+    // Prepare the JSON payload with a system prompt
+    QJsonObject json;
+    QString systemPrompt = "You are a friendly and helpful Meeting Assistant. Respond naturally and conversationally, as if you're a human assistant.";
+    json["inputs"] = QString("[INST] %1\n\nUser: %2 [/INST]").arg(systemPrompt, input);
+
+    QJsonObject parameters;
+    parameters["max_new_tokens"] = 150;
+    parameters["temperature"] = 0.7;
+    parameters["top_p"] = 0.9;
+    parameters["do_sample"] = true;
+    json["parameters"] = parameters;
+
+    QJsonDocument doc(json);
+    QByteArray data = doc.toJson();
+
+    // Send the request
+    appendChatMessage("Processing...", true); // Show a loading message
+    disconnect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::on_imageAnalysisFinished);
+    connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onAIResponseReceived);
+    QNetworkReply *reply = networkManager->post(request, data);
+    if (!reply) {
+        qDebug() << "Error: Failed to create network reply in processUserInput";
+        appendChatMessage("Error: Failed to send message to API.", true);
+        return;
+    }
+
+
+    connect(reply, &QNetworkReply::errorOccurred, this, [this, reply](QNetworkReply::NetworkError code) {
+        qDebug() << "Network error in processUserInput:" << reply->errorString();
+        appendChatMessage("Error: " + reply->errorString(), true);
+    });
+}
+
+void MainWindow::onAIResponseReceived(QNetworkReply *reply)
+{
+    qDebug() << "Entering onAIResponseReceived";
+    if (reply->error() != QNetworkReply::NoError) {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        QString errorMsg = reply->errorString();
+        QByteArray responseBody = reply->readAll();
+        QString detailedError = QString("Error communicating with AI: %1 (HTTP %2)\nServer response: %3")
+                                    .arg(errorMsg)
+                                    .arg(statusCode)
+                                    .arg(QString(responseBody));
+        appendChatMessage(detailedError, true);
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray responseData = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+
+    if (doc.isArray() && !doc.array().isEmpty()) {
+        QString aiResponse = doc.array()[0].toObject()["generated_text"].toString();
+        // Clean up the response (remove the [INST] prompt part)
+        aiResponse = aiResponse.section("[/INST]", 1).trimmed();
+        // Display the AI's natural response
+        appendChatMessage(aiResponse, true);
+    } else {
+        appendChatMessage("Sorry, I couldn't process that. Please try again.\nResponse: " + QString(responseData), true);
+    }
+
+    reply->deleteLater();
+    qDebug() << "Exiting onAIResponseReceived";
+}
+
+meeting MainWindow::createMeetingFromInput(const QString &input)
+{
+    static const QRegularExpression addMeetingRegex(R"(add meeting\s+(.+?)\s+by\s+(.+?)\s+with\s+(.+?)\s+about\s+(.+?)\s+for\s+(\d+)\s+min\s+on\s+(.+))", QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch match = addMeetingRegex.match(input);
+
+    QString title = match.captured(1);
+    QString organiser = match.captured(2);
+    QString participant = match.captured(3);
+    QString agenda = match.captured(4);
+    int duration = match.captured(5).toInt();
+    QDateTime dateTime = QDateTime::fromString(match.captured(6), "yyyy-MM-dd hh:mm");
+
+    // Use -1 as temporary ID, using the constructor compatible with meeting.h
+    return meeting(-1, title, organiser, participant, agenda, duration, dateTime);
+}
+
+bool MainWindow::validateMeetingInput(const QStringList &parts, QString &errorMessage)
+{
+    if (parts.size() != 7) {
+        errorMessage = "Invalid input format. Use: add meeting <title> by <organiser> with <participant> about <agenda> for <duration> min on <date>";
+        return false;
+    }
+
+    bool ok;
+    int duration = parts[5].toInt(&ok);
+    if (!ok || duration <= 0) {
+        errorMessage = "Duration must be a positive number.";
+        return false;
+    }
+
+    QDateTime dateTime = QDateTime::fromString(parts[6], "yyyy-MM-dd hh:mm");
+    if (!dateTime.isValid() || dateTime < QDateTime::currentDateTime()) {
+        errorMessage = "Date and time must be valid and in the future.";
+        return false;
+    }
+
+    return true;
+}
+
+/*void MainWindow::onAIResponseReceived(QNetworkReply *reply)
+{
+    qDebug() << "Entering onAIResponseReceived";
+    if (!reply) {
+        qDebug() << "Error: Network reply is null";
+        return;
+    }
+
+    if (reply->error() != QNetworkReply::NoError) {
+        qDebug() << "Network error:" << reply->errorString();
+        appendChatMessage("Error: " + reply->errorString(), true);
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray responseData = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+    if (doc.isNull()) {
+        qDebug() << "Error: Failed to parse JSON response";
+        appendChatMessage("Error: Failed to parse API response.", true);
+        reply->deleteLater();
+        return;
+    }
+
+    QJsonObject json = doc.object();
+    QString botResponse = json.value("response").toString();
+    if (botResponse.isEmpty()) {
+        qDebug() << "Error: Empty response from API";
+        appendChatMessage("Error: Empty response from API.", true);
+    } else {
+        appendChatMessage(botResponse, true);
+    }
+
+    reply->deleteLater();
+    qDebug() << "Exiting onAIResponseReceived";
+}*/
+
+void MainWindow::setupChartConnections()
+{
+    if (!m_dbConnected) return;
+    
+    // Connect client chart controls
+    connect(ui->clientChartRefreshButton, &QPushButton::clicked, this, &MainWindow::on_clientChartRefreshButton_clicked);
+    connect(ui->clientChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_clientChartTypeComboBox_currentIndexChanged);
+    connect(ui->clientChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_clientChartFilterComboBox_currentIndexChanged);
+    
+    // Connect training chart controls
+    connect(ui->trainingChartRefreshButton, &QPushButton::clicked, this, &MainWindow::on_trainingChartRefreshButton_clicked);
+    connect(ui->trainingChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_trainingChartTypeComboBox_currentIndexChanged);
+    connect(ui->trainingChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_trainingChartFilterComboBox_currentIndexChanged);
+    
+    // Connect meeting chart controls
+    connect(ui->meetingChartRefreshButton, &QPushButton::clicked, this, &MainWindow::on_meetingChartRefreshButton_clicked);
+    connect(ui->meetingChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_meetingChartTypeComboBox_currentIndexChanged);
+    connect(ui->meetingChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_meetingChartFilterComboBox_currentIndexChanged);
+    
+    // Add these to setup chart connections
+    connect(ui->employeeChartRefreshButton, &QPushButton::clicked, this, &MainWindow::on_employeeChartRefreshButton_clicked);
+    connect(ui->employeeChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_employeeChartTypeComboBox_currentIndexChanged);
+    connect(ui->employeeChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_employeeChartFilterComboBox_currentIndexChanged);
+    connect(ui->employeeToggleLegendCheckBox, &QCheckBox::toggled, this, &MainWindow::on_employeeToggleLegendCheckBox_toggled);
+    // Resource statistics chart controls
+    connect(ui->resourceRefreshStatsButton, &QPushButton::clicked, this, [this]() { updateResourceChart(); });
+    connect(ui->resourceChartTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { updateResourceChart(); });
+    connect(ui->resourceChartFilterComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { updateResourceChart(); });
+    connect(ui->resourceToggleLegendCheckBox, &QCheckBox::toggled, this, [this](bool) { updateResourceChart(); });
+}
+
+void MainWindow::setupClientChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart 
+    QChart *chart = new QChart();
+    chart->setTitle("Client Statistics");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    
+    // Set the chart on the ChartView
+    ui->clientChartView->setChart(chart);
+    ui->clientChartView->setRenderHint(QPainter::Antialiasing);
+    ui->clientChartView->setRubberBand(QChartView::RectangleRubberBand);
+    ui->clientChartView->setMouseTracking(true);
+    ui->clientChartView->setEnabled(true);
+    
+    // Update with initial data
+    updateClientChart();
+}
+
+void MainWindow::setupTrainingChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart 
+    QChart *chart = new QChart();
+    chart->setTitle("Training Statistics");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    
+    // Set the chart on the ChartView
+    ui->trainingChartView->setChart(chart);
+    ui->trainingChartView->setRenderHint(QPainter::Antialiasing);
+    ui->trainingChartView->setRubberBand(QChartView::RectangleRubberBand);
+    ui->trainingChartView->setMouseTracking(true);
+    ui->trainingChartView->setEnabled(true);
+    
+    // Enable chart hover effects
+    ui->trainingChartView->setRubberBand(QChartView::RectangleRubberBand);
+    
+    // Update with initial data
+    updateTrainingChart();
+}
+
+void MainWindow::setupMeetingChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart 
+    QChart *chart = new QChart();
+    chart->setTitle("Meeting Statistics");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    
+    // Set the chart on the ChartView
+    ui->meetingChartView->setChart(chart);
+    ui->meetingChartView->setRenderHint(QPainter::Antialiasing);
+    ui->meetingChartView->setRubberBand(QChartView::RectangleRubberBand);
+    ui->meetingChartView->setMouseTracking(true);
+    ui->meetingChartView->setEnabled(true);
+    
+    // Enable chart hover effects
+    ui->meetingChartView->setRubberBand(QChartView::RectangleRubberBand);
+    
+    // Update with initial data
+    updateMeetingChart();
+}
+
+void MainWindow::setupEmployeeChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart directly using the employee chart view
+    QChart* chart = new QChart();
+    chart->setTitle("Employee Statistics");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    
+    // Set the chart on the ChartView
+    if (ui->employeeChartView) {
+        ui->employeeChartView->setChart(chart);
+        ui->employeeChartView->setRenderHint(QPainter::Antialiasing);
+        ui->employeeChartView->setRubberBand(QChartView::RectangleRubberBand);
+        ui->employeeChartView->setMouseTracking(true);
+        ui->employeeChartView->setEnabled(true);
+        // Update with initial data
+        updateEmployeeChart();
+    }
+}
+
+void MainWindow::updateClientChart()
+{
+    if (!m_dbConnected) return;
+    
+    try {
+        // Get chart type and filter
+        QString chartType = ui->clientChartTypeComboBox->currentText();
+        QString filter = ui->clientChartFilterComboBox->currentText();
+        bool showLegend = ui->clientToggleLegendCheckBox->isChecked();
+        
+        // Get the chart from the view
+        QChart *chart = ui->clientChartView->chart();
+        if (!chart) return;
+        
+        // Clear existing series and disconnect old connections
+        foreach(QAbstractSeries *series, chart->series()) {
+            if (QBarSeries *barSeries = qobject_cast<QBarSeries*>(series)) {
+                disconnect(barSeries, &QBarSeries::hovered, nullptr, nullptr);
+            } else if (QPieSeries *pieSeries = qobject_cast<QPieSeries*>(series)) {
+                for (QPieSlice *slice : pieSeries->slices()) {
+                    disconnect(slice, &QPieSlice::hovered, nullptr, nullptr);
+                }
+            }
+        }
+        chart->removeAllSeries();
+        
+        // Also clear the axes to prevent duplication
+        QList<QAbstractAxis*> axes = chart->axes();
+        for (QAbstractAxis *axis : axes) {
+            chart->removeAxis(axis);
+            delete axis;
+        }
+        
+        // Update chart title based on filter
+        chart->setTitle(QString("Client Statistics by %1").arg(filter));
+        
+        // Show/hide legend based on checkbox
+        chart->legend()->setVisible(showLegend);
+        
+        // Create appropriate chart based on selection
+        if (chartType == "Pie Chart") {
+            QPieSeries *series = new QPieSeries();
+            
+            // Get data from database through client manager
+            QMap<QString, int> data = clientManager->getStatisticsByCategory(filter);
+            
+            // Add slices to the pie series
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                QPieSlice *slice = series->append(it.key(), it.value());
+                slice->setLabelVisible(true);
+                connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    slice->setExploded(hovered);
+                    slice->setLabelVisible(true);
+                    if (hovered) {
+                        ui->clientHoverDescriptionLabel->setText(slice->label());
+                    } else {
+                        ui->clientHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                    }
+                });
+            }
+            
+            // Only show percentages if there are multiple categories
+            int total = 0;
+            for (auto v : data.values()) total += v;
+            for (int i = 0; i < series->count(); ++i) {
+                QPieSlice *slice = series->slices().at(i);
+                if (data.size() > 1 && total > 0) {
+                    double percent = 100.0 * slice->value() / total;
+                    slice->setLabel(QString("%1 (%2%)").arg(slice->label()).arg(QString::number(percent, 'f', 1)));
+                } else {
+                    slice->setLabel(slice->label());
+                }
+            }
+            
+            chart->addSeries(series);
+        } else if (chartType == "Bar Chart") {
+            QBarSeries *series = new QBarSeries();
+            
+            // Get data from database through client manager
+            QMap<QString, int> data = clientManager->getStatisticsByCategory(filter);
+            
+            // Create a bar set
+            QBarSet *set = new QBarSet("Clients");
+            
+            // Create categories list for axis
+            QStringList categories;
+            
+            // Add values to the bar set
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                *set << it.value();
+                categories << it.key();
+            }
+            
+            series->append(set);
+            chart->addSeries(series);
+            
+            // Create axes
+            QBarCategoryAxis *axisX = new QBarCategoryAxis();
+            axisX->append(categories);
+            chart->addAxis(axisX, Qt::AlignBottom);
+            series->attachAxis(axisX);
+            
+            QValueAxis *axisY = new QValueAxis();
+            // Ensure we don't crash with empty data
+            if (set->count() > 0) {
+                double maxValue = 0;
+                for (int i = 0; i < set->count(); i++) {
+                    maxValue = qMax(maxValue, set->at(i));
+                }
+                axisY->setRange(0, maxValue * 1.1); // Set range with some padding
+            } else {
+                axisY->setRange(0, 10); // Default range if no data
+            }
+            chart->addAxis(axisY, Qt::AlignLeft);
+            series->attachAxis(axisY);
+            
+            // Connect hover signals
+            connect(series, &QBarSeries::hovered, [this](bool status, int index, QBarSet *barset) {
+                if (status) {
+                    ui->clientHoverDescriptionLabel->setText(
+                        QString("%1: %2 clients").arg(
+                            barset->label(), 
+                            QString::number(barset->at(index))
+                        )
+                    );
+                } else {
+                    ui->clientHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                }
+            });
+        }
+    } catch (const std::exception& e) {
+        qDebug() << "Exception in updateClientChart:" << e.what();
+        QMessageBox::warning(this, "Chart Error", "Failed to update client chart: " + QString(e.what()));
+    } catch (...) {
+        qDebug() << "Unknown exception in updateClientChart";
+        QMessageBox::warning(this, "Chart Error", "Unknown error updating client chart");
+    }
+}
+
+void MainWindow::updateTrainingChart()
+{
+    if (!m_dbConnected) return;
+    
+    try {
+        // Get chart type and filter
+        QString chartType = ui->trainingChartTypeComboBox->currentText();
+        QString filter = ui->trainingChartFilterComboBox->currentText();
+        bool showLegend = ui->trainingToggleLegendCheckBox->isChecked();
+        
+        // Get the chart from the view
+        QChart *chart = ui->trainingChartView->chart();
+        if (!chart) return;
+        
+        // Clear existing series and disconnect old connections
+        foreach(QAbstractSeries *series, chart->series()) {
+            if (QBarSeries *barSeries = qobject_cast<QBarSeries*>(series)) {
+                disconnect(barSeries, &QBarSeries::hovered, nullptr, nullptr);
+            } else if (QPieSeries *pieSeries = qobject_cast<QPieSeries*>(series)) {
+                for (QPieSlice *slice : pieSeries->slices()) {
+                    disconnect(slice, &QPieSlice::hovered, nullptr, nullptr);
+                }
+            }
+        }
+        chart->removeAllSeries();
+        
+        // Also clear the axes to prevent duplication
+        QList<QAbstractAxis*> axes = chart->axes();
+        for (QAbstractAxis *axis : axes) {
+            chart->removeAxis(axis);
+            delete axis;
+        }
+        
+        // Update chart title based on filter
+        chart->setTitle(QString("Training Statistics by %1").arg(filter));
+        
+        // Show/hide legend based on checkbox
+        chart->legend()->setVisible(showLegend);
+        
+        // Create appropriate chart based on selection
+        if (chartType == "Pie Chart") {
+            QPieSeries *series = new QPieSeries();
+            
+            // Get data from database through training manager
+            QMap<QString, int> data = trainingManager->getStatisticsByCategory(filter);
+            
+            // Add slices to the pie series
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                QPieSlice *slice = series->append(it.key(), it.value());
+                slice->setLabelVisible(true);
+                connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    slice->setExploded(hovered);
+                    slice->setLabelVisible(true);
+                    if (hovered) {
+                        ui->trainingHoverDescriptionLabel->setText(slice->label());
+                    } else {
+                        ui->trainingHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                    }
+                });
+            }
+            
+            // Only show percentages if there are multiple categories
+            int total = 0;
+            for (auto v : data.values()) total += v;
+            for (int i = 0; i < series->count(); ++i) {
+                QPieSlice *slice = series->slices().at(i);
+                if (data.size() > 1 && total > 0) {
+                    double percent = 100.0 * slice->value() / total;
+                    slice->setLabel(QString("%1 (%2%)").arg(slice->label()).arg(QString::number(percent, 'f', 1)));
+                } else {
+                    slice->setLabel(slice->label());
+                }
+            }
+            
+            chart->addSeries(series);
+        } else if (chartType == "Bar Chart") {
+            QBarSeries *series = new QBarSeries();
+            
+            // Get data from database through training manager
+            QMap<QString, int> data = trainingManager->getStatisticsByCategory(filter);
+            
+            // Create a bar set
+            QBarSet *set = new QBarSet("Trainings");
+            
+            // Create categories list for axis
+            QStringList categories;
+            
+            // Add values to the bar set
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                *set << it.value();
+                categories << it.key();
+            }
+            
+            series->append(set);
+            chart->addSeries(series);
+            
+            // Create axes
+            QBarCategoryAxis *axisX = new QBarCategoryAxis();
+            axisX->append(categories);
+            chart->addAxis(axisX, Qt::AlignBottom);
+            series->attachAxis(axisX);
+            
+            QValueAxis *axisY = new QValueAxis();
+            // Ensure we don't crash with empty data
+            if (set->count() > 0) {
+                double maxValue = 0;
+                for (int i = 0; i < set->count(); i++) {
+                    maxValue = qMax(maxValue, set->at(i));
+                }
+                axisY->setRange(0, maxValue * 1.1); // Set range with some padding
+            } else {
+                axisY->setRange(0, 10); // Default range if no data
+            }
+            chart->addAxis(axisY, Qt::AlignLeft);
+            series->attachAxis(axisY);
+            
+            // Connect hover signals
+            connect(series, &QBarSeries::hovered, [this](bool status, int index, QBarSet *barset) {
+                if (status) {
+                    ui->trainingHoverDescriptionLabel->setText(
+                        QString("%1: %2 trainings").arg(
+                            barset->label(), 
+                            QString::number(barset->at(index))
+                        )
+                    );
+                } else {
+                    ui->trainingHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                }
+            });
+        }
+    } catch (const std::exception& e) {
+        qDebug() << "Exception in updateTrainingChart:" << e.what();
+        QMessageBox::warning(this, "Chart Error", "Failed to update training chart: " + QString(e.what()));
+    } catch (...) {
+        qDebug() << "Unknown exception in updateTrainingChart";
+        QMessageBox::warning(this, "Chart Error", "Unknown error updating training chart");
+    }
+}
+
+void MainWindow::updateMeetingChart()
+{
+    if (!m_dbConnected) return;
+
+    try {
+        // Get chart type and filter
+        QString chartType = ui->meetingChartTypeComboBox->currentText();
+        QString filter = ui->meetingChartFilterComboBox->currentText();
+        bool showLegend = ui->meetingToggleLegendCheckBox->isChecked();
+
+        // Get the chart from the view
+        QChart *chart = ui->meetingChartView->chart();
+        if (!chart) return;
+
+        // Clear existing series and disconnect old connections
+        foreach(QAbstractSeries *series, chart->series()) {
+            if (QBarSeries *barSeries = qobject_cast<QBarSeries*>(series)) {
+                disconnect(barSeries, &QBarSeries::hovered, nullptr, nullptr);
+            } else if (QPieSeries *pieSeries = qobject_cast<QPieSeries*>(series)) {
+                for (QPieSlice *slice : pieSeries->slices()) {
+                    disconnect(slice, &QPieSlice::hovered, nullptr, nullptr);
+                }
+            }
+        }
+        chart->removeAllSeries();
+
+        // Also clear the axes to prevent duplication
+        QList<QAbstractAxis*> axes = chart->axes();
+        for (QAbstractAxis *axis : axes) {
+            chart->removeAxis(axis);
+            delete axis;
+        }
+
+        // Update chart title based on filter
+        chart->setTitle(QString("Meeting Statistics by %1").arg(filter));
+
+        // Show/hide legend based on checkbox
+        chart->legend()->setVisible(showLegend);
+
+        // Create appropriate chart based on selection
+        if (chartType == "Pie Chart") {
+            QPieSeries *series = new QPieSeries();
+            QMap<QString, int> data = meetingManager->getStatisticsByCategory(filter);
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                QPieSlice *slice = series->append(it.key(), it.value());
+                slice->setLabelVisible(true);
+                connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    slice->setExploded(hovered);
+                    slice->setLabelVisible(true);
+                    if (hovered) {
+                        ui->meetingHoverDescriptionLabel->setText(slice->label());
+                    } else {
+                        ui->meetingHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                    }
+                });
+            }
+            int total = 0;
+            for (auto v : data.values()) total += v;
+            for (int i = 0; i < series->count(); ++i) {
+                QPieSlice *slice = series->slices().at(i);
+                if (data.size() > 1 && total > 0) {
+                    double percent = 100.0 * slice->value() / total;
+                    slice->setLabel(QString("%1 (%2%)").arg(slice->label()).arg(QString::number(percent, 'f', 1)));
+                } else {
+                    slice->setLabel(slice->label());
+                }
+            }
+            chart->addSeries(series);
+        } else if (chartType == "Bar Chart") {
+            QBarSeries *series = new QBarSeries();
+
+            // Get data from database through meeting manager
+            QMap<QString, int> data = meetingManager->getStatisticsByCategory(filter);
+
+            // Create a bar set
+            QBarSet *set = new QBarSet("Meetings");
+
+            // Create categories list for axis
+            QStringList categories;
+
+            // Add values to the bar set
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                *set << it.value();
+                categories << it.key();
+            }
+
+            series->append(set);
+            chart->addSeries(series);
+
+            // Create axes
+            QBarCategoryAxis *axisX = new QBarCategoryAxis();
+            axisX->append(categories);
+            chart->addAxis(axisX, Qt::AlignBottom);
+            series->attachAxis(axisX);
+
+            QValueAxis *axisY = new QValueAxis();
+            // Ensure we don't crash with empty data
+            if (set->count() > 0) {
+                double maxValue = 0;
+                for (int i = 0; i < set->count(); i++) {
+                    maxValue = qMax(maxValue, set->at(i));
+                }
+                axisY->setRange(0, maxValue * 1.1); // Set range with some padding
+            } else {
+                axisY->setRange(0, 10); // Default range if no data
+            }
+            chart->addAxis(axisY, Qt::AlignLeft);
+            series->attachAxis(axisY);
+
+            // Connect hover signals, capturing categories
+            connect(series, &QBarSeries::hovered, [this, categories](bool status, int index, QBarSet *barset) {
+                if (status) {
+                    ui->meetingHoverDescriptionLabel->setText(
+                        QString("%1: %2 meetings").arg(
+                            categories.at(index),
+                            QString::number(barset->at(index))
+                            )
+                        );
+                } else {
+                    ui->meetingHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                }
+            });
+        }
+    } catch (const std::exception& e) {
+        qDebug() << "Exception in updateMeetingChart:" << e.what();
+        QMessageBox::warning(this, "Chart Error", "Failed to update meeting chart: " + QString(e.what()));
+    } catch (...) {
+        qDebug() << "Unknown exception in updateMeetingChart";
+        QMessageBox::warning(this, "Chart Error", "Unknown error updating meeting chart");
+    }
+}
+
+void MainWindow::updateEmployeeChart()
+{
+    if (!m_dbConnected) return;
+    try {
+        QComboBox* employeeChartTypeComboBox = ui->employeeChartTypeComboBox;
+        QComboBox* employeeChartFilterComboBox = ui->employeeChartFilterComboBox;
+        QCheckBox* employeeToggleLegendCheckBox = ui->employeeToggleLegendCheckBox;
+        QString chartType = employeeChartTypeComboBox ? employeeChartTypeComboBox->currentText() : "Pie Chart";
+        QString filter = employeeChartFilterComboBox ? employeeChartFilterComboBox->currentText() : "Role";
+        bool showLegend = employeeToggleLegendCheckBox ? employeeToggleLegendCheckBox->isChecked() : true;
+        QChartView* chartView = ui->employeeChartView;
+        if (!chartView) return;
+        QChart* chart = chartView->chart();
+        if (!chart) return;
+        chart->removeAllSeries();
+        QList<QAbstractAxis*> axes = chart->axes();
+        for (QAbstractAxis* axis : axes) { chart->removeAxis(axis); delete axis; }
+        chart->setTitle(QString("Employee Statistics by %1").arg(filter));
+        chart->setAnimationOptions(QChart::SeriesAnimations); // Enable animation
+        chart->legend()->setVisible(showLegend);
+        QMap<QString, int> data;
+        // Query EMPLOYEE table directly for statistics
+        if (filter == "Role") {
+            QSqlQuery query("SELECT ROLE, COUNT(*) as COUNT FROM EMPLOYEE GROUP BY ROLE");
+            while (query.next()) {
+                QString role = query.value(0).toString();
+                int count = query.value(1).toInt();
+                data[role] = count;
+            }
+        } else if (filter == "Specialty") {
+            QSqlQuery query("SELECT SPECIALITY, COUNT(*) as COUNT FROM EMPLOYEE GROUP BY SPECIALITY");
+            while (query.next()) {
+                QString specialty = query.value(0).toString();
+                int count = query.value(1).toInt();
+                data[specialty] = count;
+            }
+        }
+        if (data.isEmpty()) {
+            chart->setTitle("No employee data available");
+            if (ui->employeeHoverDescriptionLabel) ui->employeeHoverDescriptionLabel->setText("No data");
+            return;
+        }
+        if (chartType == "Pie Chart") {
+            QPieSeries *series = new QPieSeries();
+            int total = 0;
+            for (auto it = data.begin(); it != data.end(); ++it) total += it.value();
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                QPieSlice *slice = series->append(it.key(), it.value());
+                slice->setLabelVisible(true);
+                slice->setLabel(QString("%1: %2 (%3%)").arg(it.key()).arg(it.value()).arg(100.0 * it.value() / total, 0, 'f', 1));
+                connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    if (hovered) {
+                        slice->setExploded(true);
+                        ui->employeeHoverDescriptionLabel->setText(slice->label());
+                    } else {
+                        slice->setExploded(false);
+                        ui->employeeHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                    }
+                });
+            }
+            chart->addSeries(series);
+        } else if (chartType == "Bar Chart") {
+            QBarSeries *series = new QBarSeries();
+            QBarSet *set = new QBarSet("Employees");
+            QStringList categories;
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                *set << it.value();
+                categories << it.key();
+            }
+            series->append(set);
+            chart->addSeries(series);
+            QBarCategoryAxis *axisX = new QBarCategoryAxis();
+            axisX->append(categories);
+            chart->addAxis(axisX, Qt::AlignBottom);
+            series->attachAxis(axisX);
+            QValueAxis *axisY = new QValueAxis();
+            int maxValue = 0;
+            for (auto it = data.begin(); it != data.end(); ++it) maxValue = qMax(maxValue, it.value());
+            axisY->setRange(0, maxValue * 1.1);
+            chart->addAxis(axisY, Qt::AlignLeft);
+            series->attachAxis(axisY);
+            connect(series, &QBarSeries::hovered, [this, categories](bool status, int index, QBarSet *barset) {
+                if (status && index >= 0 && index < categories.size()) {
+                    ui->employeeHoverDescriptionLabel->setText(QString("%1: %2 employees").arg(categories.at(index)).arg(barset->at(index)));
+                } else {
+                    ui->employeeHoverDescriptionLabel->setText("Hover over a chart element to see details");
+                }
+            });
+        }
+        if (ui->employeeTotalCountLabel) {
+            QSqlQuery totalQuery("SELECT COUNT(*) FROM EMPLOYEE");
+            int total = 0;
+            if (totalQuery.next()) total = totalQuery.value(0).toInt();
+            ui->employeeTotalCountLabel->setText(QString("Total Employees: %1").arg(total));
+        }
+        if (ui->employeeAverageSalaryLabel) {
+            QSqlQuery avgQuery("SELECT AVG(SALAIRE) FROM EMPLOYEE");
+            double avg = 0;
+            if (avgQuery.next()) avg = avgQuery.value(0).toDouble();
+            ui->employeeAverageSalaryLabel->setText(QString("Average Salary: $%1").arg(avg, 0, 'f', 2));
+        }
+        chartView->setRenderHint(QPainter::Antialiasing);
+        chartView->setRubberBand(QChartView::RectangleRubberBand);
+    } catch (const std::exception& e) {
+        qDebug() << "Exception in updateEmployeeChart:" << e.what();
+        QMessageBox::warning(this, "Chart Error", "Failed to update employee chart: " + QString(e.what()));
+    } catch (...) {
+        qDebug() << "Unknown exception in updateEmployeeChart";
+        QMessageBox::warning(this, "Chart Error", "Unknown error updating employee chart");
+    }
+}
+
+void MainWindow::updateResourceChart()
+{
+    if (!m_dbConnected) return;
+    try {
+        QChartView* chartView = ui->chartView;
+        if (!chartView) return;
+        QComboBox* chartTypeCombo = ui->resourceChartTypeComboBox;
+        QComboBox* filterCombo = ui->resourceChartFilterComboBox;
+        QCheckBox* legendCheck = ui->resourceToggleLegendCheckBox;
+        QString chartType = chartTypeCombo ? chartTypeCombo->currentText() : "Pie Chart";
+        QString filter = filterCombo ? filterCombo->currentText() : "Type";
+        bool showLegend = legendCheck ? legendCheck->isChecked() : true;
+        QChart* chart = chartView->chart();
+        if (!chart) return;
+        chart->removeAllSeries();
+        QList<QAbstractAxis*> axes = chart->axes();
+        for (QAbstractAxis* axis : axes) { chart->removeAxis(axis); delete axis; }
+        chart->setTitle(QString("Resource Statistics by %1").arg(filter));
+        chart->setAnimationOptions(QChart::SeriesAnimations); // Enable animation
+        chart->legend()->setVisible(showLegend);
+        QMap<QString, int> data;
+        // Fix: Always query the actual RESOURCES table columns
+        if (filter == "Type") {
+            QSqlQuery query("SELECT TYPE, COUNT(*) as COUNT FROM RESOURCES GROUP BY TYPE");
+            while (query.next()) {
+                QString type = query.value(0).toString();
+                int count = query.value(1).toInt();
+                data[type] = count;
+            }
+        } else if (filter == "Purchase Date") {
+            QSqlQuery query("SELECT TO_CHAR(PURCHASE_DATE, 'YYYY-MM') as MONTH, COUNT(*) as COUNT FROM RESOURCES GROUP BY TO_CHAR(PURCHASE_DATE, 'YYYY-MM') ORDER BY MONTH");
+            while (query.next()) {
+                QString month = query.value(0).toString();
+                int count = query.value(1).toInt();
+                data[month] = count;
+            }
+        }
+        if (data.isEmpty()) {
+            chart->setTitle("No resource data available");
+            if (ui->resourceHoverLabel) ui->resourceHoverLabel->setText("No data");
+            return;
+        }
+        if (chartType == "Pie Chart") {
+            QPieSeries *series = new QPieSeries();
+            int total = 0;
+            for (auto it = data.begin(); it != data.end(); ++it) total += it.value();
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                QPieSlice *slice = series->append(it.key(), it.value());
+                slice->setLabelVisible(true);
+                slice->setLabel(QString("%1: %2 (%3%)").arg(it.key()).arg(it.value()).arg(100.0 * it.value() / total, 0, 'f', 1));
+                connect(slice, &QPieSlice::hovered, [this, slice](bool hovered) {
+                    if (hovered) {
+                        slice->setExploded(true);
+                        ui->resourceHoverLabel->setText(slice->label());
+                    } else {
+                        slice->setExploded(false);
+                        ui->resourceHoverLabel->setText("Hover over a chart element to see details");
+                    }
+                });
+            }
+            chart->addSeries(series);
+        } else if (chartType == "Bar Chart") {
+            QBarSeries *series = new QBarSeries();
+            QBarSet *set = new QBarSet("Resources");
+            QStringList categories;
+            for (auto it = data.begin(); it != data.end(); ++it) {
+                *set << it.value();
+                categories << it.key();
+            }
+            series->append(set);
+            chart->addSeries(series);
+            QBarCategoryAxis *axisX = new QBarCategoryAxis();
+            axisX->append(categories);
+            chart->addAxis(axisX, Qt::AlignBottom);
+            series->attachAxis(axisX);
+            QValueAxis *axisY = new QValueAxis();
+            int maxValue = 0;
+            for (auto it = data.begin(); it != data.end(); ++it) maxValue = qMax(maxValue, it.value());
+            axisY->setRange(0, maxValue * 1.1);
+            chart->addAxis(axisY, Qt::AlignLeft);
+            series->attachAxis(axisY);
+            connect(series, &QBarSeries::hovered, [this, categories](bool status, int index, QBarSet *barset) {
+                if (status && index >= 0 && index < categories.size()) {
+                    ui->resourceHoverLabel->setText(QString("%1: %2 resources").arg(categories.at(index)).arg(barset->at(index)));
+                } else {
+                    ui->resourceHoverLabel->setText("Hover over a chart element to see details");
+                }
+            });
+        }
+        chartView->setRenderHint(QPainter::Antialiasing);
+        chartView->setRubberBand(QChartView::RectangleRubberBand);
+    } catch (const std::exception& e) {
+        qDebug() << "Exception in updateResourceChart:" << e.what();
+        QMessageBox::warning(this, "Chart Error", "Failed to update resource chart: " + QString(e.what()));
+    } catch (...) {
+        qDebug() << "Unknown exception in updateResourceChart";
+        QMessageBox::warning(this, "Chart Error", "Unknown error updating resource chart");
+    }
+}
+
+// Add this new helper method to improve all table displays
+void MainWindow::improveTableDisplay(QTableView* tableView)
+{
+    if (!tableView) return;
+    tableView->verticalHeader()->setDefaultSectionSize(40);
+    QFont tableFont = tableView->font();
+    tableFont.setPointSize(11);
+    tableView->setFont(tableFont);
+    tableView->horizontalHeader()->setVisible(true);
+    tableView->horizontalHeader()->setFont(tableFont);
+    tableView->setStyleSheet(
+        "QTableView { gridline-color: #E5E5E5; selection-background-color: #A1B8E6; selection-color: #333333; }"
+        "QTableView::item { padding: 8px 12px; border: none; }"
+        "QTableView::item:selected { background-color: #A1B8E6; color: #333333; }"
+        "QHeaderView::section { background-color: #3A5DAE; color: white; padding: 10px; font-weight: bold; border: none; font-size: 12pt; }"
+    );
+    tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    tableView->horizontalHeader()->setStretchLastSection(true);
+    int columnCount = tableView->model() ? tableView->model()->columnCount() : 6;
+    tableView->setMinimumWidth(columnCount * 140);
+    // Hide ID column if present
+    if (tableView->model() && columnCount > 0 && tableView->model()->headerData(0, Qt::Horizontal).toString().toLower().contains("id")) {
+        tableView->hideColumn(0);
+    }
+}
+
+// Similar method for QTableWidget
+void MainWindow::improveTableWidgetDisplay(QTableWidget* tableWidget)
+{
+    if (!tableWidget) return;
+    tableWidget->verticalHeader()->setDefaultSectionSize(40);
+    QFont tableFont = tableWidget->font();
+    tableFont.setPointSize(10);
+    tableWidget->setFont(tableFont);
+    tableWidget->horizontalHeader()->setVisible(true);
+    tableWidget->horizontalHeader()->setFont(tableFont);
+    tableWidget->horizontalHeader()->setDefaultSectionSize(150);
+    tableWidget->horizontalHeader()->setMinimumSectionSize(100);
+    tableWidget->setStyleSheet(
+        "QTableWidget {"
+        "    gridline-color: #E5E5E5;"
+        "    selection-background-color: #A1B8E6;"
+        "    selection-color: #333333;"
+        "}"
+        "QTableWidget::item {"
+        "    padding: 5px 8px;"
+        "    border: none;"
+        "}"
+        "QTableWidget::item:selected {"
+        "    background-color: #A1B8E6;"
+        "    color: #333333;"
+        "}"
+        "QHeaderView::section {"
+        "    background-color: #3A5DAE;"
+        "    color: white;"
+        "    padding: 8px;"
+        "    font-weight: bold;"
+        "    border: none;"
+        "}"
+    );
+    tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    tableWidget->horizontalHeader()->setStretchLastSection(true);
+    // Hide ID column if present
+    if (tableWidget->columnCount() > 0 && tableWidget->horizontalHeaderItem(0) && tableWidget->horizontalHeaderItem(0)->text().toLower().contains("id")) {
+        tableWidget->hideColumn(0);
+    }
+}
+
+void MainWindow::on_employeeSearchChanged(const QString &text)
+{
+    // Implement search for QTableWidget
+    // For now, just filter rows by name, CIN, or specialty
+    QTableWidget* table = ui->employeeTableWidget;
+    for (int row = 0; row < table->rowCount(); ++row) {
+        bool match = false;
+        for (int col = 0; col < table->columnCount(); ++col) {
+            QTableWidgetItem* item = table->item(row, col);
+            if (item && item->text().contains(text, Qt::CaseInsensitive)) {
+                match = true;
+                break;
+            }
+        }
+        table->setRowHidden(row, !match);
+    }
+}
+
+void MainWindow::on_resetSearchButton_clicked()
+{
+    ui->searchInput->clear();
+    QTableWidget* table = ui->employeeTableWidget;
+    for (int row = 0; row < table->rowCount(); ++row) {
+        table->setRowHidden(row, false);
+    }
+}
+
+void MainWindow::on_addButton_clicked()
+{
+    // Validation des champs de saisie
+    if (!validateEmployeeInput()) {
+        return;
+    }
+    QString cin = ui->lineEdit_CIN->text();
+    QString lastName = ui->lineEdit_Nom->text();
+    QString firstName = ui->lineEdit_Prenom->text();
+    QDate dateOfBirth = ui->dateEdit_birth->date();
+    QString phoneNumber = ui->lineEdit_phone->text();
+    QString email = ui->lineEdit_email->text();
+    QString gender = ui->radioButton_H->isChecked() ? "Homme" : "Femme";
+    int salary = ui->lineEdit_salaire->text().toInt();
+    QDate dateOfHire = ui->dateEdit_hiring->date();
+    QString field = ui->comboBox->currentText();
+    QString imagePath = ui->imagePathLineEdit->text();
+    QString role = ui->roleComboBox->currentText();
+
+    bool success = employeeManager->addEmployee(cin, lastName, firstName, dateOfBirth, phoneNumber, 
+                                               email, gender, salary, dateOfHire, field, imagePath, role);
+    
+    if (success) {
+        QMessageBox::information(this, "Success", "Employee added successfully!");
+        
+        // Clear fields after adding
+        ui->lineEdit_CIN->clear();
+        ui->lineEdit_Nom->clear();
+        ui->lineEdit_Prenom->clear();
+        ui->dateEdit_birth->setDate(QDate::currentDate());
+        ui->lineEdit_phone->clear();
+        ui->lineEdit_email->clear();
+        ui->radioButton_H->setChecked(true);
+        ui->lineEdit_salaire->clear();
+        ui->dateEdit_hiring->setDate(QDate::currentDate());
+        ui->imagePathLineEdit->clear();
+        
+        // Refresh the table
+        on_employeeSectionButton_clicked();
+        
+        // Add notification
+        notificationManager->addNotification("Employee Added", "New employee: " + firstName + " " + lastName, 
+                                           "Added by " + QString::number(QDateTime::currentDateTime().toSecsSinceEpoch()), -1);
+    } else {
+        QMessageBox::critical(this, "Error", "Failed to add employee. Check the fields and try again.");
+    }
+}
+
+void MainWindow::on_deleteBtn_clicked()
+{
+    QTableWidget* table = ui->employeeTableWidget;
+    int row = table->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Error", "Please select an employee to delete.");
+        return;
+    }
+    int employeeId = table->item(row, 0)->text().toInt();
+    QString employeeName = table->item(row, 2)->text() + " " + table->item(row, 3)->text();
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "Confirm Delete", 
+        "Are you sure you want to delete employee " + employeeName + "?", 
+        QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::Yes) {
+        bool success = employeeManager->deleteEmployee(employeeId);
+        if (success) {
+            QMessageBox::information(this, "Success", "Employee deleted successfully!");
+            on_employeeSectionButton_clicked();
+            notificationManager->addNotification("Employee Deleted", "Deleted: " + employeeName, 
+                                             "Deleted at " + QDateTime::currentDateTime().toString(), -1);
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to delete employee. Please try again.");
+        }
+    }
+}
+
+void MainWindow::on_modifyBtn_clicked()
+{
+    QTableWidget* table = ui->employeeTableWidget;
+    int row = table->currentRow();
+    qDebug() << "on_modifyBtn_clicked called - Selected row:" << row;
+
+    static bool isProcessing = false;
+    if (isProcessing) {
+        qDebug() << "on_modifyBtn_clicked re-entrant call detected, ignoring";
+        return;
+    }
+    isProcessing = true;
+
+    if (row < 0) {
+        QMessageBox::warning(this, "Error", "Please select an employee to update.");
+        isProcessing = false;
+        return;
+    }
+
+    QTableWidgetItem* idItem = table->item(row, 0);
+    if (!idItem) {
+        QMessageBox::warning(this, "Error", "Invalid employee ID in table.");
+        isProcessing = false;
+        return;
+    }
+    bool ok;
+    int employeeId = idItem->text().toInt(&ok);
+    if (!ok || employeeId <= 0) {
+        QMessageBox::warning(this, "Error", "Invalid employee ID: " + idItem->text());
+        isProcessing = false;
+        return;
+    }
+    qDebug() << "Opening UpdateEmployeeDialog with employeeId:" << employeeId;
+
+    // Disconnect the signal temporarily to prevent re-triggering
+    disconnect(ui->modifyBtn, &QPushButton::clicked, this, &MainWindow::on_modifyBtn_clicked);
+
+    UpdateEmployeeDialog updateDialog(employeeId, this);
+    int result = updateDialog.exec();
+    qDebug() << "UpdateEmployeeDialog closed with result:" << result;
+
+    if (result == QDialog::Accepted) {
+        qDebug() << "Employee updated successfully, refreshing table";
+        on_employeeSectionButton_clicked();
+
+        QString employeeName = table->item(row, 2) ? table->item(row, 2)->text() : "Unknown";
+        employeeName += " ";
+        employeeName += table->item(row, 3) ? table->item(row, 3)->text() : "Employee";
+        notificationManager->addNotification("Employee Updated", "Updated: " + employeeName,
+                                             "Updated at " + QDateTime::currentDateTime().toString(), -1);
+    } else {
+        qDebug() << "Update dialog was rejected or canceled";
+    }
+
+    if (row < table->rowCount() && table->item(row, 0)) {
+        table->blockSignals(true);
+        table->setCurrentCell(row, 0);
+        table->blockSignals(false);
+        qDebug() << "Restored selection to row:" << row << "with signals blocked";
+    }
+
+    // Reconnect the signal
+    connect(ui->modifyBtn, &QPushButton::clicked, this, &MainWindow::on_modifyBtn_clicked);
+    isProcessing = false;
+}
+
+void MainWindow::on_downloadBtn_clicked()
+{
+    static bool isSaving = false;
+    if (isSaving) return;
+
+    QTableWidget* table = ui->employeeTableWidget;
+    QList<QTableWidgetItem*> selectedItems = table->selectedItems();
+    if (selectedItems.isEmpty()) {
+        QMessageBox::warning(this, "Error", "No employee selected!");
+        return;
+    }
+
+    int row = table->row(selectedItems.first());
+    QStringList headers;
+    for (int column = 0; column < table->columnCount(); ++column) {
+        QTableWidgetItem* item = table->horizontalHeaderItem(column);
+        headers << (item ? item->text() : "");
+    }
+
+    QStringList employeeData;
+    QString base64Image;
+    for (int col = 0; col < headers.size(); ++col) {
+        QTableWidgetItem* item = table->item(row, col);
+        if (item && headers[col].toLower() == "image") {
+            base64Image = item->data(Qt::UserRole).toString();
+        } else {
+            employeeData << (item ? item->text() : "");
+        }
+    }
+
+    QString fileName = QFileDialog::getSaveFileName(this, "Export Employee as PDF", "", "PDF Files (*.pdf)");
+    if (fileName.isEmpty()) {
+        return;
+    }
+    if (!fileName.endsWith(".pdf", Qt::CaseInsensitive)) {
+        fileName += ".pdf";
+    }
+
+    isSaving = true; // Set flag to prevent re-entry
+
+    QTextDocument doc;
+    QString imageHtml;
+    if (!base64Image.isEmpty()) {
+        imageHtml = QString(R"(
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src='data:image/jpeg;base64,%1' width='120' height='160' style='border:2px solid #4a90e2; border-radius: 5px;'/>
+            </div>
+        )").arg(base64Image);
+    } else {
+        imageHtml = "<p><em>No Image Available</em></p>";
+    }
+
+    QString infoItems;
+    int dataIndex = 0;
+    for (int i = 0; i < headers.size(); ++i) {
+        if (headers[i].toLower() != "image") {
+            if (dataIndex < employeeData.size()) {
+                infoItems += "<div class='info-item'><strong>" + headers[i] + ":</strong> " + employeeData[dataIndex] + "</div>";
+                dataIndex++;
+            }
+        }
+    }
+
+    QString html = R"(
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: 'Segoe UI', sans-serif;
+                    background-color: #f7f7f7;
+                    padding: 20px;
+                    color: #333;
+                }
+                .cv-container {
+                    background-color: #ffffff;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    width: 100%;
+                }
+                .section {
+                    margin-top: 20px;
+                }
+                .section h2 {
+                    color: #2c5282;
+                    border-bottom: 1px solid #ccc;
+                    padding-bottom: 5px;
+                }
+                .info-item {
+                    margin: 6px 0;
+                }
+                .info-item strong {
+                    display: inline-block;
+                    width: 140px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class='cv-container'>
+                %1
+                <div class='section'>
+                    <h2>Employee Information</h2>
+                    <p style='color: #666;'>Generated on %2</p>
+                    %3
+                </div>
+            </div>
+        </body>
+        </html>
+    )";
+
+    html = html.arg(imageHtml, QDate::currentDate().toString("yyyy-MM-dd"), infoItems);
+    doc.setHtml(html);
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(fileName);
+    printer.setPageSize(QPageSize(QPageSize::A4));
+    printer.setPageMargins(QMarginsF(15, 15, 15, 15));
+
+    doc.print(&printer);
+    QMessageBox::information(this, "Export Successful", "Employee data exported to PDF successfully!");
+
+    isSaving = false; // Reset flag after successful save
+}
+void MainWindow::on_selectImageButton_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, "Select Employee Image", "",
+                                                    "Image Files (*.png *.jpg *.jpeg *.bmp)");
+    if (!fileName.isEmpty()) {
+        ui->imagePathLineEdit->setText(fileName);
+    }
+}
+
+void MainWindow::on_generateQRCodeBtn_clicked()
+{
+    QTableWidget* table = ui->employeeTableWidget;
+    int row = table->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Error", "Please select an employee.");
+        return;
+    }
+    QString employeeId = table->item(row, 0)->text();
+    QString employeeName = table->item(row, 2)->text() + " " + table->item(row, 3)->text();
+    QString employeeCIN = table->item(row, 1)->text();
+    QString qrContent = "ID: " + employeeId + "\n" + "Name: " + employeeName + "\n" + "CIN: " + employeeCIN;
+    qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(qrContent.toUtf8().constData(), qrcodegen::QrCode::Ecc::MEDIUM);
+    const int qrSize = qr.getSize();
+    const int scale = 10;
+    QImage image(qrSize * scale, qrSize * scale, QImage::Format_RGB32);
+    image.fill(Qt::white);
+    QPainter painter(&image);
+    painter.setPen(Qt::black);
+    painter.setBrush(Qt::black);
+    for (int y = 0; y < qrSize; ++y) {
+        for (int x = 0; x < qrSize; ++x) {
+            if (qr.getModule(x, y)) {
+                painter.fillRect(x * scale, y * scale, scale, scale, Qt::black);
+            }
+        }
+    }
+    QString saveFileName = QFileDialog::getSaveFileName(this, "Save QR Code", 
+                                                     "employee_" + employeeId + "_qr.png", 
+                                                     "PNG Files (*.png)");
+    if (!saveFileName.isEmpty()) {
+        if (image.save(saveFileName)) {
+            QMessageBox::information(this, "Success", "QR Code saved successfully!");
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to save QR Code image.");
+        }
+    }
+}
+
+void MainWindow::on_resourceSectionButton_clicked()
+{
+    ui->mainStackedWidget->setCurrentWidget(ui->resourcePage);
+    
+    // Check if the table widget exists before setting up
+    if (ui->tableWidget) {
+        // Setup the resource table
+        resourceManager->setupTable(ui->tableWidget);
+        
+        // Apply improved table styling for better readability
+        improveTableWidgetDisplay(ui->tableWidget);
+        
+        // Connect table selection to update selectedResourceId
+        connect(ui->tableWidget, &QTableWidget::itemSelectionChanged, this, &MainWindow::on_resourceTableSelectionChanged);
+        
+        // Setup search functionality
+        connect(ui->searchLineEdit, &QLineEdit::textChanged, this, &MainWindow::on_searchTextChanged);
+        connect(ui->resourceSearchColumnComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::on_resourceSearchColumnChanged);
+        
+        // Refresh statistics if needed
+        updateResourceChart();
+    } else {
+        QMessageBox::warning(this, "UI Error", "Resource table widget not found. Please check the UI setup.");
+    }
+}
+
+void MainWindow::setupResourceChart()
+{
+    if (!m_dbConnected) return;
+    
+    // Create a default chart for resources
+    QChart *chart = new QChart();
+    chart->setTitle("Resource Statistics");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    
+    // Check if resourceChartView exists in the UI before using it
+    // This will prevent the "no member named 'resourceChartView'" error
+    QChartView* resourceChartView = ui->mainStackedWidget->findChild<QChartView*>("resourceChartView");
+    if (resourceChartView) {
+        resourceChartView->setChart(chart);
+        resourceChartView->setRenderHint(QPainter::Antialiasing);
+        resourceChartView->setRubberBand(QChartView::RectangleRubberBand);
+        
+        // Update with initial data
+        updateResourceChart();
+    } else {
+        qDebug() << "Resource chart view not found in UI";
+    }
+}
+
+void MainWindow::on_confirmFormButton_clicked()
+{
+    QString name = ui->nameLineEdit->text().trimmed();
+    QString type = ui->typeComboBox->currentText().trimmed();
+    QString brand = ui->brandLineEdit->text().trimmed();
+    bool ok;
+    int quantity = ui->quantityLineEdit->text().toInt(&ok);
+    QDate purchase_date = ui->purchaseDateEdit->date();
+    QDate currentDate = QDate::currentDate();
+
+    if (name.isEmpty() || type.isEmpty() || brand.isEmpty() || !ok) {
+        QMessageBox::warning(this, "Input Error", "All fields (Name, Type, Brand, Quantity) must be filled correctly.");
+        return;
+    }
+
+    auto startsWithUpper = [](const QString& str) {
+        return !str.isEmpty() && str[0].isUpper();
+    };
+    if (!startsWithUpper(name) || !startsWithUpper(type) || !startsWithUpper(brand)) {
+        QMessageBox::warning(this, "Input Error", "Name, Type, and Brand must start with an uppercase letter.");
+        return;
+    }
+
+    if (!ok || quantity <= 0) {
+        QMessageBox::warning(this, "Input Error", "Quantity must be a positive number greater than zero.");
+        return;
+    }
+
+    if (purchase_date > currentDate) {
+        QMessageBox::warning(this, "Input Error", "Purchase date cannot be in the future.");
+        return;
+    }
+
+    if (imageData.isEmpty()) {
+        QMessageBox::warning(this, "Input Error", "Please select an image.");
+        return;
+    }
+
+    // Prepare Clarifai API request
+    QNetworkRequest request(QUrl("https://api.clarifai.com/v2/models/aaa03c23b3724a16a56b629203edc62c/outputs"));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Key 5deb057118f94dc8ac2dcd74b1047592"); // Replace with your Clarifai API key
+
+    QJsonObject imageObject;
+    imageObject["base64"] = QString(imageData.toBase64());
+    QJsonObject dataObject;
+    dataObject["image"] = imageObject;
+    QJsonObject inputObject;
+    inputObject["data"] = dataObject;
+    QJsonArray inputsArray;
+    inputsArray.append(inputObject);
+    QJsonObject requestObject;
+    requestObject["inputs"] = inputsArray;
+    QJsonDocument doc(requestObject);
+    QByteArray jsonData = doc.toJson();
+    //qDebug() << "JSON Payload:" << QString(jsonData);
+    QNetworkReply *reply = networkManager->post(request, jsonData);
+    reply->setProperty("resourceName", name);
+    reply->setProperty("type", type);
+    reply->setProperty("brand", brand);
+    reply->setProperty("quantity", quantity);
+    reply->setProperty("purchaseDate", purchase_date.toString("yyyy-MM-dd"));
+    qDebug() << "Sent image analysis request to Clarifai API";
+    disconnect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onAIResponseReceived);
+    connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::on_imageAnalysisFinished);
+}
+
+void MainWindow::on_imageAnalysisFinished(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        QByteArray responseData = reply->readAll();
+        QString responseString = QString::fromUtf8(responseData);
+        QMessageBox::warning(this, "API Error",
+                             "Failed to analyze image: " + reply->errorString() + "\nServer response: " + responseString);
+        qDebug() << "API request failed:" << reply->errorString();
+        qDebug() << "Server response:" << responseString;
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray responseData = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+    QJsonObject jsonObj = doc.object();
+    QString resourceName = reply->property("resourceName").toString().toLower();
+    bool matchFound = false;
+    QJsonArray outputs = jsonObj["outputs"].toArray();
+    if (!outputs.isEmpty()) {
+        QJsonObject output = outputs[0].toObject();
+        QJsonObject data = output["data"].toObject();
+        QJsonArray concepts = data["concepts"].toArray();
+        qDebug() << "Resource name to match:" << resourceName;
+        qDebug() << "Detected concepts:";
+        for (const QJsonValue &value : concepts) {
+            QJsonObject concept = value.toObject();
+            QString detectedName = concept["name"].toString().toLower();
+            double confidence = concept["value"].toDouble();
+            qDebug() << "- Name:" << detectedName << "Confidence:" << confidence;
+            if (detectedName == resourceName) {
+                matchFound = true;
+                break;
+            }
+        }
+    } else {
+        qDebug() << "No concepts detected in the image.";
+    }
+    if (!matchFound) {
+        QMessageBox::warning(this, "Mismatch Error", "The picture you added does not match the resource name '" + resourceName + "'.");
+        reply->deleteLater();
+        return;
+    }
+    Resource resource;
+    resource.setName(reply->property("resourceName").toString());
+    resource.setType(reply->property("type").toString());
+    resource.setBrand(reply->property("brand").toString());
+    resource.setQuantity(reply->property("quantity").toInt());
+    resource.setPurchaseDate(QDate::fromString(reply->property("purchaseDate").toString(), "yyyy-MM-dd"));
+    resource.setImage(imageData);
+    if (resource.addResource(/*employeeName*/"Admin")) {
+        //qDebug() << "Resource added successfully by " << employeeName;
+        QMessageBox::information(this, "Success", "Resource added successfully!");
+        ui->nameLineEdit->clear();
+        ui->typeComboBox->setCurrentIndex(0);
+        ui->brandLineEdit->clear();
+        ui->quantityLineEdit->clear();
+        ui->purchaseDateEdit->setDate(QDate::currentDate());
+        imageData.clear();
+        ui->lblImagePreview->clear();
+        resourceManager->updateTable(ui->tableWidget);
+        updateResourceChart();
+    } else {
+        qDebug() << "Failed to add resource:" << QSqlQuery().lastError().text();
+        QMessageBox::warning(this, "Error", "Failed to add resource: " + QSqlQuery().lastError().text());
+    }
+    reply->deleteLater();
+}
+
+void MainWindow::on_btnSelectImage_clicked()
+{
+    QString filePath = QFileDialog::getOpenFileName(
+        this,
+        "Select Resource Image",
+        "",
+        "Image Files (*.png *.jpg *.jpeg *.bmp)"
+    );
+    
+    if (!filePath.isEmpty()) {
+        // Load image data
+        imageData = ResourceManager::loadImageData(filePath);
+        
+        if (!imageData.isEmpty()) {
+            // Display image preview
+            QPixmap pixmap = ResourceManager::byteArrayToPixmap(imageData);
+            if (!pixmap.isNull()) {
+                ui->lblImagePreview->setPixmap(pixmap.scaled(200, 150, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            } else {
+                ui->lblImagePreview->setText("Invalid image format");
+                imageData.clear();
+            }
+        } else {
+            ui->lblImagePreview->setText("Failed to load image");
+        }
+    }
+}
+
+void MainWindow::on_cancelFormButton_clicked()
+{
+    // Clear form
+    ui->nameLineEdit->clear();
+    ui->typeComboBox->setCurrentIndex(0);
+    ui->brandLineEdit->clear();
+    ui->quantityLineEdit->setText("1");
+    ui->purchaseDateEdit->setDate(QDate::currentDate());
+    ui->lblImagePreview->clear();
+    imageData.clear();
+    
+    // Deselect any selected row
+    if (ui->tableWidget) {
+        ui->tableWidget->clearSelection();
+    }
+    
+    // Reset the selected resource id
+    selectedResourceId = -1;
+}
+
+void MainWindow::on_updateButton_clicked()
+{
+    // Check if a resource is selected
+    if (selectedResourceId <= 0) {
+        QMessageBox::warning(this, "Selection Error", "Please select a resource to update.");
+        return;
+    }
+
+    // Find the selected row in the table
+    int selectedRow = -1;
+    for (int i = 0; i < ui->tableWidget->rowCount(); ++i) {
+        QTableWidgetItem *idItem = ui->tableWidget->item(i, 0);
+        if (idItem && idItem->text().toInt() == selectedResourceId) {
+            selectedRow = i;
+            break;
+        }
+    }
+    if (selectedRow == -1) {
+        QMessageBox::warning(this, "Error", "Selected resource not found in the table.");
+        return;
+    }
+
+    // Extract data from the selected row
+    QString name = ui->tableWidget->item(selectedRow, 1)->text();
+    QString type = ui->tableWidget->item(selectedRow, 2)->text();
+    QString brand = ui->tableWidget->item(selectedRow, 3)->text();
+    int quantity = ui->tableWidget->item(selectedRow, 4)->text().toInt();
+    QDate purchaseDate = QDate::fromString(ui->tableWidget->item(selectedRow, 5)->text(), "yyyy-MM-dd");
+    QByteArray imageData;
+    // Try to get image data from the cell widget if possible
+    QLabel *imageLabel = qobject_cast<QLabel*>(ui->tableWidget->cellWidget(selectedRow, 6));
+    if (imageLabel && !imageLabel->pixmap(Qt::ReturnByValue).isNull()) {
+        QPixmap pixmap = imageLabel->pixmap(Qt::ReturnByValue);
+        QBuffer buffer(&imageData);
+        buffer.open(QIODevice::WriteOnly);
+        pixmap.save(&buffer, "PNG");
+    }
+
+    // Open update dialog and pre-fill with selected resource data
+    UpdateResourceDialog dialog(this);
+    dialog.setResourceData(selectedResourceId, name, type, brand, quantity, purchaseDate, imageData);
+    if (dialog.exec() == QDialog::Accepted) {
+        // Update the resource in the database
+        bool success = resourceManager->updateResource(
+            selectedResourceId,
+            dialog.getName(),
+            dialog.getType(),
+            dialog.getBrand(),
+            dialog.getQuantity(),
+            dialog.getPurchaseDate(),
+            dialog.getImageData()
+        );
+        if (success) {
+            resourceManager->updateTable(ui->tableWidget);
+            updateResourceChart();
+            notificationManager->addNotification(
+                "Resource Updated",
+                "Updated resource ID: " + QString::number(selectedResourceId),
+                "Updated at " + QDateTime::currentDateTime().toString(),
+                -1
+            );
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to update resource. Check the database connection.");
+        }
+    }
+}
+
+void MainWindow::on_deleteButton_clicked()
+{
+    // Check if a resource is selected
+    if (selectedResourceId <= 0) {
+        QMessageBox::warning(this, "Selection Error", "Please select a resource to delete.");
+        return;
+    }
+    
+    // Confirm deletion
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Confirm Delete",
+        "Are you sure you want to delete this resource?",
+        QMessageBox::Yes | QMessageBox::No
+    );
+    
+    if (reply == QMessageBox::Yes) {
+        // Delete the resource
+        if (resourceManager->deleteResource(selectedResourceId)) {
+            QMessageBox::information(this, "Success", "Resource deleted successfully");
+            
+            // Refresh table
+            resourceManager->updateTable(ui->tableWidget);
+            
+            // Clear selection
+            selectedResourceId = -1;
+            
+            // Update statistics
+            updateResourceChart();
+            
+            // Clear form
+            on_cancelFormButton_clicked();
+            
+            // Add notification
+            notificationManager->addNotification(
+                "Resource Deleted",
+                "Deleted resource ID: " + QString::number(selectedResourceId),
+                "Deleted at " + QDateTime::currentDateTime().toString(),
+                -1
+            );
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to delete resource. Check the database connection.");
+        }
+    }
+}
+
+/*void MainWindow::on_exportPdfButton_clicked() {
+    // Refresh the table with all data (no filter)
+    //refreshTableWidget("");
+    qDebug() << "Table row count before export:" << ui->tableWidget->rowCount();
+
+    // Prompt the user to choose a save location for the PDF
+    QString filePath = QFileDialog::getSaveFileName(this, "Save PDF", QDir::homePath() + "/resources.pdf", "PDF Files (*.pdf)");
+    if (filePath.isEmpty()) {
+        qDebug() << "PDF export canceled by user.";
+        return;
+    }
+
+    // Ensure the file has a .pdf extension
+    if (!filePath.endsWith(".pdf", Qt::CaseInsensitive)) {
+        filePath += ".pdf";
+    }
+
+    // Check if file is writable to avoid issues later
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        QMessageBox::warning(this, "PDF Export Error", "Cannot write to the selected file location.");
+        qDebug() << "Failed to open file for writing:" << filePath;
+        return;
+    }
+    file.close(); // Close it since QPrinter will handle writing
+
+    // Set up the QPrinter for PDF output
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(filePath);
+    printer.setPageSize(QPageSize(QPageSize::A4));
+    printer.setPageMargins(QMarginsF(15, 50, 15, 15), QPageLayout::Millimeter);
+
+    // Set up the QPainter to draw on the PDF
+    QPainter painter(&printer);
+    if (!painter.isActive()) {
+        QMessageBox::warning(this, "PDF Export Error", "Failed to initialize PDF painter.");
+        qDebug() << "Failed to initialize QPainter for PDF export.";
+        return;
+    }
+
+    // Get the page dimensions in pixels
+    QRectF pageRect = printer.pageRect(QPrinter::DevicePixel);
+    int pageWidth = pageRect.width();
+    int pageHeight = pageRect.height();
+    qDebug() << "Page dimensions:" << pageWidth << "x" << pageHeight;
+
+    // Define layout constants
+    const int tableMargin = 100;
+    const int rowHeight = 700; // Increased to 500 for taller rows (was 400)
+    const int fontSize = 10;   // Increased font size for better readability (was 9)
+    const int headerFontSize = 12; // Increased header font size (was 11)
+    const int imageSize = 600; // Increased to 300 for larger images (was 200)
+    const int textPadding = 30; // Increased padding for better spacing (was 25)
+
+    // Calculate column widths dynamically based on page width
+    const int numColumns = ui->tableWidget->columnCount();
+    int totalTableWidth = pageWidth - 2 * tableMargin;
+    int colWidths[] = {40, 100, 100, 100, 100, 100, 200}; // Adjusted widths: Quantity (index 4) to 100, Image (index 6) to 350
+    int totalDefinedWidth = 0;
+    for (int colWidth : colWidths) {
+        totalDefinedWidth += colWidth;
+    }
+    double scaleFactor = static_cast<double>(totalTableWidth) / totalDefinedWidth;
+    for (int &colWidth : colWidths) {
+        colWidth = static_cast<int>(colWidth * scaleFactor);
+    }
+
+    // Center the table on the page
+    totalTableWidth = 0;
+    for (int colWidth : colWidths) {
+        totalTableWidth += colWidth;
+    }
+    int tableMarginAdjusted = (pageWidth - totalTableWidth) / 2;
+
+    // Set up fonts
+    QFont font("Arial", fontSize);
+    QFont headerFont("Arial", headerFontSize, QFont::Bold);
+    painter.setFont(font);
+
+    // Draw the title and timestamp
+    painter.setFont(QFont("Arial", 14, QFont::Bold));
+    painter.drawText(tableMarginAdjusted, 150, "Resource Management System - Exported Data"); // Uncommented for better presentation
+    painter.setFont(QFont("Arial", 10));
+    painter.drawText(tableMarginAdjusted, 350, "Exported on: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+    int y = 250;
+
+    // Draw the table headers
+    int x = tableMarginAdjusted;
+    painter.setFont(headerFont);
+    for (int col = 0; col < numColumns; ++col) {
+        QString headerText = ui->tableWidget->horizontalHeaderItem(col)->text();
+        QRect headerRect(x, y, colWidths[col], rowHeight);
+        QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, headerText);
+        painter.drawRect(headerRect);
+        x += colWidths[col];
+    }
+    y += rowHeight;
+
+    // Set the font back to normal for the table data
+    painter.setFont(font);
+
+    // Draw the table data
+    for (int row = 0; row < ui->tableWidget->rowCount(); ++row) {
+        x = tableMarginAdjusted;
+
+        // Add alternating row colors
+        if (row % 2 == 0) {
+            painter.fillRect(QRect(tableMarginAdjusted, y, totalTableWidth, rowHeight), QBrush(QColor(240, 240, 240)));
+        }
+
+        for (int col = 0; col < numColumns; ++col) {
+            QTableWidgetItem *item = ui->tableWidget->item(row, col);
+            QRect cellRect(x, y, colWidths[col], rowHeight);
+            QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+
+            if (col == 6) { // Image column
+                if (item) {
+                    QVariant imageData = item->data(Qt::DecorationRole);
+                    if (imageData.canConvert<QPixmap>()) {
+                        QPixmap pixmap = imageData.value<QPixmap>();
+                        if (!pixmap.isNull()) {
+                            QPixmap scaledPixmap = pixmap.scaled(imageSize, imageSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                            int imageX = x + (colWidths[col] - imageSize) / 2; // Center horizontally
+                            int imageY = y + (rowHeight - imageSize) / 2;      // Center vertically
+                            painter.drawPixmap(imageX, imageY, scaledPixmap);
+                            qDebug() << "Image rendered successfully for row" << row;
+                        } else {
+                            painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "Image Load Failed");
+                            qDebug() << "Image is null for row" << row;
+                        }
+                    } else {
+                        painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "No Image Data");
+                        qDebug() << "No image data for row" << row;
+                    }
+                } else {
+                    painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "No Item");
+                    qDebug() << "No item in image column for row" << row;
+                }
+            } else { // Text columns
+                QString text = item ? item->text() : "";
+                painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, text);
+            }
+
+            painter.drawRect(cellRect);
+            x += colWidths[col];
+        }
+
+        y += rowHeight;
+
+        // Check if we need a new page
+        if (y > pageHeight - tableMargin) {
+            printer.newPage();
+            y = tableMargin;
+
+            // Redraw the headers on the new page
+            x = tableMarginAdjusted;
+            painter.setFont(headerFont);
+            for (int col = 0; col < numColumns; ++col) {
+                QString headerText = ui->tableWidget->horizontalHeaderItem(col)->text();
+                QRect headerRect(x, y, colWidths[col], rowHeight);
+                QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+                painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, headerText);
+                painter.drawRect(headerRect);
+                x += colWidths[col];
+            }
+            y += rowHeight;
+            painter.setFont(font);
+        }
+    }
+
+    // Finish painting and save the PDF
+    painter.end();
+
+    // Verify the file was written
+    if (QFile::exists(filePath)) {
+        QMessageBox::information(this, "PDF Export", "Table data has been successfully exported to " + filePath);
+        qDebug() << "PDF exported to:" << filePath;
+    } else {
+        QMessageBox::warning(this, "PDF Export Error", "Failed to save the PDF file.");
+        qDebug() << "PDF export failed: File not found at" << filePath;
+    }
+}*/
+void MainWindow::on_exportPdfButton_clicked() {
+    qDebug() << "Table row count before export:" << ui->tableWidget->rowCount();
+
+    // Prompt the user to choose a save location for the PDF
+    QString filePath = QFileDialog::getSaveFileName(this, "Save PDF", QDir::homePath() + "/resources.pdf", "PDF Files (*.pdf)");
+    if (filePath.isEmpty()) {
+        qDebug() << "PDF export canceled by user.";
+        return;
+    }
+
+    // Ensure the file has a .pdf extension
+    if (!filePath.endsWith(".pdf", Qt::CaseInsensitive)) {
+        filePath += ".pdf";
+    }
+
+    // Check if file is writable to avoid issues later
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        QMessageBox::warning(this, "PDF Export Error", "Cannot write to the selected file location.");
+        qDebug() << "Failed to open file for writing:" << filePath;
+        return;
+    }
+    file.close(); // Close it since QPrinter will handle writing
+
+    // Set up the QPrinter for PDF output
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(filePath);
+    printer.setPageSize(QPageSize(QPageSize::A4));
+    printer.setPageMargins(QMarginsF(15, 50, 15, 15), QPageLayout::Millimeter);
+
+    // Set up the QPainter to draw on the PDF
+    QPainter painter(&printer);
+    if (!painter.isActive()) {
+        QMessageBox::warning(this, "PDF Export Error", "Failed to initialize PDF painter.");
+        qDebug() << "Failed to initialize QPainter for PDF export.";
+        return;
+    }
+
+    // Get the page dimensions in pixels
+    QRectF pageRect = printer.pageRect(QPrinter::DevicePixel);
+    int pageWidth = pageRect.width();
+    int pageHeight = pageRect.height();
+    qDebug() << "Page dimensions:" << pageWidth << "x" << pageHeight;
+
+    // Define layout constants
+    const int tableMargin = 100;
+    const int rowHeight = 700; // Increased to 500 for taller rows (was 400)
+    const int fontSize = 10;   // Increased font size for better readability (was 9)
+    const int headerFontSize = 12; // Increased header font size (was 11)
+    const int imageSize = 600; // Increased to 300 for larger images (was 200)
+    const int textPadding = 30; // Increased padding for better spacing (was 25)
+
+    // Calculate column widths dynamically based on page width
+    const int numColumns = ui->tableWidget->columnCount();
+    int totalTableWidth = pageWidth - 2 * tableMargin;
+    int colWidths[] = {40, 100, 100, 100, 100, 100, 200}; // Adjusted widths: Quantity (index 4) to 100, Image (index 6) to 350
+    int totalDefinedWidth = 0;
+    for (int colWidth : colWidths) {
+        totalDefinedWidth += colWidth;
+    }
+    double scaleFactor = static_cast<double>(totalTableWidth) / totalDefinedWidth;
+    for (int &colWidth : colWidths) {
+        colWidth = static_cast<int>(colWidth * scaleFactor);
+    }
+
+    // Center the table on the page
+    totalTableWidth = 0;
+    for (int colWidth : colWidths) {
+        totalTableWidth += colWidth;
+    }
+    int tableMarginAdjusted = (pageWidth - totalTableWidth) / 2;
+
+    // Set up fonts
+    QFont font("Arial", fontSize);
+    QFont headerFont("Arial", headerFontSize, QFont::Bold);
+    painter.setFont(font);
+
+    // Draw the title and timestamp
+    painter.setFont(QFont("Arial", 14, QFont::Bold));
+    painter.drawText(tableMarginAdjusted, 150, "Resource Management System - Exported Data");
+    painter.setFont(QFont("Arial", 10));
+    painter.drawText(tableMarginAdjusted, 350, "Exported on: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+    int y = 250;
+
+    // Draw the table headers
+    int x = tableMarginAdjusted;
+    painter.setFont(headerFont);
+    for (int col = 0; col < numColumns; ++col) {
+        QString headerText = ui->tableWidget->horizontalHeaderItem(col)->text();
+        QRect headerRect(x, y, colWidths[col], rowHeight);
+        QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, headerText);
+        painter.drawRect(headerRect);
+        x += colWidths[col];
+    }
+    y += rowHeight;
+
+    // Set the font back to normal for the table data
+    painter.setFont(font);
+
+    // Draw the table data
+    for (int row = 0; row < ui->tableWidget->rowCount(); ++row) {
+        x = tableMarginAdjusted;
+
+        // Add alternating row colors
+        if (row % 2 == 0) {
+            painter.fillRect(QRect(tableMarginAdjusted, y, totalTableWidth, rowHeight), QBrush(QColor(240, 240, 240)));
+        }
+
+        for (int col = 0; col < numColumns; ++col) {
+            QTableWidgetItem *item = ui->tableWidget->item(row, col);
+            QRect cellRect(x, y, colWidths[col], rowHeight);
+            QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+
+            if (col == 6) { // Image column
+                if (item) {
+                    // Read the base64 string from Qt::UserRole
+                    QString base64 = item->data(Qt::UserRole).toString();
+                    if (!base64.isEmpty()) {
+                        QByteArray imageData = QByteArray::fromBase64(base64.toUtf8());
+                        QPixmap pixmap;
+                        if (pixmap.loadFromData(imageData)) {
+                            QPixmap scaledPixmap = pixmap.scaled(imageSize, imageSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                            int imageX = x + (colWidths[col] - imageSize) / 2; // Center horizontally
+                            int imageY = y + (rowHeight - imageSize) / 2;      // Center vertically
+                            painter.drawPixmap(imageX, imageY, scaledPixmap);
+                            qDebug() << "Image rendered successfully for row" << row;
+                        } else {
+                            painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "Image Load Failed");
+                            qDebug() << "Failed to load image from base64 for row" << row;
+                        }
+                    } else {
+                        painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "No Image Data");
+                        qDebug() << "No image data for row" << row;
+                    }
+                } else {
+                    painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, "No Item");
+                    qDebug() << "No item in image column for row" << row;
+                }
+            } else { // Text columns
+                QString text = item ? item->text() : "";
+                painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, text);
+            }
+
+            painter.drawRect(cellRect);
+            x += colWidths[col];
+        }
+
+        y += rowHeight;
+
+        // Check if we need a new page
+        if (y > pageHeight - tableMargin) {
+            printer.newPage();
+            y = tableMargin;
+
+            // Redraw the headers on the new page
+            x = tableMarginAdjusted;
+            painter.setFont(headerFont);
+            for (int col = 0; col < numColumns; ++col) {
+                QString headerText = ui->tableWidget->horizontalHeaderItem(col)->text();
+                QRect headerRect(x, y, colWidths[col], rowHeight);
+                QRect textRect(x, y + textPadding, colWidths[col], rowHeight - 2 * textPadding);
+                painter.drawText(textRect, Qt::AlignCenter | Qt::TextWordWrap, headerText);
+                painter.drawRect(headerRect);
+                x += colWidths[col];
+            }
+            y += rowHeight;
+            painter.setFont(font);
+        }
+    }
+
+    // Finish painting and save the PDF
+    painter.end();
+
+    // Verify the file was written
+    if (QFile::exists(filePath)) {
+        QMessageBox::information(this, "PDF Export", "Table data has been successfully exported to " + filePath);
+        qDebug() << "PDF exported to:" << filePath;
+    } else {
+        QMessageBox::warning(this, "PDF Export Error", "Failed to save the PDF file.");
+        qDebug() << "PDF export failed: File not found at" << filePath;
+    }
+}
+
+void MainWindow::on_searchTextChanged(const QString &text)
+{
+    if (searchTimer) {
+        searchTimer->stop();
+        
+        if (!text.isEmpty()) {
+            searchTimer->start(300);  // Delay search by 300ms to avoid frequent queries
+        } else {
+            resourceManager->updateTable(ui->tableWidget);
+        }
+    }
+}
+
+void MainWindow::on_searchTimeout()
+{
+    QString searchText = ui->searchLineEdit->text().trimmed();
+    QString column = ui->resourceSearchColumnComboBox->currentText();
+    resourceManager->updateTable(ui->tableWidget, searchText, column);
+}
+
+void MainWindow::on_resetResourceSearchButton_clicked()
+{
+    ui->searchLineEdit->clear();
+    resourceManager->updateTable(ui->tableWidget);
+}
+
+void MainWindow::on_downloadHistoryButton_clicked()
+{
+    QString filePath = QFileDialog::getSaveFileName(
+        this,
+        "Save History Log",
+        "",
+        "Text Files (*.txt)"
+    );
+    
+    if (!filePath.isEmpty()) {
+        if (!filePath.endsWith(".txt", Qt::CaseInsensitive)) {
+            filePath += ".txt";
+        }
+        
+        if (resourceManager->exportHistoryToFile(filePath)) {
+            QMessageBox::information(this, "Success", "Resource history exported successfully");
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to export resource history. The history file may not exist.");
+        }
+    }
+}
+
+void MainWindow::on_clearHistoryButton_clicked()
+{
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Confirm Clear History",
+        "Are you sure you want to clear the resource history? This action cannot be undone.",
+        QMessageBox::Yes | QMessageBox::No
+    );
+    
+    if (reply == QMessageBox::Yes) {
+        if (resourceManager->clearHistory()) {
+            QMessageBox::information(this, "Success", "Resource history cleared successfully");
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to clear resource history");
+        }
+    }
+}
+
+/*void MainWindow::on_btnLookForResource_clicked()
+{
+    // Open the SearchDialog and refresh the resource table if a resource was updated
+    SearchDialog searchDialog(this);
+    connect(&searchDialog, &SearchDialog::resourceUpdated, this, [this]() {
+        resourceManager->updateTable(ui->tableWidget);
+        updateResourceChart();
+    });
+    searchDialog.exec();
+}*/
+
+void MainWindow::setLoggedInRole(const QString &role)
+{
+    m_loggedInRole = role;
+    bool isAdmin = (role == "Admin");
+    bool isManager = (role == "Manager");
+    bool isEmployee = (role == "Employee");
+
+    if (ui->employeeSectionButton) {
+        ui->employeeSectionButton->setEnabled(true);
+    }
+    if (ui->addButton) {
+        ui->addButton->setEnabled(isAdmin);
+    }
+    if (ui->deleteBtn) {
+        ui->deleteBtn->setEnabled(isAdmin);
+    }
+    if (ui->modifyBtn) {
+        ui->modifyBtn->setEnabled(isAdmin || isManager);
+    }
+    if (isEmployee) {
+        if (ui->addButton) ui->addButton->setVisible(false);
+        if (ui->deleteBtn) ui->deleteBtn->setVisible(false);
+        if (ui->modifyBtn) ui->modifyBtn->setVisible(false);
+    } else {
+        if (ui->addButton) ui->addButton->setVisible(true);
+        if (ui->deleteBtn) ui->deleteBtn->setVisible(true);
+        if (ui->modifyBtn) ui->modifyBtn->setVisible(true);
+    }
+    statusBar()->showMessage(QString("Logged in as: %1").arg(role));
+}
+
+void MainWindow::on_employeeChartRefreshButton_clicked()
+{
+    updateEmployeeChart();
+}
+
+void MainWindow::on_employeeChartTypeComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateEmployeeChart();
+}
+
+void MainWindow::on_employeeChartFilterComboBox_currentIndexChanged(int index)
+{
+    Q_UNUSED(index);
+    updateEmployeeChart();
+}
+
+void MainWindow::on_employeeToggleLegendCheckBox_toggled(bool checked)
+{
+    Q_UNUSED(checked);
+    updateEmployeeChart();
+}
+
+void MainWindow::on_resourceSearchColumnChanged(int index)
+{
+    Q_UNUSED(index);
+    on_searchTimeout(); // Re-filter when column changes
+}
+
+void MainWindow::setupUiConnections()
+{
+    qDebug() << "Setting up UI connections";
+    connect(ui->clientSectionButton, &QPushButton::clicked, this, &MainWindow::on_clientSectionButton_clicked);
+    connect(ui->trainingSectionButton, &QPushButton::clicked, this, &MainWindow::on_trainingSectionButton_clicked);
+    connect(ui->meetingSectionButton, &QPushButton::clicked, this, &MainWindow::on_meetingSectionButton_clicked);
+    connect(ui->employeeSectionButton, &QPushButton::clicked, this, &MainWindow::on_employeeSectionButton_clicked);
+    connect(ui->resourceSectionButton, &QPushButton::clicked, this, &MainWindow::on_resourceSectionButton_clicked);
+    connect(ui->menuButton, &QPushButton::clicked, this, &MainWindow::toggleSidebar);
+    connect(ui->themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
+    
+    // Check if chat interface exists before connecting
+    if (ui->meetingChatSendButton && ui->meetingChatClearButton) {
+        connect(ui->meetingChatSendButton, &QPushButton::clicked, this, &MainWindow::on_chatSendButton_clicked);
+        connect(ui->meetingChatClearButton, &QPushButton::clicked, this, &MainWindow::on_chatClearButton_clicked);
+    }
+    
+    // Connect employee-specific buttons
+    if (ui->addButton) {
+        connect(ui->addButton, &QPushButton::clicked, this, &MainWindow::on_addButton_clicked);
+    }
+    
+    /*if (ui->deleteBtn) {
+        connect(ui->deleteBtn, &QPushButton::clicked, this, &MainWindow::on_deleteBtn_clicked);
+    }*/
+    
+    if (ui->modifyBtn) {
+        connect(ui->modifyBtn, &QPushButton::clicked, this, &MainWindow::on_modifyBtn_clicked);
+    }
+    
+    /*if (ui->downloadBtn) {
+        disconnect(ui->downloadBtn, &QPushButton::clicked, this, &MainWindow::on_downloadBtn_clicked);
+        connect(ui->downloadBtn, &QPushButton::clicked, this, &MainWindow::on_downloadBtn_clicked);
+    }*/
+    
+    /*if (ui->selectImageButton) {
+        connect(ui->selectImageButton, &QPushButton::clicked, this, &MainWindow::on_selectImageButton_clicked);
+    }*/
+    
+    if (ui->generateQRCodeBtn) {
+        connect(ui->generateQRCodeBtn, &QPushButton::clicked, this, &MainWindow::on_generateQRCodeBtn_clicked);
+    }
+    
+    if (ui->resetSearchButton) {
+        connect(ui->resetSearchButton, &QPushButton::clicked, this, &MainWindow::on_resetSearchButton_clicked);
+    }
+    connect(ui->lineEdit_CIN, &QLineEdit::textChanged, this, &MainWindow::validateCIN);
+    connect(ui->lineEdit_Nom, &QLineEdit::textChanged, this, &MainWindow::validateName);
+    connect(ui->lineEdit_Prenom, &QLineEdit::textChanged, this, &MainWindow::validateName);
+    connect(ui->lineEdit_phone, &QLineEdit::textChanged, this, &MainWindow::validatePhone);
+    connect(ui->lineEdit_email, &QLineEdit::textChanged, this, &MainWindow::validateEmail);
+    connect(ui->lineEdit_salaire, &QLineEdit::textChanged, this, &MainWindow::validateSalary);
+    qDebug() << "Validation signals connected for CIN, Name, Phone, Email, and Salary";
+}
+
+void MainWindow::on_resourceTableSelectionChanged() {
+    auto selectedItems = ui->tableWidget->selectedItems();
+    if (!selectedItems.isEmpty()) {
+        int row = selectedItems.first()->row();
+        QTableWidgetItem *idItem = ui->tableWidget->item(row, 0);
+        if (idItem) {
+            selectedResourceId = idItem->text().toInt();
+        }
+    } else {
+        selectedResourceId = -1;
+    }
+}
+
+// Helper: Set up employee table row with image logic like resource table
+void MainWindow::setEmployeeTableRow(QTableWidget* table, int row, const QList<QVariant>& employeeData) {
+    for (int col = 0; col < employeeData.size(); ++col) {
+        if (col == 11) { // Image column
+            QLabel* imageLabel = new QLabel();
+            imageLabel->setAlignment(Qt::AlignCenter);
+            QByteArray imageData = employeeData[col].toByteArray();
+            if (!imageData.isEmpty()) {
+                QPixmap pixmap;
+                if (pixmap.loadFromData(imageData)) {
+                    QPixmap scaled = pixmap.scaled(100, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                    imageLabel->setPixmap(scaled);
+                } else {
+                    imageLabel->setText("No Image");
+                }
+            } else {
+                imageLabel->setText("No Image");
+            }
+            table->setCellWidget(row, col, imageLabel);
+        } else {
+            QString text = employeeData[col].isNull() ? "" : employeeData[col].toString();
+            if (text.trimmed().isEmpty()) {
+                text = "-"; // Show dash for empty/blank values
+            }
+            QTableWidgetItem* item = new QTableWidgetItem(text);
+            // Ensure text is visible (force foreground color)
+            item->setForeground(QBrush(Qt::black));
+            table->setItem(row, col, item);
+        }
+    }
+}
+
+// Call this after fetching employees to fill the table
+void MainWindow::populateEmployeeTable(const QList<QList<QVariant>>& employees) {
+    QTableWidget* table = ui->employeeTableWidget;
+    table->setRowCount(employees.size());
+    for (int row = 0; row < employees.size(); ++row) {
+        setEmployeeTableRow(table, row, employees[row]);
+    }
+    improveTableWidgetDisplay(table);
+}
+
+void MainWindow::handleSerialData()
+{
+    static QString lastUidProcessed;
+    QByteArray data = arduino->readData();
+    serialBuffer += QString(data);
+    int newlineIndex;
+    while ((newlineIndex = serialBuffer.indexOf('\n')) != -1) {
+        QString uid = serialBuffer.left(newlineIndex).trimmed();
+        serialBuffer.remove(0, newlineIndex + 1);
+        QRegularExpression uidRegex("^[A-Fa-f0-9]{8}$");
+        if (!uidRegex.match(uid).hasMatch()) continue;
+        if (uid == lastUidProcessed) continue;
+        lastUidProcessed = uid;
+        qDebug() << "UID RFID reçu d'Arduino :" << uid;
+        QSqlQuery query;
+        query.prepare("SELECT ID, FIRST_NAME, LAST_NAME FROM EMPLOYEE WHERE RFID_UID = :uid");
+        query.bindValue(":uid", uid);
+        if (!query.exec()) {
+            qDebug() << "Erreur requête :" << query.lastError().text();
+            arduino->sendData("error");
+            QMessageBox::warning(this, "Erreur BDD", "Échec de la requête : " + query.lastError().text());
+            continue;
+        }
+        if (query.next()) {
+            int employeeId = query.value("ID").toInt();
+            QString firstName = query.value("FIRST_NAME").toString();
+            QString lastName = query.value("LAST_NAME").toString();
+            // Requête pour compter les consultations aujourd'hui
+            QSqlQuery countQuery;
+            QString today = QDate::currentDate().toString("yyyy-MM-dd");
+            countQuery.prepare("SELECT COUNT(*) FROM CLIENTS WHERE CONSULTANT_ID = :employeeId AND TRUNC(CONSULTATION_DATE) = TO_DATE(:today, 'YYYY-MM-DD')");
+            countQuery.bindValue(":employeeId", employeeId);
+            countQuery.bindValue(":today", today);
+            int count = 0;
+            if (countQuery.exec() && countQuery.next()) {
+                count = countQuery.value(0).toInt();
+                arduino->sendData(QString::number(count));
+            } else {
+                arduino->sendData("error");
+            }
+            QMessageBox::information(this, "Employé trouvé", "Badge employé : " + firstName + " " + lastName + "\nConsultations aujourd'hui : " + QString::number(count));
+        } else {
+            arduino->sendData("error");
+            // Demander à l'utilisateur s'il veut assigner ce badge
+            auto reply = QMessageBox::question(this, "Badge inconnu", "Aucun employé trouvé pour ce badge. Voulez-vous l'assigner à un employé existant ?", QMessageBox::Yes | QMessageBox::No);
+            if (reply == QMessageBox::Yes) {
+                // Récupérer la liste des employés sans badge
+                QSqlQuery listQuery("SELECT ID, FIRST_NAME, LAST_NAME FROM EMPLOYEE WHERE RFID_UID IS NULL OR RFID_UID = ''");
+                QStringList employeeList;
+                QList<int> employeeIds;
+                while (listQuery.next()) {
+                    int id = listQuery.value("ID").toInt();
+                    QString name = listQuery.value("FIRST_NAME").toString() + " " + listQuery.value("LAST_NAME").toString();
+                    employeeList << name;
+                    employeeIds << id;
+                }
+                if (employeeList.isEmpty()) {
+                    QMessageBox::information(this, "Aucun employé disponible", "Tous les employés ont déjà un badge assigné.");
+                    continue;
+                }
+                bool ok = false;
+                QString selected = QInputDialog::getItem(this, "Assigner badge", "Choisissez l'employé à qui assigner ce badge :", employeeList, 0, false, &ok);
+                if (ok && !selected.isEmpty()) {
+                    int idx = employeeList.indexOf(selected);
+                    int selectedId = employeeIds.value(idx);
+                    QSqlQuery updateQuery;
+                    updateQuery.prepare("UPDATE EMPLOYEE SET RFID_UID = :uid WHERE ID = :id");
+                    updateQuery.bindValue(":uid", uid);
+                    updateQuery.bindValue(":id", selectedId);
+                    if (updateQuery.exec()) {
+                        QMessageBox::information(this, "Badge assigné", "Le badge a été assigné à : " + selected);
+                    } else {
+                        QMessageBox::warning(this, "Erreur", "Impossible d'assigner le badge : " + updateQuery.lastError().text());
+                    }
+                }
+            } else {
+                QMessageBox::warning(this, "Badge inconnu", "Aucun employé trouvé pour ce badge.");
+            }
+        }
+    }
+}
