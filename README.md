@@ -1,4 +1,4 @@
-# Training Management Desktop Application
+# TrainingManagement
 
 <div align="center">
 
@@ -8,7 +8,7 @@
 ![Arduino](https://img.shields.io/badge/Arduino-Integration-00979D?style=for-the-badge&logo=arduino&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 
-A full-featured Qt desktop application for managing training centers — covering clients, employees, training sessions, meetings, resources, statistics, and hardware integration.
+**A Training Management Desktop Application** — a full-featured Qt desktop application for managing training centers, covering clients, employees, training sessions, meetings, resources, statistics, and hardware integration.
 
 </div>
 
